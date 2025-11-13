@@ -1,0 +1,18 @@
+[project]
+name = "openxc2064"
+version = "0.1.0"
+description = "An open-source toolchain and development platform for the Xilinx XC2064, the first FPGA."
+readme = "README.md"
+authors = [{ name = "Satya Jhaveri" }, { name = "Ben Saunders" }]
+requires-python = ">=3.10"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+]
+
