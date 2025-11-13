@@ -1,0 +1,46 @@
+// HDL Grammar definition for custom HDL for openxc2064
+// Can use https://www.lark-parser.org/ide/ to visualize and test grammar interactively
+
+start: module+
+
+// Module definition
+module: "module" IDENT "(" port_list ")" ";" module_contents "endmodule"
+
+// Ports for the modules
+port_list: port ("," port)*
+
+port: direction IDENT
+    | direction RANGE IDENT
+
+direction: "input" | "output" | "inout"
+
+
+// Module body:
+module_contents: (wire_decl | reg_decl)*
+
+wire_decl: "wire" IDENT ";"
+    | "wire" RANGE IDENT ";"
+
+reg_decl: "reg" IDENT ";"
+    | "reg" RANGE IDENT ";"
+
+
+// in progress:
+assign_stmt: "assign" IDENT "=" expression ";"
+
+expression: "todo" // rhs of an assignment
+
+instance: "todo" // instantiation of a module
+
+
+
+
+// Utility rules
+RANGE: "[" NUMBER ":" NUMBER "]" // e.g., [7:0]
+IDENT: /[a-zA-Z_][a-zA-Z0-9_]*/ // Identifiers (alphanumeric string starting with letter or underscore)
+NUMBER: /[0-9]+('[bh][0-9A-Fa-f]+)?/
+COMMENT: /\/\/[^\n]*/ // Single line comment
+MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
+%ignore /[ \t\r\n]+/ // Ignore whitespace
+%ignore COMMENT
+%ignore MULTILINE_COMMENT

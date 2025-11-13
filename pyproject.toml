@@ -5,7 +5,9 @@ description = "An open-source toolchain and development platform for the Xilinx 
 readme = "README.md"
 authors = [{ name = "Satya Jhaveri" }, { name = "Ben Saunders" }]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "lark>=1.3.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.9,<0.10.0"]
