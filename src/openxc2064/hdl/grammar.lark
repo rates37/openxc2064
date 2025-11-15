@@ -7,17 +7,19 @@ start: module+
 module: "module" IDENT "(" port_list ")" ";" module_contents "endmodule"
 
 // Ports for the modules
-port_list: port ("," port)*
-
+port_list: port ("," port)* // must have at least one port
 port: direction IDENT
     | direction RANGE IDENT
 
 direction: "input" | "output" | "inout"
 
 
-// Module body:
-module_contents: (wire_decl | reg_decl)*
 
+// Module body:
+module_contents: (wire_decl | reg_decl | assign_stmt | instance)*
+
+
+// wire / reg declarations:
 wire_decl: "wire" IDENT ";"
     | "wire" RANGE IDENT ";"
 
@@ -25,22 +27,48 @@ reg_decl: "reg" IDENT ";"
     | "reg" RANGE IDENT ";"
 
 
-// in progress:
-assign_stmt: "assign" IDENT "=" expression ";"
 
-expression: "todo" // rhs of an assignment
+// assign statements:
+assign_stmt: "assign" assign_stmt_lhs "=" expression ";"
 
-instance: "todo" // instantiation of a module
+assign_stmt_lhs: IDENT
+    | IDENT INDEX
+    | IDENT RANGE
 
+expression: atom
+    | expression OP expression // todo: operator precedence
+    | "(" expression ")"
+
+atom: IDENT
+    | IDENT INDEX
+    | IDENT RANGE
+    | NUMBER
+
+
+
+// instances:
+instance: module_name ["#" "(" param_list ")"] module_instance_name "(" connection_list ")" ";"
+
+module_name: IDENT
+module_instance_name: IDENT
+
+param_list: param ("," param)*
+param: "." IDENT "(" expression ")" // force named parameters
+
+connection_list: connection ("," connection)*
+connection: "." IDENT "(" expression ")" // force named connections
 
 
 
 // Utility rules
 RANGE: "[" NUMBER ":" NUMBER "]" // e.g., [7:0]
+INDEX: "[" NUMBER "]" // e.g., [3]
 IDENT: /[a-zA-Z_][a-zA-Z0-9_]*/ // Identifiers (alphanumeric string starting with letter or underscore)
 NUMBER: /[0-9]+('[bh][0-9A-Fa-f]+)?/
 COMMENT: /\/\/[^\n]*/ // Single line comment
 MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
+// Operators: [+ - * / == != && || < >]
+OP: /\+|-|\*|\/|==|!=|&&|\|\||</|>/
 %ignore /[ \t\r\n]+/ // Ignore whitespace
 %ignore COMMENT
 %ignore MULTILINE_COMMENT
