@@ -8,10 +8,10 @@ module: "module" IDENT "(" port_list ")" ";" module_contents "endmodule"
 
 // Ports for the modules
 port_list: port ("," port)* // must have at least one port
-port: direction IDENT
-    | direction RANGE IDENT
+port: DIRECTION IDENT
+    | DIRECTION RANGE IDENT
 
-direction: "input" | "output" | "inout"
+DIRECTION: "input" | "output" | "inout"
 
 
 
@@ -35,16 +35,40 @@ assign_stmt_lhs: IDENT
     | IDENT INDEX
     | IDENT RANGE
 
-expression: atom
-    | expression OP expression // todo: operator precedence
-    | "(" expression ")"
+?expresssion: expr_or
 
-atom: IDENT
-    | IDENT INDEX
-    | IDENT RANGE
-    | NUMBER
+?expr_or: expr_or OR expr_and   -> bin_op
+        | expr_and
 
+?expr_and: expr_and AND expr_eq   -> bin_op
+         | expr_eq
 
+?expr_eq: expr_eq EQ expr_add   -> bin_op
+         | expr_add
+
+?expr_add: expr_add ADD expr_mul   -> bin_op
+          | expr_mul
+
+?expr_mul: expr_mul MUL expr_unary   -> bin_op
+          | expr_unary
+
+?expr_unary: UNARY expr_unary   -> unary_op
+            | expr_primary
+
+?expr_primary: atom
+              | "(" expresssion ")"
+
+atom: IDENT         -> ident_only
+    | IDENT INDEX   -> ident_index
+    | IDENT RANGE   -> ident_range
+    | NUMBER        -> number_only
+
+OR: "||"
+AND: "&&"
+EQ: "==" | "!="
+ADD: "+" | "-"
+MUL: "*" | "/"
+UNARY: "-" | "!"
 
 // instances:
 instance: module_name ["#" "(" param_list ")"] module_instance_name "(" connection_list ")" ";"
@@ -67,8 +91,6 @@ IDENT: /[a-zA-Z_][a-zA-Z0-9_]*/ // Identifiers (alphanumeric string starting wit
 NUMBER: /[0-9]+('[bh][0-9A-Fa-f]+)?/
 COMMENT: /\/\/[^\n]*/ // Single line comment
 MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
-// Operators: [+ - * / == != && || < >]
-OP: /\+|-|\*|\/|==|!=|&&|\|\||</|>/
 %ignore /[ \t\r\n]+/ // Ignore whitespace
 %ignore COMMENT
 %ignore MULTILINE_COMMENT
