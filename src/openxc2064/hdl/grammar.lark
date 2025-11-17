@@ -8,8 +8,8 @@ module: "module" IDENT "(" port_list ")" ";" module_contents "endmodule"
 
 // Ports for the modules
 port_list: port ("," port)* // must have at least one port
-port: DIRECTION ["reg"] IDENT
-    | DIRECTION ["reg"] RANGE IDENT
+port: DIRECTION [REG] IDENT
+    | DIRECTION [REG] RANGE IDENT
 
 DIRECTION: "input" | "output" | "inout"
 
@@ -30,8 +30,9 @@ reg_decl: "reg" IDENT ";"
 always_comb: "always" ":" "comb" statement // no choice of sensitivity list - we will infer this based on the block body
 always_seq : "always" ":" "seq"  "@" "(" always_sens_seq  ")" statement
 
-always_sens_seq: "posedge" IDENT
-               | "negedge" IDENT  // only one signal for now
+// only triggered on one signal for now
+always_sens_seq: "posedge" IDENT    -> sens_posedge
+               | "negedge" IDENT    -> sens_negedge
 
 // Procedural assignments (for inside always blocks)
 proc_assign: IDENT (INDEX | RANGE)? PROC_OP expression ";"
@@ -101,6 +102,10 @@ connection_list: connection ("," connection)*
 connection: "." IDENT "(" expression ")" // force named connections
 
 
+// declare keywords as tokens so they can't be used as identifiers
+
+REG: "reg"
+
 
 // Utility rules
 RANGE: "[" NUMBER ":" NUMBER "]" // e.g., [7:0]
@@ -112,3 +117,5 @@ MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
 %ignore /[ \t\r\n]+/ // Ignore whitespace
 %ignore COMMENT
 %ignore MULTILINE_COMMENT
+
+
