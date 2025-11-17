@@ -3,6 +3,7 @@ HDL AST Node Definitions for openxc2064 toolchain.
 Defines data structures representing HDL constructs."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 
 
 @dataclass
@@ -26,9 +27,15 @@ class Index:
     index: str
 
 
+class Direction(Enum):
+    INPUT = "input"
+    OUTPUT = "output"
+    INOUT = "inout"
+
+
 @dataclass
 class Port:
-    direction: str
+    direction: Direction
     name: str
     range: Range | None = None
     is_reg: bool = False
