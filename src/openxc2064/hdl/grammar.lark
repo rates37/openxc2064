@@ -8,8 +8,8 @@ module: "module" IDENT "(" port_list ")" ";" module_contents "endmodule"
 
 // Ports for the modules
 port_list: port ("," port)* // must have at least one port
-port: DIRECTION IDENT
-    | DIRECTION RANGE IDENT
+port: DIRECTION ["reg"] IDENT
+    | DIRECTION ["reg"] RANGE IDENT
 
 DIRECTION: "input" | "output" | "inout"
 
