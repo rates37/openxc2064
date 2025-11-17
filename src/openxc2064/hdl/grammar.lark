@@ -27,6 +27,24 @@ reg_decl: "reg" IDENT ";"
     | "reg" RANGE IDENT ";"
 
 
+always_comb: "always" ":" "comb" statement // no choice of sensitivity list - we will infer this based on the block body
+always_seq : "always" ":" "seq"  "@" "(" always_sens_seq  ")" statement
+
+always_sens_seq: "posedge" IDENT
+               | "negedge" IDENT  // only one signal for now
+
+// Procedural assignments (for inside always blocks)
+proc_assign: IDENT (INDEX | RANGE)? PROC_OP expression ";"
+PROC_OP: "=" | "<=" // todo: should we just always support "=" and chose based on always block type?
+
+// body of always blocks:
+statement: proc_assign
+         | if_stmt
+         | "begin" statement+ "end"  -> block
+    
+if_stmt: "if" "(" expression ")" statement ["else" statement]
+
+
 
 // assign statements:
 assign_stmt: "assign" assign_stmt_lhs "=" expression ";"
@@ -35,7 +53,7 @@ assign_stmt_lhs: IDENT
     | IDENT INDEX
     | IDENT RANGE
 
-?expresssion: expr_or
+?expression: expr_or
 
 ?expr_or: expr_or OR expr_and   -> bin_op
         | expr_and
@@ -56,7 +74,7 @@ assign_stmt_lhs: IDENT
             | expr_primary
 
 ?expr_primary: atom
-              | "(" expresssion ")"
+              | "(" expression ")"
 
 atom: IDENT         -> ident_only
     | IDENT INDEX   -> ident_index
