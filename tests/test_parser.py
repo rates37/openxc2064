@@ -123,7 +123,7 @@ def test_port_with_reg_and_range():
     assert p2.range is None
 
 
-# ---------- Basic module and ports ----------
+# ---------- Wires, Registers and Assign Statements ----------
 def test_wire_declaration():
     src = """
     module m(output flag);
@@ -192,6 +192,7 @@ def test_assign_statement():
     assert isinstance(a0.rhs, Number)
     assert a0.rhs.value == "4'b1010"
 
+
 def test_assign_to_ident_statement():
     src = """
     module m(input a);
@@ -204,14 +205,14 @@ def test_assign_to_ident_statement():
     m = parse_single_module(src)
     assert len(m.contents) == 4
     _w0, _w1, a0, a1 = m.contents
-    
+
     # check first assign statement
     assert isinstance(a0, AssignStmt)
     assert isinstance(a0.lhs, Identifier)
     assert a0.lhs.name == "w"
     assert isinstance(a0.rhs, Identifier)
     assert a0.rhs.name == "a"
-    
+
     # check second assign statement
     assert isinstance(a1, AssignStmt)
     assert isinstance(a1.lhs, Indexed)
@@ -221,9 +222,20 @@ def test_assign_to_ident_statement():
     assert a1.lhs.range.msb == 3 and a1.lhs.range.lsb == 0
     assert isinstance(a1.rhs, Identifier)
     assert a1.rhs.name == "a"
-    
-    
-    
+
+
+# ---------- ensure failures  ----------
+def test_port_error_unrecognized_form_raises():
+    bad_src = "module m(output unknown_keyword out); endmodule"
+    with pytest.raises(Exception):
+        parse_hdl(bad_src)
+
+
+def test_missing_ports_is_error():
+    #  Zero-argument module not allowed by grammar
+    bad_src = "module m(); endmodule"
+    with pytest.raises(Exception):
+        parse_hdl(bad_src)
 
 
 if __name__ == "__main__":
