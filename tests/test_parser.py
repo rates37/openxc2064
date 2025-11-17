@@ -29,7 +29,6 @@ from openxc2064.hdl.ast_nodes import (
 )
 
 
-# --- Fixtures ---
 # Helper: parse single module and return it
 def parse_single_module(src: str) -> Module:
     mods = parse_hdl(src)
@@ -124,5 +123,108 @@ def test_port_with_reg_and_range():
     assert p2.range is None
 
 
+# ---------- Basic module and ports ----------
+def test_wire_declaration():
+    src = """
+    module m(output flag);
+        wire [3:0] data_bus;
+        wire flag;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 2
+    w0, w1 = m.contents
+
+    # check first wire
+    assert isinstance(w0, WireDecl)
+    assert w0.name == "data_bus"
+    assert isinstance(w0.range, Range)
+    assert w0.range.msb == 3 and w0.range.lsb == 0
+
+    # check second wire
+    assert isinstance(w1, WireDecl)
+    assert w1.name == "flag"
+    assert w1.range is None
+
+
+def test_reg_declaration():
+    src = """
+    module m(output reg flag);
+        reg [7:0] status;
+        reg enable;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 2
+    r0, r1 = m.contents
+
+    # check first reg
+    assert isinstance(r0, RegDecl)
+    assert r0.name == "status"
+    assert isinstance(r0.range, Range)
+    assert r0.range.msb == 7 and r0.range.lsb == 0
+
+    # check second reg
+    assert isinstance(r1, RegDecl)
+    assert r1.name == "enable"
+    assert r1.range is None
+
+
+def test_assign_statement():
+    src = """
+    module m(output reg flag);
+        wire [3:0] data_bus;
+        assign data_bus = 4'b1010;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 2
+    w0, a0 = m.contents
+
+    # check wire
+    assert isinstance(w0, WireDecl)
+    assert w0.name == "data_bus"
+
+    # check assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "data_bus"
+    assert isinstance(a0.rhs, Number)
+    assert a0.rhs.value == "4'b1010"
+
+def test_assign_to_ident_statement():
+    src = """
+    module m(input a);
+      wire w;
+      wire [3:0] bus;
+      assign w = a;
+      assign bus[3:0] = a;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 4
+    _w0, _w1, a0, a1 = m.contents
+    
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "w"
+    assert isinstance(a0.rhs, Identifier)
+    assert a0.rhs.name == "a"
+    
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Indexed)
+    assert a1.lhs.base.name == "bus"
+    assert a1.lhs.index is None
+    assert isinstance(a1.lhs.range, Range)
+    assert a1.lhs.range.msb == 3 and a1.lhs.range.lsb == 0
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "a"
+    
+    
+    
+
+
 if __name__ == "__main__":
-    test_port_with_reg_and_range()
+    test_assign_to_ident_statement()

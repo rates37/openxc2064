@@ -10,11 +10,11 @@ with open(GRAMMAR_PATH) as f:
 
 
 class ASTBuilder(Transformer):
-    def IDENT(self, tok: Token) -> Identifier:
-        return Identifier(name=str(tok))
+    def IDENT(self, tok: Token) -> str:
+        return str(tok)
 
-    def NUMBER(self, tok: Token) -> Number:
-        return Number(value=str(tok))
+    def NUMBER(self, tok: Token) -> str:
+        return str(tok)
 
     def RANGE(self, tok: Token) -> Range:
         s = tok.value  # e.g. "[7:0]"
@@ -41,7 +41,7 @@ class ASTBuilder(Transformer):
             _, reg_token, name = items
             return Port(
                 direction=direction,
-                name=name.name,
+                name=name,
                 is_reg=(reg_token is not None),
                 range=None,
             )
@@ -61,7 +61,7 @@ class ASTBuilder(Transformer):
 
             return Port(
                 direction=direction,
-                name=name.name,
+                name=name,
                 is_reg=(reg_token is not None),
                 range=rng,
             )
@@ -239,7 +239,7 @@ class ASTBuilder(Transformer):
         name_ident = items[0]
         ports = items[1]
         module_items = items[2] if len(items) > 2 else []
-        return Module(name=name_ident.name, ports=ports, contents=module_items)
+        return Module(name=name_ident, ports=ports, contents=module_items)
 
     def start(self, items: list) -> list[Module]:
         return list(items)
