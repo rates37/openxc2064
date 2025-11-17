@@ -2,6 +2,7 @@
 HDL AST Node Definitions for openxc2064 toolchain.
 Defines data structures representing HDL constructs."""
 
+from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -102,7 +103,7 @@ class Connection:
 @dataclass
 class Instance:
     module_name: str
-    params: list[Param] = []
+    params: list[Param]
     instance_name: str
     connections: list[Connection]
 
@@ -131,7 +132,6 @@ Statement = ProcAssignStmt | IfStmt | BlockStmt
 
 @dataclass
 class AlwaysComb:
-    statements: list[Identifier | Indexed]
     stmt: Statement
 
 
@@ -145,5 +145,5 @@ class AlwaysSeq:
 @dataclass
 class Module:
     name: str
-    ports: list[Port] = []
+    ports: list[Port]
     contents: list[WireDecl | RegDecl | AssignStmt | Instance | AlwaysComb | AlwaysSeq]
