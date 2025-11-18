@@ -215,10 +215,10 @@ class ASTBuilder(Transformer):
         return items[0]
 
     def sens_posedge(self, items: list) -> tuple[str, Identifier]:
-        return ("posedge", items[0])
+        return ("posedge", Identifier(items[0]))
 
     def sens_negedge(self, items: list) -> tuple[str, Identifier]:
-        return ("negedge", items[0])
+        return ("negedge", Identifier(items[0]))
 
     def always_comb(self, items: list) -> AlwaysComb:
         stmt = items[0]

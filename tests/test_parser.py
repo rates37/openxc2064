@@ -685,6 +685,77 @@ def test_always_comb_nested_if_parsing():
     assert inner_else_assign.op == "="
 
 
+def test_always_seq_block_parsing():
+    src = """
+    module m(input clk, input rst, input a, output reg out);
+      always:seq @(posedge clk) begin
+        if (rst) begin
+          out <= 0;
+        end else begin
+          out <= a;
+        end
+        end
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 1
+    always_seq = m.contents[0]
+    assert isinstance(always_seq, AlwaysSeq)
+    assert always_seq.edge == "posedge"
+    assert isinstance(always_seq.signal, Identifier)
+    assert always_seq.signal.name == "clk"
+
+    # check block statement
+    stmt = always_seq.statements
+    assert isinstance(stmt, BlockStmt)
+    assert len(stmt.statements) == 1
+    if_stmt = stmt.statements[0]
+    assert isinstance(if_stmt, IfStmt)
+
+    # check condition
+    condition = if_stmt.condition
+    assert isinstance(condition, Identifier)
+    assert condition.name == "rst"
+
+    # check then block
+    then_stmts = if_stmt.then_stmts
+    assert isinstance(then_stmts, BlockStmt)
+    assert len(then_stmts.statements) == 1
+    then_assign = then_stmts.statements[0]
+    assert isinstance(then_assign, ProcAssignStmt)
+    assert then_assign.op == "<="
+
+    # check else block:
+    else_stmts = if_stmt.else_stmts
+    assert isinstance(else_stmts, BlockStmt)
+    assert len(else_stmts.statements) == 1
+    else_assign = else_stmts.statements[0]
+    assert isinstance(else_assign, ProcAssignStmt)
+    assert else_assign.op == "<="
+
+
+def test_always_seq_block_negedge_parsing():
+    src = """
+    module m(input clock, input rst, input a, output reg out);
+      always:seq @(negedge clock) begin
+        if (rst) begin
+          out <= 0;
+        end else begin
+          out <= a;
+        end
+        end
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 1
+    always_seq = m.contents[0]
+    assert isinstance(always_seq, AlwaysSeq)
+    assert always_seq.edge == "negedge"
+    assert isinstance(always_seq.signal, Identifier)
+    assert always_seq.signal.name == "clock"
+    # contents of block remain same as previous test
+
+
 # ---------- ensure failures  ----------
 def test_port_error_unrecognized_form_raises():
     bad_src = "module m(output unknown_keyword out); endmodule"
@@ -700,4 +771,4 @@ def test_missing_ports_is_error():
 
 
 if __name__ == "__main__":
-    test_always_comb_nested_if_parsing()
+    test_always_seq_block_parsing()
