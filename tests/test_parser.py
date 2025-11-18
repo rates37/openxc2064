@@ -463,6 +463,52 @@ def test_expression_precedence():
     assert not_f.op == "!"
 
 
+def test_indexing_identifiers():
+    src = """
+    module m(input a);
+      wire [7:0] bus;
+      assign out = bus[3] + bus[7:0] + 42;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 2
+    _w0, a0 = m.contents
+    # check assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "out"
+
+    # check rhs expression
+    bin_op1 = a0.rhs
+    assert isinstance(bin_op1, BinaryOp)
+    assert bin_op1.op == "+"
+    bin_op2 = bin_op1.left
+    assert isinstance(bin_op2, BinaryOp)
+    assert bin_op2.op == "+"
+
+    # check first term: bus[3]
+    indexed1 = bin_op2.left
+    assert isinstance(indexed1, Indexed)
+    assert indexed1.base.name == "bus"
+    assert isinstance(indexed1.index, Index)
+    print(indexed1.index)
+    assert indexed1.index.index == "3"
+    assert indexed1.range is None
+
+    # check second term: bus[7:0]
+    indexed2 = bin_op2.right
+    assert isinstance(indexed2, Indexed)
+    assert indexed2.base.name == "bus"
+    assert indexed2.index is None
+    assert isinstance(indexed2.range, Range)
+    assert indexed2.range.msb == 7 and indexed2.range.lsb == 0
+
+    # check third term: 42
+    number = bin_op1.right
+    assert isinstance(number, Number)
+    assert number.value == "42"
+
+
 # ---------- ensure failures  ----------
 def test_port_error_unrecognized_form_raises():
     bad_src = "module m(output unknown_keyword out); endmodule"
@@ -478,4 +524,4 @@ def test_missing_ports_is_error():
 
 
 if __name__ == "__main__":
-    test_expression_precedence()
+    test_indexing_identifiers()
