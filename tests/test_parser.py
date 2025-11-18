@@ -283,6 +283,7 @@ def test_add_expression():
     assert isinstance(a1.rhs, Identifier)
     assert a1.rhs.name == "temp_sum"
 
+
 def test_sub_expression():
     src = """
     module m(input [3:0] c, input [3:0] d, output [4:0] diff);
@@ -313,6 +314,7 @@ def test_sub_expression():
     assert a1.lhs.name == "diff"
     assert isinstance(a1.rhs, Identifier)
     assert a1.rhs.name == "temp_diff"
+
 
 def test_mul_expression():
     src = """
@@ -377,6 +379,7 @@ def test_div_expression():
     assert isinstance(a1.rhs, Identifier)
     assert a1.rhs.name == "temp_quot"
 
+
 def test_complex_expression():
     src = """
     module m(input [3:0] a, input [3:0] b, input [3:0] c, output [5:0] result);
@@ -386,7 +389,6 @@ def test_complex_expression():
     endmodule
     """
     m = parse_single_module(src)
-    import pprint; pprint.pprint(m)
     assert len(m.contents) == 3
     _w0, a0, a1 = m.contents
 
@@ -421,6 +423,7 @@ def test_complex_expression():
     assert isinstance(a1.rhs, Identifier)
     assert a1.rhs.name == "temp_result"
 
+
 def test_expression_precedence():
     src = """
     module m(input a, input b, input c, input d, input e, input f, input g, input h);
@@ -428,7 +431,6 @@ def test_expression_precedence():
     endmodule
     """
     m = parse_single_module(src)
-    print(m)
     assert len(m.contents) == 1
     expr = m.contents[0].rhs
     # top level should be '||'
@@ -550,6 +552,7 @@ def test_instance_with_params_parsing():
     assert len(inst2.connections) == 2
     assert "in" in map(lambda x: x.port_name, inst2.connections)
     assert "out" in map(lambda x: x.port_name, inst2.connections)
+
 
 # ---------- ensure failures  ----------
 def test_port_error_unrecognized_form_raises():
