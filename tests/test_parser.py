@@ -491,7 +491,6 @@ def test_indexing_identifiers():
     assert isinstance(indexed1, Indexed)
     assert indexed1.base.name == "bus"
     assert isinstance(indexed1.index, Index)
-    print(indexed1.index)
     assert indexed1.index.index == "3"
     assert indexed1.range is None
 
@@ -509,6 +508,49 @@ def test_indexing_identifiers():
     assert number.value == "42"
 
 
+def test_instance_parsing():
+    src = """
+    module m(input a, output b);
+      wire w;
+      my_module inst1 (.in(a), .out(w));
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 2
+    _w0, inst1 = m.contents
+
+    # check instantiation
+    assert isinstance(inst1, Instance)
+    assert inst1.module_name == "my_module"
+    assert inst1.instance_name == "inst1"
+    assert len(inst1.params) == 0
+    assert len(inst1.connections) == 2
+    assert "in" in map(lambda x: x.port_name, inst1.connections)
+    assert "out" in map(lambda x: x.port_name, inst1.connections)
+
+
+def test_instance_with_params_parsing():
+    src = """
+    module m(input a, output b);
+      my_module #(.WIDTH(8), .DEPTH(16)) inst2 (.in(a), .out(b));
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 1
+    inst2 = m.contents[0]
+
+    # check instantiation
+    assert isinstance(inst2, Instance)
+    assert inst2.module_name == "my_module"
+    assert inst2.instance_name == "inst2"
+    assert len(inst2.params) == 2
+    param_names = [p.name for p in inst2.params]
+    assert "WIDTH" in param_names
+    assert "DEPTH" in param_names
+    assert len(inst2.connections) == 2
+    assert "in" in map(lambda x: x.port_name, inst2.connections)
+    assert "out" in map(lambda x: x.port_name, inst2.connections)
+
 # ---------- ensure failures  ----------
 def test_port_error_unrecognized_form_raises():
     bad_src = "module m(output unknown_keyword out); endmodule"
@@ -524,4 +566,4 @@ def test_missing_ports_is_error():
 
 
 if __name__ == "__main__":
-    test_indexing_identifiers()
+    test_instance_with_params_parsing()

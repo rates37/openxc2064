@@ -189,23 +189,17 @@ class ASTBuilder(Transformer):
     def connection_list(self, items: list) -> list[Connection]:
         return list(items)
 
-    def instance(self, items: list) -> Instance:  # todo: check this logic carefully
-        module_name = None
-        params: list[Param] = []
-        instance_name = None
-        connections: list[Connection] = []
+    def instance(self, items: list) -> Instance:
+        module_name = items[0]
+        idx = 1
+        params = []
+        if isinstance(items[idx], list):
+            params = items[idx]
+        idx += 1
+        instance_name = items[idx]
+        idx += 1
 
-        str_items = [it for it in items if isinstance(it, str)]
-        list_items = [it for it in items if isinstance(it, list)]
-
-        if str_items:
-            module_name = str_items[0]
-        if len(str_items) >= 2:
-            instance_name = str_items[1]
-        if list_items:
-            connections = list_items[-1]
-            if len(list_items) > 1:
-                params = list_items[0]
+        connections = items[idx]
 
         return Instance(
             module_name=module_name,
@@ -213,6 +207,12 @@ class ASTBuilder(Transformer):
             instance_name=instance_name,
             connections=connections,
         )
+
+    def module_name(self, items: list) -> str:
+        return items[0]
+
+    def module_instance_name(self, items: list) -> str:
+        return items[0]
 
     def sens_posedge(self, items: list) -> tuple[str, Identifier]:
         return ("posedge", items[0])
