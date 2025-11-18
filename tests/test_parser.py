@@ -554,6 +554,137 @@ def test_instance_with_params_parsing():
     assert "out" in map(lambda x: x.port_name, inst2.connections)
 
 
+# ---------- check combinational always blocks  ----------
+def test_always_comb_block_parsing():
+    src = """
+    module m(input a, input b, output reg out);
+      always:comb begin
+        if (a && b) begin
+          out = 1;
+        end else begin
+          out = 0;
+        end
+      end
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 1
+
+    always_comb = m.contents[0]
+    assert isinstance(always_comb, AlwaysComb)
+    # check block statement
+    stmt = always_comb.stmt
+    assert isinstance(stmt, BlockStmt)
+    assert len(stmt.statements) == 1
+    if_stmt = stmt.statements[0]
+    assert isinstance(if_stmt, IfStmt)
+
+    # check condition
+    condition = if_stmt.condition
+    assert isinstance(condition, BinaryOp)
+    assert condition.op == "&&"
+
+    # check then block
+    then_stmts = if_stmt.then_stmts
+    assert isinstance(then_stmts, BlockStmt)
+    assert len(then_stmts.statements) == 1
+    then_assign = then_stmts.statements[0]
+    assert isinstance(then_assign, ProcAssignStmt)
+    assert then_assign.op == "="
+
+    # check else block:
+    else_stmts = if_stmt.else_stmts
+    assert isinstance(else_stmts, BlockStmt)
+    assert len(else_stmts.statements) == 1
+    else_assign = else_stmts.statements[0]
+    assert isinstance(else_assign, ProcAssignStmt)
+    assert else_assign.op == "="
+
+
+def test_always_comb_single_statement_parsing():
+    src = """
+    module m(input a, input b, output reg out);
+      always:comb
+        out = a || b;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 1
+
+    always_comb = m.contents[0]
+    assert isinstance(always_comb, AlwaysComb)
+    # check proc assign statement
+    stmt = always_comb.stmt
+    assert isinstance(stmt, ProcAssignStmt)
+    assert stmt.op == "="
+    # check rhs expression
+    expr = stmt.expr
+    assert isinstance(expr, BinaryOp)
+    assert expr.op == "||"
+
+
+def test_always_comb_nested_if_parsing():
+    src = """
+    module m(input a, input b, input c, output reg out);
+      always:comb begin
+        if (a) begin
+          if (b) begin
+            out = 1;
+          end else begin
+            out = 0;
+          end
+        end else begin
+          out = c;
+        end
+        end
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 1
+    always_comb = m.contents[0]
+    assert isinstance(always_comb, AlwaysComb)
+
+    # check block statement
+    stmt = always_comb.stmt
+    assert isinstance(stmt, BlockStmt)
+    assert len(stmt.statements) == 1
+    outer_if = stmt.statements[0]
+    assert isinstance(outer_if, IfStmt)
+
+    # check outer condition
+    outer_condition = outer_if.condition
+    assert isinstance(outer_condition, Identifier)
+    assert outer_condition.name == "a"
+
+    # check outer then block
+    outer_then_stmts = outer_if.then_stmts
+    assert isinstance(outer_then_stmts, BlockStmt)
+    assert len(outer_then_stmts.statements) == 1
+    inner_if = outer_then_stmts.statements[0]
+    assert isinstance(inner_if, IfStmt)
+
+    # check inner condition
+    inner_condition = inner_if.condition
+    assert isinstance(inner_condition, Identifier)
+    assert inner_condition.name == "b"
+
+    # check inner then block
+    inner_then_stmts = inner_if.then_stmts
+    assert isinstance(inner_then_stmts, BlockStmt)
+    assert len(inner_then_stmts.statements) == 1
+    inner_then_assign = inner_then_stmts.statements[0]
+    assert isinstance(inner_then_assign, ProcAssignStmt)
+    assert inner_then_assign.op == "="
+
+    # check inner else block:
+    inner_else_stmts = inner_if.else_stmts
+    assert isinstance(inner_else_stmts, BlockStmt)
+    assert len(inner_else_stmts.statements) == 1
+    inner_else_assign = inner_else_stmts.statements[0]
+    assert isinstance(inner_else_assign, ProcAssignStmt)
+    assert inner_else_assign.op == "="
+
+
 # ---------- ensure failures  ----------
 def test_port_error_unrecognized_form_raises():
     bad_src = "module m(output unknown_keyword out); endmodule"
@@ -569,4 +700,4 @@ def test_missing_ports_is_error():
 
 
 if __name__ == "__main__":
-    test_instance_with_params_parsing()
+    test_always_comb_nested_if_parsing()

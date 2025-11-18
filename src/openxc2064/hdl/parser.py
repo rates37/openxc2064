@@ -244,6 +244,9 @@ class ASTBuilder(Transformer):
     def start(self, items: list) -> list[Module]:
         return list(items)
 
+    def statement(self, items: list) -> Statement:
+        return items[0]
+
 
 def create_parser():
     return Lark(hdl_grammar, start="start", parser="lalr")
