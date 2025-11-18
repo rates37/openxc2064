@@ -224,6 +224,245 @@ def test_assign_to_ident_statement():
     assert a1.rhs.name == "a"
 
 
+def test_not_expression():
+    src = """
+    module m(input a, output b);
+      wire not_a;
+      assign not_a = !a;
+      assign b = not_a;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 3
+    _w0, a0, a1 = m.contents
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "not_a"
+    assert isinstance(a0.rhs, UnaryOp)
+    un_op = a0.rhs
+    assert un_op.op == "!"
+    assert isinstance(un_op.operand, Identifier)
+    assert un_op.operand.name == "a"
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Identifier)
+    assert a1.lhs.name == "b"
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "not_a"
+
+
+def test_add_expression():
+    src = """
+    module m(input [3:0] a, input [3:0] b, output [4:0] sum);
+      wire [4:0] temp_sum;
+      assign temp_sum = a + b;
+      assign sum = temp_sum;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 3
+    _w0, a0, a1 = m.contents
+
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "temp_sum"
+    assert isinstance(a0.rhs, BinaryOp)
+    bin_op = a0.rhs
+    assert bin_op.op == "+"
+    assert isinstance(bin_op.left, Identifier)
+    assert bin_op.left.name == "a"
+    assert isinstance(bin_op.right, Identifier)
+    assert bin_op.right.name == "b"
+
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Identifier)
+    assert a1.lhs.name == "sum"
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "temp_sum"
+
+def test_sub_expression():
+    src = """
+    module m(input [3:0] c, input [3:0] d, output [4:0] diff);
+      wire [4:0] temp_diff;
+      assign temp_diff = c - d;
+      assign diff = temp_diff;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 3
+    _w0, a0, a1 = m.contents
+
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "temp_diff"
+    assert isinstance(a0.rhs, BinaryOp)
+    bin_op = a0.rhs
+    assert bin_op.op == "-"
+    assert isinstance(bin_op.left, Identifier)
+    assert bin_op.left.name == "c"
+    assert isinstance(bin_op.right, Identifier)
+    assert bin_op.right.name == "d"
+
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Identifier)
+    assert a1.lhs.name == "diff"
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "temp_diff"
+
+def test_mul_expression():
+    src = """
+    module m(input [3:0] x, input [3:0] y, output [7:0] prod);
+      wire [7:0] temp_prod;
+      assign temp_prod = x * y;
+      assign prod = temp_prod;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 3
+    _w0, a0, a1 = m.contents
+
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "temp_prod"
+    assert isinstance(a0.rhs, BinaryOp)
+    bin_op = a0.rhs
+    assert bin_op.op == "*"
+    assert isinstance(bin_op.left, Identifier)
+    assert bin_op.left.name == "x"
+    assert isinstance(bin_op.right, Identifier)
+    assert bin_op.right.name == "y"
+
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Identifier)
+    assert a1.lhs.name == "prod"
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "temp_prod"
+
+
+def test_div_expression():
+    src = """
+    module m(input [7:0] p, input [7:0] q, output [7:0] quot);
+      wire [7:0] temp_quot;
+      assign temp_quot = p / q;
+      assign quot = temp_quot;
+    endmodule
+    """
+    m = parse_single_module(src)
+    assert len(m.contents) == 3
+    _w0, a0, a1 = m.contents
+
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "temp_quot"
+    assert isinstance(a0.rhs, BinaryOp)
+    bin_op = a0.rhs
+    assert bin_op.op == "/"
+    assert isinstance(bin_op.left, Identifier)
+    assert bin_op.left.name == "p"
+    assert isinstance(bin_op.right, Identifier)
+    assert bin_op.right.name == "q"
+
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Identifier)
+    assert a1.lhs.name == "quot"
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "temp_quot"
+
+def test_complex_expression():
+    src = """
+    module m(input [3:0] a, input [3:0] b, input [3:0] c, output [5:0] result);
+      wire [5:0] temp_result;
+      assign temp_result = (a + b) * c - 4;
+      assign result = temp_result;
+    endmodule
+    """
+    m = parse_single_module(src)
+    import pprint; pprint.pprint(m)
+    assert len(m.contents) == 3
+    _w0, a0, a1 = m.contents
+
+    # check first assign statement
+    assert isinstance(a0, AssignStmt)
+    assert isinstance(a0.lhs, Identifier)
+    assert a0.lhs.name == "temp_result"
+    assert isinstance(a0.rhs, BinaryOp)
+    bin_op_sub = a0.rhs
+    assert bin_op_sub.op == "-"
+    assert isinstance(bin_op_sub.right, Number)
+    assert bin_op_sub.right.value == "4"
+
+    bin_op_mul = bin_op_sub.left
+    assert isinstance(bin_op_mul, BinaryOp)
+    assert bin_op_mul.op == "*"
+    assert isinstance(bin_op_mul.right, Identifier)
+    assert bin_op_mul.right.name == "c"
+
+    paren_expr = bin_op_mul.left
+    assert isinstance(paren_expr, BinaryOp)
+    assert paren_expr.op == "+"
+    assert isinstance(paren_expr.left, Identifier)
+    assert paren_expr.left.name == "a"
+    assert isinstance(paren_expr.right, Identifier)
+    assert paren_expr.right.name == "b"
+
+    # check second assign statement
+    assert isinstance(a1, AssignStmt)
+    assert isinstance(a1.lhs, Identifier)
+    assert a1.lhs.name == "result"
+    assert isinstance(a1.rhs, Identifier)
+    assert a1.rhs.name == "temp_result"
+
+def test_expression_precedence():
+    src = """
+    module m(input a, input b, input c, input d, input e, input f, input g, input h);
+      assign out = a + b * (c - d) || e && !f == g;
+    endmodule
+    """
+    m = parse_single_module(src)
+    print(m)
+    assert len(m.contents) == 1
+    expr = m.contents[0].rhs
+    # top level should be '||'
+    assert isinstance(expr, BinaryOp)
+    assert expr.op == "||"
+    # left side should be binop for addition:
+    left = expr.left
+    assert isinstance(left, BinaryOp)
+    assert left.op == "+"
+    # left.right should be binop for multiplication:
+    mult = left.right
+    assert isinstance(mult, BinaryOp)
+    assert mult.op == "*"
+    # mult.right should be paren expression:
+    paren = mult.right
+    assert isinstance(paren, BinaryOp)
+    assert paren.op == "-"
+    # right side should be binop for '&&'
+    right = expr.right
+    assert isinstance(right, BinaryOp)
+    assert right.op == "&&"
+    # right.right should be binop for '=='
+    eq = right.right
+    assert isinstance(eq, BinaryOp)
+    assert eq.op == "=="
+    # eq.right should be identifier 'g'
+    assert isinstance(eq.right, Identifier)
+    assert eq.right.name == "g"
+    # eq.left should be unary op '!'
+    not_f = eq.left
+    assert isinstance(not_f, UnaryOp)
+    assert not_f.op == "!"
+
+
 # ---------- ensure failures  ----------
 def test_port_error_unrecognized_form_raises():
     bad_src = "module m(output unknown_keyword out); endmodule"
@@ -239,4 +478,4 @@ def test_missing_ports_is_error():
 
 
 if __name__ == "__main__":
-    test_assign_to_ident_statement()
+    test_expression_precedence()

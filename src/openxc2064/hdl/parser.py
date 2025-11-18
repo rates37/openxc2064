@@ -92,7 +92,7 @@ class ASTBuilder(Transformer):
         op = str(op_tok) if isinstance(op_tok, Token) else op_tok
         return UnaryOp(op=op, operand=operand)
 
-    def binary_op(self, items: list) -> BinaryOp:
+    def bin_op(self, items: list) -> BinaryOp:
         if len(items) == 3:
             left, op_tok, right = items
             op = str(op_tok) if isinstance(op_tok, Token) else op_tok
