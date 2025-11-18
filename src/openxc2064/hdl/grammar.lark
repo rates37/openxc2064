@@ -16,7 +16,7 @@ DIRECTION: "input" | "output" | "inout"
 
 
 // Module body:
-module_contents: (wire_decl | reg_decl | assign_stmt | instance)*
+module_contents: (wire_decl | reg_decl | assign_stmt | instance | always_comb | always_seq)*
 
 
 // wire / reg declarations:
@@ -41,7 +41,7 @@ PROC_OP: "=" | "<=" // todo: should we just always support "=" and chose based o
 // body of always blocks:
 statement: proc_assign
          | if_stmt
-         | "begin" statement+ "end"  -> block
+         | "begin" statement* "end"  -> block
     
 if_stmt: "if" "(" expression ")" statement ["else" statement]
 

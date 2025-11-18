@@ -4,8 +4,9 @@
   "python.testing.pytestArgs": ["tests"],
 "python.testing.pytestEnabled": true,
 "cSpell.words": [
-    "bitstream",
-    "netlist",
-    "openxc"
+  "bitstream",
+  "combinational",
+  "netlist",
+  "openxc"
 ]
 }
