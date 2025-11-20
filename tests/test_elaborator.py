@@ -605,10 +605,29 @@ def test_instance_output_driving_constant():
         ]
     )
     elaborator = HDLElaborator([child, top])
-    with pytest.raises(HDLValidationError) as e:  # , match="Cannot connect expression to output port")
+    with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
     
 
 
+def test_two_drivers_for_signal():
+    # test where two separate assign statements drive a single wire
+    parsed_modules = [
+        Module(
+            name="mod",
+            ports=[Port(Direction.OUTPUT, name="out")],
+            contents=[
+                WireDecl("w"),
+                WireDecl("x"),
+                AssignStmt(lhs=Identifier("out"), rhs=Identifier("w")),
+                AssignStmt(lhs=Identifier("out"), rhs=Identifier("x"))
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+
+
 if __name__ == "__main__":
-    test_instance_output_driving_reg()
+    test_two_drivers_for_signal()
