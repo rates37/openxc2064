@@ -1,0 +1,5 @@
+{
+  "name": "SimuFrame - React Simulator Template",
+  "description": "A high-performance, extensible React template for building 2D visual simulators using HTML5 Canvas and Gemini AI for scenario generation.",
+  "requestFramePermissions": []
+}
