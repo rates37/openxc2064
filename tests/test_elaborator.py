@@ -61,8 +61,10 @@ def test_recursive_module_instantiation():
                     module_name="top_module",
                     instance_name="child1",
                     connections=[
-                        Connection(port_name="in_child", expr=Identifier(name="in1")),
-                        Connection(port_name="out_child", expr=Identifier(name="out1")),
+                        Connection(port_name="in_child",
+                                   expr=Identifier(name="in1")),
+                        Connection(port_name="out_child",
+                                   expr=Identifier(name="out1")),
                     ],
                     params=[],
                 )
@@ -71,8 +73,9 @@ def test_recursive_module_instantiation():
     ]
     elaborator = HDLElaborator(modules=parsed_modules)
 
-    with pytest.raises(HDLValidationError):
+    with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
+        assert "top_module" in str(e.value)
 
 
 def test_module_pair_binary_recursion():
@@ -89,8 +92,10 @@ def test_module_pair_binary_recursion():
                     module_name="module_b",
                     instance_name="inst_b",
                     connections=[
-                        Connection(port_name="in_b", expr=Identifier(name="in_a")),
-                        Connection(port_name="out_b", expr=Identifier(name="out_a")),
+                        Connection(port_name="in_b",
+                                   expr=Identifier(name="in_a")),
+                        Connection(port_name="out_b",
+                                   expr=Identifier(name="out_a")),
                     ],
                     params=[],
                 )
@@ -107,8 +112,10 @@ def test_module_pair_binary_recursion():
                     module_name="module_a",
                     instance_name="inst_a",
                     connections=[
-                        Connection(port_name="in_a", expr=Identifier(name="in_b")),
-                        Connection(port_name="out_a", expr=Identifier(name="out_b")),
+                        Connection(port_name="in_a",
+                                   expr=Identifier(name="in_b")),
+                        Connection(port_name="out_a",
+                                   expr=Identifier(name="out_b")),
                     ],
                     params=[],
                 )
@@ -117,5 +124,114 @@ def test_module_pair_binary_recursion():
     ]
     elaborator = HDLElaborator(modules=parsed_modules)
 
-    with pytest.raises(HDLValidationError):
+    with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
+        assert "module_a" in str(e.value)
+        assert "module_b" in str(e.value)
+
+
+def test_duplicate_input_port():
+    parsed_modules = [
+        Module(
+            name="dup_input_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="in1", direction=Direction.INPUT,
+                     is_reg=False),  # duplicate
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+        assert ("in1" in str(e.value))
+
+
+def test_duplicate_output_port():
+    parsed_modules = [
+        Module(
+            name="dup_output_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT,
+                     is_reg=False),  # duplicate
+            ],
+            contents=[],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+        assert ("out1" in str(e.value))
+
+
+def test_duplicate_wire_declaration():
+    parsed_modules = [
+        Module(
+            name="dup_wire_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[
+                WireDecl(name="internal_wire"),
+                WireDecl(name="internal_wire"),  # duplicate
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError)as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+        assert ("internal_wire" in str(e.value))
+
+
+def test_duplicate_reg_declaration():
+    parsed_modules = [
+        Module(
+            name="dup_reg_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[
+                RegDecl(name="internal_reg"),
+                RegDecl(name="internal_reg"),  # duplicate
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+        assert ("internal_reg" in str(e.value))
+
+
+def test_wire_named_same_as_port():
+    parsed_modules = [
+        Module(
+            name="wire_port_conflict_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[
+                WireDecl(name="in1"),  # conflicts with port name
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+        assert ("in1" in str(e.value))

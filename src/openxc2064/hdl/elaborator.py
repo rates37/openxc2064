@@ -43,6 +43,13 @@ class HDLElaborator:
         self.current_module = ""
         self.symbol_table: dict[str, SymbolInfo] = {}
 
+    def validate(self) -> None:
+        # iterates over all modules and validates them
+        for module_name, module in self.modules.items():
+            if module_name not in self.validated_modules:
+                self.elaborate(module)
+                self.validated_modules.add(module_name)
+
     def elaborate(self, module: Module) -> None:
         # validate a single module
 
@@ -56,11 +63,19 @@ class HDLElaborator:
 
         self.elaboration_stack.add(module.name)
         self.current_module = module.name
+        self.symbol_table = {}
 
         try:
-            # Validate module contents here
+            # collect symbols from ports:
+            self._collect_symbols(module)
+            # Validate module contents
             for content in module.contents:
-                if isinstance(content, Instance):
+                # skip wires and registers as they are validated when collecting symbols
+                if isinstance(content, WireDecl):
+                    continue
+                elif isinstance(content, RegDecl):
+                    continue
+                elif isinstance(content, Instance):
                     if content.module_name not in self.modules:
                         raise HDLValidationError(
                             f"Module '{content.module_name}' instantiated in '{self.current_module}' is not defined."
@@ -68,7 +83,7 @@ class HDLElaborator:
                     # Recursively elaborate the instantiated module
                     self.elaborate(self.modules[content.module_name])
                 else:
-                    pass  #! todo: other cases here
+                    pass  # ! todo: other cases here
                 self.validated_modules.add(module.name)
         except HDLValidationError as e:
             raise e
@@ -77,12 +92,44 @@ class HDLElaborator:
 
         pass
 
-    def validate(self) -> None:
-        for module_name, module in self.modules.items():
-            if module_name not in self.validated_modules:
-                self.elaborate(module)
-                self.validated_modules.add(module_name)
+    def _collect_symbols(self, module: Module) -> None:
+        # collect symbols from ports
+        for port in module.ports:
+            if port.name in self.symbol_table:
+                raise HDLValidationError(
+                    f"Duplicate port name '{port.name}' declared in module '{module.name}'."
+                )
+            port_type = (
+                "port_input"
+                if port.direction == Direction.INPUT
+                else "port_output"
+                if port.direction == Direction.OUTPUT
+                else "port_inout"
+            )
+            self.symbol_table[port.name] = SymbolInfo(
+                name=port.name, type=port_type, direction=port.direction
+            )
+
+        # collect symbols from wire and reg declarations
+        for content in module.contents:
+            if isinstance(content, WireDecl):
+                if content.name in self.symbol_table:
+                    raise HDLValidationError(
+                        f"Duplicate wire name '{content.name}' in module '{module.name}'."
+                    )
+                self.symbol_table[content.name] = SymbolInfo(
+                    name=content.name, type="wire"
+                )
+            elif isinstance(content, RegDecl):
+                if content.name in self.symbol_table:
+                    raise HDLValidationError(
+                        f"Duplicate register name '{content.name}' in module '{module.name}'."
+                    )
+                self.symbol_table[content.name] = SymbolInfo(
+                    name=content.name, type="reg"
+                )
 
 
 if __name__ == "__main__":
-    raise HDLValidationError("This module is not intended to be run as a script.")
+    raise HDLValidationError(
+        "This module is not intended to be run as a script.")
