@@ -61,8 +61,10 @@ def test_recursive_module_instantiation():
                     module_name="top_module",
                     instance_name="child1",
                     connections=[
-                        Connection(port_name="in_child", expr=Identifier(name="in1")),
-                        Connection(port_name="out_child", expr=Identifier(name="out1")),
+                        Connection(port_name="in_child",
+                                   expr=Identifier(name="in1")),
+                        Connection(port_name="out_child",
+                                   expr=Identifier(name="out1")),
                     ],
                     params=[],
                 )
@@ -71,8 +73,9 @@ def test_recursive_module_instantiation():
     ]
     elaborator = HDLElaborator(modules=parsed_modules)
 
-    with pytest.raises(HDLValidationError):
+    with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
+    assert "top_module" in str(e.value)
 
 
 def test_module_pair_binary_recursion():
@@ -89,8 +92,10 @@ def test_module_pair_binary_recursion():
                     module_name="module_b",
                     instance_name="inst_b",
                     connections=[
-                        Connection(port_name="in_b", expr=Identifier(name="in_a")),
-                        Connection(port_name="out_b", expr=Identifier(name="out_a")),
+                        Connection(port_name="in_b",
+                                   expr=Identifier(name="in_a")),
+                        Connection(port_name="out_b",
+                                   expr=Identifier(name="out_a")),
                     ],
                     params=[],
                 )
@@ -107,8 +112,10 @@ def test_module_pair_binary_recursion():
                     module_name="module_a",
                     instance_name="inst_a",
                     connections=[
-                        Connection(port_name="in_a", expr=Identifier(name="in_b")),
-                        Connection(port_name="out_a", expr=Identifier(name="out_b")),
+                        Connection(port_name="in_a",
+                                   expr=Identifier(name="in_b")),
+                        Connection(port_name="out_a",
+                                   expr=Identifier(name="out_b")),
                     ],
                     params=[],
                 )
@@ -117,5 +124,317 @@ def test_module_pair_binary_recursion():
     ]
     elaborator = HDLElaborator(modules=parsed_modules)
 
-    with pytest.raises(HDLValidationError):
+    with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
+    assert "module_a" in str(e.value)
+    assert "module_b" in str(e.value)
+
+
+def test_duplicate_input_port():
+    parsed_modules = [
+        Module(
+            name="dup_input_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="in1", direction=Direction.INPUT,
+                     is_reg=False),  # duplicate
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+    assert ("in1" in str(e.value))
+
+
+def test_duplicate_output_port():
+    parsed_modules = [
+        Module(
+            name="dup_output_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT,
+                     is_reg=False),  # duplicate
+            ],
+            contents=[],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+    assert ("out1" in str(e.value))
+
+
+def test_duplicate_wire_declaration():
+    parsed_modules = [
+        Module(
+            name="dup_wire_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[
+                WireDecl(name="internal_wire"),
+                WireDecl(name="internal_wire"),  # duplicate
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError)as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+    assert ("internal_wire" in str(e.value))
+
+
+def test_duplicate_reg_declaration():
+    parsed_modules = [
+        Module(
+            name="dup_reg_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[
+                RegDecl(name="internal_reg"),
+                RegDecl(name="internal_reg"),  # duplicate
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+    assert ("internal_reg" in str(e.value))
+
+
+def test_wire_named_same_as_port():
+    parsed_modules = [
+        Module(
+            name="wire_port_conflict_module",
+            ports=[
+                Port(name="in1", direction=Direction.INPUT, is_reg=False),
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
+            ],
+            contents=[
+                WireDecl(name="in1"),  # conflicts with port name
+            ],
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+        # check error message contains the conflicting name
+    assert ("in1" in str(e.value))
+
+
+def test_assign_undeclared_lhs():
+    parsed_modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("a"),
+                AssignStmt(lhs=Identifier("b"), rhs=Identifier("a"))
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'b'" in str(e.value))
+
+
+def test_assign_to_reg():
+    parsed_modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                RegDecl("r"),
+                AssignStmt(lhs=Identifier("r"), rhs=Identifier("w"))
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'r'" in str(e.value))
+
+
+def test_assign_to_output():
+    parsed_modules = [
+        Module(
+            name="mod",
+            ports=[Port(Direction.OUTPUT, name="out")],
+            contents=[
+                WireDecl("w"),
+                AssignStmt(lhs=Identifier("out"), rhs=Identifier("w"))
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+    elaborator.validate()  # should not raise an error
+
+
+def test_assign_to_input():
+    parsed_modules = [
+        Module(
+            name="mod",
+            ports=[Port(Direction.INPUT, name="input_assign")],
+            contents=[
+                WireDecl("w"),
+                AssignStmt(lhs=Identifier("input_assign"), rhs=Identifier("w"))
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules=parsed_modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'input_assign'" in str(e.value))
+
+
+def test_undeclared_identifier():
+    modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                AssignStmt(lhs=Identifier("w"),
+                           rhs=Identifier("undefined_signal"))
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'undefined_signal'" in str(e.value))
+
+
+def test_undeclared_indexed_identifier():
+    modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                AssignStmt(
+                    lhs=Identifier("w"),
+                    rhs=Indexed(base=Identifier("missing"), index=Index("0"))
+                )
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'missing'" in str(e.value))
+
+
+def test_undeclared_identifier_unary_op():
+    modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                AssignStmt(
+                    lhs=Identifier("w"),
+                    rhs=UnaryOp(op="!", operand=Identifier("missing"))
+                )
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'missing'" in str(e.value))
+
+
+def test_undeclared_identifier_binary_op():
+    modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                WireDecl("known"),
+                AssignStmt(
+                    lhs=Identifier("w"),
+                    rhs=BinaryOp(left=Identifier("known"), op="+",
+                                 right=Identifier("missing"))
+                )
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'missing'" in str(e.value))
+
+
+def test_undeclared_indexed_unary_op():
+    modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                AssignStmt(
+                    lhs=Identifier("w"),
+                    rhs=UnaryOp(op="!", operand=Indexed(
+                        base=Identifier("missing_arr"), index=Index("1")))
+                )
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("'missing_arr'" in str(e.value))
+
+
+def test_undeclared_indexed_binary_op():
+    modules = [
+        Module(
+            name="mod",
+            ports=[],
+            contents=[
+                WireDecl("w"),
+                WireDecl("a"),
+                AssignStmt(
+                    lhs=Identifier("w"),
+                    rhs=BinaryOp(
+                        left=Identifier("a"),
+                        op="&&",
+                        right=Indexed(base=Identifier(
+                            "missing_arr"), index=Index("0"))
+                    )
+                )
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+
+    assert ("'missing_arr'" in str(e.value))
+
+
+if __name__ == "__main__":
+    test_assign_to_input()

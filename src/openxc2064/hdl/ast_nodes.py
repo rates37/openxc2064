@@ -147,3 +147,4 @@ class Module:
     name: str
     ports: list[Port]
     contents: list[WireDecl | RegDecl | AssignStmt | Instance | AlwaysComb | AlwaysSeq]
+    # todo: define parameters here as well
