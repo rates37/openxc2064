@@ -1,0 +1,11 @@
+.Node {
+    width: 5px;
+    height: 5px;
+    border-style: solid;
+    border-width: 2px;
+    position: absolute;
+    border-color: black;
+    background-color: white;
+    z-index: 10;
+    
+}
