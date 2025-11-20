@@ -186,7 +186,7 @@ class HDLElaborator:
 
     def _validate_always_seq(self, block: AlwaysSeq) -> None:
         sens_name = self._get_target_name(block.signal)
-        if sens_name not in self._get_target_name(block.signal):
+        if sens_name not in self.symbol_table:
             raise HDLValidationError(
                 f"Undeclared signal used in sensitivity list: '{sens_name}'")
 
