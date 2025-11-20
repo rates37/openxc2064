@@ -77,14 +77,15 @@ class HDLElaborator:
                 elif isinstance(content, RegDecl):
                     continue
                 elif isinstance(content, Instance):
-                    if content.module_name not in self.modules:
-                        raise HDLValidationError(
-                            f"Module '{content.module_name}' instantiated in '{self.current_module}' is not defined."
-                        )
-                    # Recursively elaborate the instantiated module
-                    self.elaborate(self.modules[content.module_name])
+                    self.elaborate(self.modules[content.module_name]) # recursively validate instantiated module FIRST
+                    self._validate_instance(content)
+                    pass
                 elif isinstance(content, AssignStmt):
                     self._validate_assign(content)
+                elif isinstance(content, AlwaysComb):
+                    self._validate_always_comb(content)
+                elif isinstance(content, AlwaysSeq):
+                    self._validate_always_seq(content)
                 else:
                     pass  # ! todo: other cases here
                 self.validated_modules.add(module.name)
@@ -177,6 +178,88 @@ class HDLElaborator:
 
         elif isinstance(expr, ParenExpr):
             self._validate_expression(expr.expr)
+
+    def _validate_always_comb(self, block: AlwaysComb) -> None:
+        self._validate_statement(block.stmt, allow_reg_assignment=True)
+
+    def _validate_always_seq(self, block: AlwaysSeq) -> None:
+        sens_name = self._get_target_name(block.signal)
+        if sens_name not in self._get_target_name(block.signal):
+            raise HDLValidationError(
+                f"Undeclared signal used in sensitivity list: '{sens_name}'")
+
+        self._validate_statement(block.statements, allow_reg_assignment=True)
+
+    def _validate_statement(self, stmt: Statement, allow_reg_assignment: bool = False) -> None:
+        # recursive statement validator:
+
+        if isinstance(stmt, BlockStmt):
+            for s in stmt.statements:
+                self._validate_statement(s, allow_reg_assignment)
+
+        elif isinstance(stmt, IfStmt):
+            self._validate_expression(stmt.condition)
+            self._validate_statement(stmt.then_stmts, allow_reg_assignment)
+            if stmt.else_stmts:
+                self._validate_statement(stmt.else_stmts, allow_reg_assignment)
+
+        elif isinstance(stmt, ProcAssignStmt):
+            lhs_name = self._get_target_name(stmt.target)
+
+            if lhs_name not in self.symbol_table:
+                raise HDLValidationError(
+                    f"Undeclared signal '{lhs_name}' used in procedural assignment.")
+
+            sym = self.symbol_table[lhs_name]
+
+            if sym.direction and sym.direction == Direction.INPUT:
+                raise HDLValidationError(
+                    f"Procedural assignment to '{lhs_name}' is illegal because it is an input.")
+            if not sym.is_reg:
+                raise HDLValidationError(
+                    f"Procedural assignment to '{lhs_name}' is illegal. Target must be declared as a reg.")
+            self._validate_expression(stmt.expr)
+        pass
+
+    def _validate_instance(self, instance: Instance) -> None:
+        # check module exists in AST:
+        if instance.module_name not in self.modules:
+            raise HDLValidationError(
+                f"Unknown module type '{instance.module_name}' instantiated as '{instance.instance_name}'.")
+
+        target_module = self.modules[instance.module_name]
+
+        # todo: ensure module instance ID is unique
+
+        # validate connections:
+        target_ports = {port.name: port for port in target_module.ports}
+        connected_ports = set()
+
+        for connection in instance.connections:
+            if connection.port_name not in target_ports:
+                raise HDLValidationError(
+                    f"Port '{connection.port_name}' does not exist in module '{instance.module_name}'.")
+
+            connected_ports.add(connection.port_name)
+
+            # validate expression connected to the port:
+            self._validate_expression(connection.expr)
+
+            # check port direction is permitted:
+            target_port = target_ports[connection.port_name]
+
+            if target_port.direction == Direction.OUTPUT:
+                if not isinstance(connection.expr, (Identifier, Indexed)):
+                    raise HDLValidationError(
+                        f"Cannot connect expression to output port '{connection.port_name}' of instance '{instance.module_name}'.")
+
+                # check if driving reg with output port (illegal):
+                signal_name = self._get_target_name(connection.expr)
+                if signal_name in self.symbol_table:
+                    signal_info = self.symbol_table[signal_name]
+                    if signal_info.is_reg:
+                        raise HDLValidationError(
+                            f"Cannot drive register '{signal_name}' from instance output '{connection.port_name}'.")
 
     # util methods:
 
