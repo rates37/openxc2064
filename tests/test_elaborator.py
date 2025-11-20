@@ -523,5 +523,92 @@ def test_always_seq_undeclared_sensitivity():
     assert "clk_missing" in str(e.value)
 
 
+def test_instantiating_unknown_module():
+    # test instantiating a module that isn't declared
+    modules = [
+        Module(
+            name="top",
+            ports=[],
+            contents=[
+                Instance(
+                    module_name="missing_child",
+                    instance_name="u0",
+                    params=[],
+                    connections=[]
+                )
+            ]
+        )
+    ]
+    elaborator = HDLElaborator(modules)
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert ("missing_child" in str(e.value))
+
+
+def test_instance_port_mismatch():
+    # test connecting to a port that doesn't exist on the module
+    child = Module(name="child", ports=[], contents=[])
+    top = Module(
+        name="top",
+        ports=[],
+        contents=[
+            Instance(
+                module_name="child",
+                instance_name="u0",
+                params=[],
+                connections=[Connection(port_name="bad_port", expr=Number("1"))]
+            )
+        ]
+    )
+    elaborator = HDLElaborator([child, top])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert("bad_port" in str(e.value))
+
+
+
+def test_instance_output_driving_reg():
+    # test that output port of a module instance cannot drive a reg in the parent
+    child = Module(name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[])
+    top = Module(
+        name="top",
+        ports=[],
+        contents=[
+            RegDecl("r_val"),
+            Instance(
+                module_name="child",
+                instance_name="u0",
+                params=[],
+                connections=[Connection(port_name="out", expr=Identifier("r_val"))]
+            )
+        ]
+    )
+    elaborator = HDLElaborator([child, top])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert("r_val" in str(e.value))
+
+
+def test_instance_output_driving_constant():
+    # test that output port can't be connected to a constant number
+    child = Module(name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[])
+    top = Module(
+        name="top",
+        ports=[],
+        contents=[
+            Instance(
+                module_name="child",
+                instance_name="u0",
+                params=[],
+                connections=[Connection(port_name="out", expr=Number("1"))]
+            )
+        ]
+    )
+    elaborator = HDLElaborator([child, top])
+    with pytest.raises(HDLValidationError) as e:  # , match="Cannot connect expression to output port")
+        elaborator.validate()
+    
+
+
 if __name__ == "__main__":
-    test_always_seq_undeclared_sensitivity()
+    test_instance_output_driving_reg()

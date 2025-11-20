@@ -78,6 +78,8 @@ class HDLElaborator:
                     continue
                 elif isinstance(content, Instance):
                     # recursively validate instantiated module FIRST
+                    if content.module_name not in self.modules:
+                        raise HDLValidationError(f"Unknown module '{content.module_name}'.")
                     self.elaborate(self.modules[content.module_name])
                     self._validate_instance(content)
                     pass
