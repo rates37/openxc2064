@@ -235,3 +235,48 @@ def test_wire_named_same_as_port():
         elaborator.validate()
         # check error message contains the conflicting name
         assert ("in1" in str(e.value))
+
+
+def test_assign_undeclared_lhs():
+    # todo
+    pass
+
+
+def test_assign_to_reg():
+    # todo
+    pass
+
+
+def test_assign_to_output():
+    # todo
+    pass
+
+
+def test_undeclared_identifier():
+    # todo
+    pass
+
+
+def test_undeclared_indexed_identifier():
+    # todo
+    pass
+
+
+def test_undeclared_identifier_unary_op():
+    # todo
+    pass
+
+
+def test_undeclared_identifier_binary_op():
+    # todo
+    pass
+
+
+def test_undeclared_indexed_unary_op():
+    # todo
+    pass
+
+
+def test_undeclared_indexed_binary_op():
+    # todo
+    pass
