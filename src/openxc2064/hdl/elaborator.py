@@ -77,7 +77,8 @@ class HDLElaborator:
                 elif isinstance(content, RegDecl):
                     continue
                 elif isinstance(content, Instance):
-                    self.elaborate(self.modules[content.module_name]) # recursively validate instantiated module FIRST
+                    # recursively validate instantiated module FIRST
+                    self.elaborate(self.modules[content.module_name])
                     self._validate_instance(content)
                     pass
                 elif isinstance(content, AssignStmt):
@@ -105,7 +106,7 @@ class HDLElaborator:
                 )
             width = self._calculate_range_width(port.range)
             self.symbol_table[port.name] = SymbolInfo(
-                name=port.name, is_reg=port.is_reg, direction=port.direction.value, width=width
+                name=port.name, is_reg=port.is_reg, direction=port.direction, width=width
             )
 
         # collect symbols from wire and reg declarations
@@ -131,7 +132,6 @@ class HDLElaborator:
 
     def _validate_assign(self, stmt: AssignStmt) -> None:
         # validates an assign statement:
-
         # Check LHS is in known symbols:
         lhs_name = self._get_target_name(stmt.lhs)
         if lhs_name not in self.symbol_table:
@@ -139,11 +139,13 @@ class HDLElaborator:
                 f"Undeclared signal '{lhs_name}' in LHS of assignment.")
 
         symbol = self.symbol_table[lhs_name]
+        print(symbol, symbol.direction, Direction.INPUT,
+              symbol.direction == Direction.INPUT)
         # continuous assignments must target wires or (non-reg) output ports
         if symbol.is_reg:
             raise HDLValidationError(
                 f"Illegal continuous assignment to register '{lhs_name}'.")
-        elif symbol.direction == Direction.INPUT:
+        if symbol.direction == Direction.INPUT:
             raise HDLValidationError(
                 f"Illegal continuous assignment to input '{lhs_name}'")
 
