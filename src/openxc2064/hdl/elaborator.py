@@ -17,9 +17,9 @@ Things to check for during elaboration:
 [ ] Parameter overrides must match the parameter names in the module definition
 [ ] Connections must match the port names and widths in the module definition
 [ ] No duplicate instance names within the same module
-[ ] Types of connected signals must be compatible
-[ ] Check all signals (wires and reg) are declared before use
-[ ] Handle hierarchical module instantiations
+[x] Types of connected signals must be compatible
+[x] Check all signals (wires and reg) are declared before use
+[x] Handle hierarchical module instantiations
 """
 
 
@@ -43,6 +43,7 @@ class HDLElaborator:
         self.elaboration_stack = set()  # modules currently being validated
         self.current_module = ""
         self.symbol_table: dict[str, SymbolInfo] = {}
+        self.driven_signals = set()  # signals that have been driven per module
 
     def validate(self) -> None:
         # iterates over all modules and validates them
@@ -65,6 +66,9 @@ class HDLElaborator:
         self.elaboration_stack.add(module.name)
         self.current_module = module.name
         self.symbol_table = {}
+        self.driven_signals = (
+            set()
+        )  # clear set of driven signals when evaluating new module
 
         try:
             # collect symbols from ports:
@@ -79,8 +83,14 @@ class HDLElaborator:
                 elif isinstance(content, Instance):
                     # recursively validate instantiated module FIRST
                     if content.module_name not in self.modules:
-                        raise HDLValidationError(f"Unknown module '{content.module_name}'.")
+                        raise HDLValidationError(
+                            f"Unknown module '{content.module_name}'."
+                        )
+                    current_driven_signals = (
+                        self.driven_signals
+                    )  # store currently driven signals before elaborating new module
                     self.elaborate(self.modules[content.module_name])
+                    self.driven_signals = current_driven_signals  # restore driven signals after the new module has been elaborated.
                     self._validate_instance(content)
                     pass
                 elif isinstance(content, AssignStmt):
@@ -97,8 +107,6 @@ class HDLElaborator:
         finally:
             self.elaboration_stack.remove(module.name)
 
-        pass
-
     def _collect_symbols(self, module: Module) -> None:
         # collect symbols from ports
         for port in module.ports:
@@ -108,7 +116,10 @@ class HDLElaborator:
                 )
             width = self._calculate_range_width(port.range)
             self.symbol_table[port.name] = SymbolInfo(
-                name=port.name, is_reg=port.is_reg, direction=port.direction, width=width
+                name=port.name,
+                is_reg=port.is_reg,
+                direction=port.direction,
+                width=width,
             )
 
         # collect symbols from wire and reg declarations
@@ -138,18 +149,28 @@ class HDLElaborator:
         lhs_name = self._get_target_name(stmt.lhs)
         if lhs_name not in self.symbol_table:
             raise HDLValidationError(
-                f"Undeclared signal '{lhs_name}' in LHS of assignment.")
+                f"Undeclared signal '{lhs_name}' in LHS of assignment."
+            )
 
         symbol = self.symbol_table[lhs_name]
-        print(symbol, symbol.direction, Direction.INPUT,
-              symbol.direction == Direction.INPUT)
+        print(
+            symbol,
+            symbol.direction,
+            Direction.INPUT,
+            symbol.direction == Direction.INPUT,
+        )
         # continuous assignments must target wires or (non-reg) output ports
         if symbol.is_reg:
             raise HDLValidationError(
-                f"Illegal continuous assignment to register '{lhs_name}'.")
+                f"Illegal continuous assignment to register '{lhs_name}'."
+            )
         if symbol.direction == Direction.INPUT:
             raise HDLValidationError(
-                f"Illegal continuous assignment to input '{lhs_name}'")
+                f"Illegal continuous assignment to input '{lhs_name}'"
+            )
+
+        # mark signal as driven:
+        self._check_and_mark_driven(lhs_name)
 
         # check RHS:
         self._validate_expression(stmt.rhs)
@@ -161,7 +182,8 @@ class HDLElaborator:
         if isinstance(expr, Identifier):
             if expr.name not in self.symbol_table:
                 raise HDLValidationError(
-                    f"Undeclared identifier '{expr.name}' used in expression")
+                    f"Undeclared identifier '{expr.name}' used in expression"
+                )
 
         elif isinstance(expr, Number):
             return  # number always valid
@@ -169,7 +191,8 @@ class HDLElaborator:
         elif isinstance(expr, Indexed):
             if expr.base.name not in self.symbol_table:
                 raise HDLValidationError(
-                    f"Undeclared identifier '{expr.base.name}' used in expression")
+                    f"Undeclared identifier '{expr.base.name}' used in expression"
+                )
 
             # todo: validate index is in range
 
@@ -184,17 +207,27 @@ class HDLElaborator:
             self._validate_expression(expr.expr)
 
     def _validate_always_comb(self, block: AlwaysComb) -> None:
+        targets = self._collect_procedural_targets(block.stmt)
+        for t in targets:
+            self._check_and_mark_driven(t)
         self._validate_statement(block.stmt, allow_reg_assignment=True)
 
     def _validate_always_seq(self, block: AlwaysSeq) -> None:
         sens_name = self._get_target_name(block.signal)
         if sens_name not in self.symbol_table:
             raise HDLValidationError(
-                f"Undeclared signal used in sensitivity list: '{sens_name}'")
+                f"Undeclared signal used in sensitivity list: '{sens_name}'"
+            )
+
+        targets = self._collect_procedural_targets(block.statements)
+        for t in targets:
+            self._check_and_mark_driven(t)
 
         self._validate_statement(block.statements, allow_reg_assignment=True)
 
-    def _validate_statement(self, stmt: Statement, allow_reg_assignment: bool = False) -> None:
+    def _validate_statement(
+        self, stmt: Statement, allow_reg_assignment: bool = False
+    ) -> None:
         # recursive statement validator:
 
         if isinstance(stmt, BlockStmt):
@@ -212,24 +245,27 @@ class HDLElaborator:
 
             if lhs_name not in self.symbol_table:
                 raise HDLValidationError(
-                    f"Undeclared signal '{lhs_name}' used in procedural assignment.")
+                    f"Undeclared signal '{lhs_name}' used in procedural assignment."
+                )
 
             sym = self.symbol_table[lhs_name]
 
             if sym.direction and sym.direction == Direction.INPUT:
                 raise HDLValidationError(
-                    f"Procedural assignment to '{lhs_name}' is illegal because it is an input.")
+                    f"Procedural assignment to '{lhs_name}' is illegal because it is an input."
+                )
             if not sym.is_reg:
                 raise HDLValidationError(
-                    f"Procedural assignment to '{lhs_name}' is illegal. Target must be declared as a reg.")
+                    f"Procedural assignment to '{lhs_name}' is illegal. Target must be declared as a reg."
+                )
             self._validate_expression(stmt.expr)
-        pass
 
     def _validate_instance(self, instance: Instance) -> None:
         # check module exists in AST:
         if instance.module_name not in self.modules:
             raise HDLValidationError(
-                f"Unknown module type '{instance.module_name}' instantiated as '{instance.instance_name}'.")
+                f"Unknown module type '{instance.module_name}' instantiated as '{instance.instance_name}'."
+            )
 
         target_module = self.modules[instance.module_name]
 
@@ -242,7 +278,8 @@ class HDLElaborator:
         for connection in instance.connections:
             if connection.port_name not in target_ports:
                 raise HDLValidationError(
-                    f"Port '{connection.port_name}' does not exist in module '{instance.module_name}'.")
+                    f"Port '{connection.port_name}' does not exist in module '{instance.module_name}'."
+                )
 
             connected_ports.add(connection.port_name)
 
@@ -255,7 +292,8 @@ class HDLElaborator:
             if target_port.direction == Direction.OUTPUT:
                 if not isinstance(connection.expr, (Identifier, Indexed)):
                     raise HDLValidationError(
-                        f"Cannot connect expression to output port '{connection.port_name}' of instance '{instance.module_name}'.")
+                        f"Cannot connect expression to output port '{connection.port_name}' of instance '{instance.module_name}'."
+                    )
 
                 # check if driving reg with output port (illegal):
                 signal_name = self._get_target_name(connection.expr)
@@ -263,7 +301,11 @@ class HDLElaborator:
                     signal_info = self.symbol_table[signal_name]
                     if signal_info.is_reg:
                         raise HDLValidationError(
-                            f"Cannot drive register '{signal_name}' from instance output '{connection.port_name}'.")
+                            f"Cannot drive register '{signal_name}' from instance output '{connection.port_name}'."
+                        )
+
+                    # mark symbol as driven:
+                    self._check_and_mark_driven(signal_name)
 
     # util methods:
 
@@ -274,7 +316,8 @@ class HDLElaborator:
             return target.name
         else:
             raise TypeError(
-                f"Invalid target: {target} with type: {type(target)}. Method only accepts target of type Indexed or Identifier.")
+                f"Invalid target: {target} with type: {type(target)}. Method only accepts target of type Indexed or Identifier."
+            )
 
     def _calculate_range_width(self, range: Range | None) -> int:
         # calculates with from Range object
@@ -282,7 +325,30 @@ class HDLElaborator:
             return 1
         return abs(range.msb - range.lsb) + 1
 
+    def _check_and_mark_driven(self, signal_name: str) -> None:
+        if signal_name in self.driven_signals:
+            raise HDLValidationError(
+                f"Multiple drivers for signal '{signal_name}' in module '{self.current_module}'"
+            )
+        self.driven_signals.add(signal_name)
+
+    def _collect_procedural_targets(self, stmt: Statement) -> set[str]:
+        # recursively finds all signals written to in a statement block.
+        targets = set()
+
+        if isinstance(stmt, ProcAssignStmt):
+            targets.add(self._get_target_name(stmt.target))
+
+        elif isinstance(stmt, BlockStmt):
+            for s in stmt.statements:
+                targets.update(self._collect_procedural_targets(s))
+
+        elif isinstance(stmt, IfStmt):
+            targets.update(self._collect_procedural_targets(stmt.then_stmts))
+            if stmt.else_stmts:
+                targets.update(self._collect_procedural_targets(stmt.else_stmts))
+        return targets
+
 
 if __name__ == "__main__":
-    raise HDLValidationError(
-        "This module is not intended to be run as a script.")
+    raise HDLValidationError("This module is not intended to be run as a script.")

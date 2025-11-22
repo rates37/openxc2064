@@ -534,15 +534,15 @@ def test_instantiating_unknown_module():
                     module_name="missing_child",
                     instance_name="u0",
                     params=[],
-                    connections=[]
+                    connections=[],
                 )
-            ]
+            ],
         )
     ]
     elaborator = HDLElaborator(modules)
     with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
-    assert ("missing_child" in str(e.value))
+    assert "missing_child" in str(e.value)
 
 
 def test_instance_port_mismatch():
@@ -556,20 +556,21 @@ def test_instance_port_mismatch():
                 module_name="child",
                 instance_name="u0",
                 params=[],
-                connections=[Connection(port_name="bad_port", expr=Number("1"))]
+                connections=[Connection(port_name="bad_port", expr=Number("1"))],
             )
-        ]
+        ],
     )
     elaborator = HDLElaborator([child, top])
     with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
-    assert("bad_port" in str(e.value))
-
+    assert "bad_port" in str(e.value)
 
 
 def test_instance_output_driving_reg():
     # test that output port of a module instance cannot drive a reg in the parent
-    child = Module(name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[])
+    child = Module(
+        name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[]
+    )
     top = Module(
         name="top",
         ports=[],
@@ -579,19 +580,21 @@ def test_instance_output_driving_reg():
                 module_name="child",
                 instance_name="u0",
                 params=[],
-                connections=[Connection(port_name="out", expr=Identifier("r_val"))]
-            )
-        ]
+                connections=[Connection(port_name="out", expr=Identifier("r_val"))],
+            ),
+        ],
     )
     elaborator = HDLElaborator([child, top])
     with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
-    assert("r_val" in str(e.value))
+    assert "r_val" in str(e.value)
 
 
 def test_instance_output_driving_constant():
     # test that output port can't be connected to a constant number
-    child = Module(name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[])
+    child = Module(
+        name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[]
+    )
     top = Module(
         name="top",
         ports=[],
@@ -600,14 +603,13 @@ def test_instance_output_driving_constant():
                 module_name="child",
                 instance_name="u0",
                 params=[],
-                connections=[Connection(port_name="out", expr=Number("1"))]
+                connections=[Connection(port_name="out", expr=Number("1"))],
             )
-        ]
+        ],
     )
     elaborator = HDLElaborator([child, top])
     with pytest.raises(HDLValidationError) as e:
         elaborator.validate()
-    
 
 
 def test_two_drivers_for_signal():
@@ -620,7 +622,7 @@ def test_two_drivers_for_signal():
                 WireDecl("w"),
                 WireDecl("x"),
                 AssignStmt(lhs=Identifier("out"), rhs=Identifier("w")),
-                AssignStmt(lhs=Identifier("out"), rhs=Identifier("x"))
+                AssignStmt(lhs=Identifier("out"), rhs=Identifier("x")),
             ],
         )
     ]
