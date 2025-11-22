@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 
-@dataclass
+@dataclass(frozen=True)
 class Identifier:
     name: str
 
@@ -72,7 +72,7 @@ class ParenExpr:
     expr: "Expression"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Indexed:
     base: Identifier
     index: Index | None = None

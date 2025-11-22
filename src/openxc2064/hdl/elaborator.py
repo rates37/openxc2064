@@ -29,9 +29,14 @@ class SymbolInfo:
 
     name: str
     is_reg: bool
-    width: int
+    msb: int
+    lsb: int
     # if direction is None, symbol is an internal signal (not port)
     direction: Direction | None = None
+
+    @property
+    def width(self) -> int:
+        return abs(self.msb - self.lsb) + 1
 
 
 class HDLElaborator:
@@ -43,7 +48,9 @@ class HDLElaborator:
         self.elaboration_stack = set()  # modules currently being validated
         self.current_module = ""
         self.symbol_table: dict[str, SymbolInfo] = {}
-        self.driven_signals = set()  # signals that have been driven per module
+        self.driven_signals: set[tuple[str, int]] = (
+            set()
+        )  # signals that have been driven stored as (name, bit_index) tuples
 
     def validate(self) -> None:
         # iterates over all modules and validates them
@@ -108,18 +115,24 @@ class HDLElaborator:
             self.elaboration_stack.remove(module.name)
 
     def _collect_symbols(self, module: Module) -> None:
+        def get_range_tuple(r: Range | None) -> tuple[int, int]:
+            if r:
+                return (r.msb, r.lsb)
+            return (0, 0)
+
         # collect symbols from ports
         for port in module.ports:
             if port.name in self.symbol_table:
                 raise HDLValidationError(
                     f"Duplicate port name '{port.name}' declared in module '{module.name}'."
                 )
-            width = self._calculate_range_width(port.range)
+            msb, lsb = get_range_tuple(port.range)
             self.symbol_table[port.name] = SymbolInfo(
                 name=port.name,
                 is_reg=port.is_reg,
                 direction=port.direction,
-                width=width,
+                msb=msb,
+                lsb=lsb,
             )
 
         # collect symbols from wire and reg declarations
@@ -129,18 +142,18 @@ class HDLElaborator:
                     raise HDLValidationError(
                         f"Duplicate wire name '{content.name}' in module '{module.name}'."
                     )
-                width = self._calculate_range_width(content.range)
+                msb, lsb = get_range_tuple(content.range)
                 self.symbol_table[content.name] = SymbolInfo(
-                    name=content.name, is_reg=False, width=width
+                    name=content.name, is_reg=False, msb=msb, lsb=lsb
                 )
             elif isinstance(content, RegDecl):
                 if content.name in self.symbol_table:
                     raise HDLValidationError(
                         f"Duplicate register name '{content.name}' in module '{module.name}'."
                     )
-                width = self._calculate_range_width(content.range)
+                msb, lsb = get_range_tuple(content.range)
                 self.symbol_table[content.name] = SymbolInfo(
-                    name=content.name, is_reg=True, width=width
+                    name=content.name, is_reg=True, msb=msb, lsb=lsb
                 )
 
     def _validate_assign(self, stmt: AssignStmt) -> None:
@@ -164,7 +177,7 @@ class HDLElaborator:
             )
 
         # mark signal as driven:
-        self._check_and_mark_driven(lhs_name)
+        self._check_and_mark_driven(stmt.lhs)
 
         # check RHS:
         self._validate_expression(stmt.rhs)
@@ -201,7 +214,9 @@ class HDLElaborator:
             self._validate_expression(expr.expr)
 
     def _validate_always_comb(self, block: AlwaysComb) -> None:
-        targets = self._collect_procedural_targets(block.stmt)
+        targets = self._collect_procedural_targets(
+            block.stmt
+        )  #  remove duplicate from here somehow?
         for t in targets:
             self._check_and_mark_driven(t)
         self._validate_statement(block.stmt, allow_reg_assignment=True)
@@ -299,7 +314,7 @@ class HDLElaborator:
                         )
 
                     # mark symbol as driven:
-                    self._check_and_mark_driven(signal_name)
+                    self._check_and_mark_driven(connection.expr)
 
     # util methods:
 
@@ -313,25 +328,59 @@ class HDLElaborator:
                 f"Invalid target: {target} with type: {type(target)}. Method only accepts target of type Indexed or Identifier."
             )
 
-    def _calculate_range_width(self, range: Range | None) -> int:
-        # calculates with from Range object
-        if range is None:
-            return 1
-        return abs(range.msb - range.lsb) + 1
+    def _check_and_mark_driven(self, target: Identifier | Indexed) -> None:
 
-    def _check_and_mark_driven(self, signal_name: str) -> None:
-        if signal_name in self.driven_signals:
-            raise HDLValidationError(
-                f"Multiple drivers for signal '{signal_name}' in module '{self.current_module}'"
-            )
-        self.driven_signals.add(signal_name)
+        bits_to_drive = self._resolve_target_bits(target)
 
-    def _collect_procedural_targets(self, stmt: Statement) -> set[str]:
+        for name, bit_idx in bits_to_drive:
+            if (name, bit_idx) in self.driven_signals:
+                raise HDLValidationError(
+                    f"Multiple drivers for signal '{name}[{bit_idx}]'."
+                )
+            self.driven_signals.add((name, bit_idx))
+
+    def _resolve_target_bits(
+        self, target: Identifier | Indexed
+    ) -> list[tuple[str, int]]:
+        name = self._get_target_name(target)
+        symbol = self._get_symbol(name)
+
+        # if full identifier:
+        if isinstance(target, Identifier):
+            start, end = min(symbol.lsb, symbol.msb), min(symbol.lsb, symbol.msb)
+            return [(name, i) for i in range(start, end + 1)]
+
+        # otherwise is indexed, e.g., `bus[1], or my_signal[4:2]`
+        if isinstance(target, Indexed):
+            if target.index is not None:
+                # must be a single bit:
+                try:
+                    idx = int(target.index.index)
+                    return [(name, idx)]
+                except ValueError:
+                    # should not be permitted by the grammar, but will assume this error means all bits of the signal are driven
+                    start, end = min(symbol.lsb, symbol.msb), min(
+                        symbol.lsb, symbol.msb
+                    )
+                    return [(name, i) for i in range(start, end + 1)]
+            elif target.range is not None:
+                # must be a range / slice like `my_signal[4:2]`
+                start = min(target.range.msb, target.range.lsb)
+                end = max(target.range.msb, target.range.lsb)
+                return [(name, i) for i in range(start, end + 1)]
+        return []
+
+    def _get_symbol(self, name: str) -> SymbolInfo:
+        if name not in self.symbol_table:
+            raise HDLValidationError(f"Undeclared identifier: '{name}'")
+        return self.symbol_table[name]
+
+    def _collect_procedural_targets(self, stmt: Statement) -> set[Identifier | Indexed]:
         # recursively finds all signals written to in a statement block.
         targets = set()
 
         if isinstance(stmt, ProcAssignStmt):
-            targets.add(self._get_target_name(stmt.target))
+            targets.add(stmt.target)
 
         elif isinstance(stmt, BlockStmt):
             for s in stmt.statements:
