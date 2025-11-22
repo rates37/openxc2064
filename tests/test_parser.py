@@ -1,8 +1,6 @@
 import pytest
 from pathlib import Path
 from lark import Lark, Transformer, Token
-
-# Import everything from the files for local testing
 from openxc2064.hdl import ASTBuilder, create_parser, parse_hdl
 from openxc2064.hdl.ast_nodes import (
     Identifier,

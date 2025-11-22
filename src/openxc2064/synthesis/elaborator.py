@@ -1,4 +1,4 @@
-from .ast_nodes import *
+from ..hdl.ast_nodes import *
 from dataclasses import dataclass
 
 
@@ -11,15 +11,10 @@ class HDLValidationError(Exception):
 
 
 """
-Things to check for during elaboration:
-[x] All instance module names must exist in self.modules
-[x] Ensure no circular dependencies in module instantiations
+Remaining Functionality to Implement:
 [ ] Parameter overrides must match the parameter names in the module definition
-[ ] Connections must match the port names and widths in the module definition
+    -> this may require updating grammar/parser as well
 [ ] No duplicate instance names within the same module
-[x] Types of connected signals must be compatible
-[x] Check all signals (wires and reg) are declared before use
-[x] Handle hierarchical module instantiations
 """
 
 

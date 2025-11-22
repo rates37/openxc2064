@@ -91,6 +91,7 @@ atom: IDENT         -> ident_only
     | IDENT RANGE   -> ident_range
     | NUMBER        -> number_only
 
+// operators in order from lowest priority to highest priority
 OR: "||"
 AND: "&&"
 EQ: "==" | "!="
