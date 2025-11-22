@@ -724,5 +724,23 @@ def test_partial_assignment_collision():
     elaborator.validate()  # shouldn't error since bit 0 and bit 1 of the 'bus' identifier are separate signals
 
 
+def test_partial_assignment_bit_collision():
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            WireDecl("bus", Range(1, 0)),
+            # Assign bit 0
+            AssignStmt(lhs=Indexed(Identifier("bus"), Index("0")), rhs=Number("0")),
+            # Assign bit 0 again - Collision
+            AssignStmt(lhs=Indexed(Identifier("bus"), Index("0")), rhs=Number("1")),
+        ],
+    )
+    elaborator = HDLElaborator([mod])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert "bus" in str(e.value)
+
+
 if __name__ == "__main__":
     test_single_driver_multiple_assign_single_block()
