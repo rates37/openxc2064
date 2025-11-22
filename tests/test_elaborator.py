@@ -631,5 +631,106 @@ def test_two_drivers_for_signal():
         elaborator.validate()
 
 
+def test_two_drivers_assign_instance():
+    child = Module(
+        name="child", ports=[Port(Direction.OUTPUT, name="c_out")], contents=[]
+    )
+
+    top = Module(
+        name="top",
+        ports=[],
+        contents=[
+            WireDecl("w"),
+            Instance(
+                module_name="child",
+                instance_name="u0",
+                params=[],
+                connections=[Connection("c_out", Identifier("w"))],
+            ),
+            AssignStmt(lhs=Identifier("w"), rhs=Number("0")),
+        ],
+    )
+    elaborator = HDLElaborator([child, top])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert "'w'" in str(e.value)
+
+
+def test_two_drivers_always_always():
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            RegDecl("r"),
+            WireDecl("clk"),
+            AlwaysSeq(
+                edge="posedge",
+                signal=Identifier("clk"),
+                statements=ProcAssignStmt(Identifier("r"), "<=", Number("1")),
+            ),
+            AlwaysSeq(
+                edge="posedge",
+                signal=Identifier("clk"),
+                statements=ProcAssignStmt(Identifier("r"), "<=", Number("0")),
+            ),
+        ],
+    )
+    elaborator = HDLElaborator([mod])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert "'r'" in str(e.value)
+
+
+def test_single_driver_multiple_assign_single_block():
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            RegDecl("r"),
+            WireDecl("cond"),
+            AlwaysComb(
+                stmt=BlockStmt(
+                    [
+                        ProcAssignStmt(Identifier("r"), "=", Number("0")),
+                        # 2nd assignment in the same block: Should NOT error
+                        IfStmt(
+                            condition=Identifier("cond"),
+                            then_stmts=ProcAssignStmt(
+                                Identifier("r"), "=", Number("1")
+                            ),
+                        ),
+                    ]
+                )
+            ),
+        ],
+    )
+    elaborator = HDLElaborator([mod])
+    elaborator.validate()
+
+
+def test_partial_assignment_collision():
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            WireDecl("bus", Range(1, 0)),
+            # Assign bit 0
+            AssignStmt(
+                lhs=Indexed(Identifier("bus"), Index("0")), 
+                rhs=Number("0")
+            ),
+            # Assign bit 1 - Collision on base identifier 'bus'
+            AssignStmt(
+                lhs=Indexed(Identifier("bus"), Index("1")), 
+                rhs=Number("1")
+            )
+        ]
+    )
+    elaborator = HDLElaborator([mod])
+    elaborator.validate()  # shouldn't error since bit 0 and bit 1 of the 'bus' identifier are separate signals 
+
+
+
+
 if __name__ == "__main__":
-    test_two_drivers_for_signal()
+    test_partial_assignment_collision()

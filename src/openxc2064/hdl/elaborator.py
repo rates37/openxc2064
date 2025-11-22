@@ -153,12 +153,6 @@ class HDLElaborator:
             )
 
         symbol = self.symbol_table[lhs_name]
-        print(
-            symbol,
-            symbol.direction,
-            Direction.INPUT,
-            symbol.direction == Direction.INPUT,
-        )
         # continuous assignments must target wires or (non-reg) output ports
         if symbol.is_reg:
             raise HDLValidationError(
