@@ -68,7 +68,16 @@ assign_stmt_lhs: IDENT
 ?expr_add: expr_add ADD expr_mul   -> bin_op
           | expr_mul
 
-?expr_mul: expr_mul MUL expr_unary   -> bin_op
+?expr_mul: expr_mul MUL expr_bit_or   -> bin_op
+          | expr_bit_or
+
+?expr_bit_or: expr_bit_or BITWISE_OR expr_bit_xor   -> bin_op
+          | expr_bit_xor
+
+?expr_bit_xor: expr_bit_xor BITWISE_XOR expr_bit_and   -> bin_op
+          | expr_bit_and
+
+?expr_bit_and: expr_bit_and BITWISE_AND expr_unary   -> bin_op
           | expr_unary
 
 ?expr_unary: UNARY expr_unary   -> unary_op
@@ -87,7 +96,10 @@ AND: "&&"
 EQ: "==" | "!="
 ADD: "+" | "-"
 MUL: "*" | "/"
-UNARY: "-" | "!"
+BITWISE_OR: "|"
+BITWISE_XOR: "^"
+BITWISE_AND: "&"
+UNARY: "-" | "!" | "~"
 
 // instances:
 instance: module_name ["#" "(" param_list ")"] module_instance_name "(" connection_list ")" ";"
