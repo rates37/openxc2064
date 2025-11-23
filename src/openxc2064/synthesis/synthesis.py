@@ -72,7 +72,7 @@ class Synthesiser:
             net = parent_netlist.create_net(name_flat, symbol.width)
             local_net_map[name] = net
 
-            if instance_name == "": # if top level module
+            if instance_name == "":  # if top level module
                 if symbol.direction == ast.Direction.INPUT:
                     parent_netlist.add_input(name, net)
                     parent_netlist.inputs.append(net)

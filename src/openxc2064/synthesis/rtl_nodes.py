@@ -8,7 +8,9 @@ class Net:
     name: str
     width: int = 1
     source: Node | None = None  # the component/input driving this net
-    sinks: list[Node] = field(default_factory=list)  # the component inputs that this net drives
+    sinks: list[Node] = field(
+        default_factory=list
+    )  # the component inputs that this net drives
 
     def __repr__(self) -> str:
         return f"Net[{self.name}]"
@@ -45,6 +47,7 @@ class LogicGate(Node):
 class DFF(Node):
     # inputs: [D, CLK], output: [Q]
     edge: str = "posedge"  # either posedge or negedge
+
     def __repr__(self) -> str:
         d_name = self.inputs[0].name if self.inputs else "?"
         clk_name = self.inputs[1].name if len(self.inputs) > 1 else "?"
@@ -92,7 +95,9 @@ class Netlist:
         self.nodes.append(g)
         return g
 
-    def add_dff(self, inputs: list[Net], outputs: list[Net], edge: str = "posedge") -> DFF:
+    def add_dff(
+        self, inputs: list[Net], outputs: list[Net], edge: str = "posedge"
+    ) -> DFF:
         d = DFF(f"dff{len(self.nodes)}", inputs, outputs, edge=edge)
         self.nodes.append(d)
         return d

@@ -98,20 +98,20 @@ class HDLElaborator:
                             f"Unknown module '{content.module_name}'."
                         )
                     # store currently driven signals before elaborating new module
-                    current_driven_signals = self.driven_signals  
+                    current_driven_signals = self.driven_signals
                     current_symbols = self.symbol_table
                     current_module_name = self.current_module
-                    
+
                     # recurse:
                     self.elaborate(self.modules[content.module_name])
-                    
+
                     # restore state:
                     self.driven_signals = current_driven_signals
                     self.symbol_table = current_symbols
                     self.current_module = current_module_name
-                    
+
                     self._validate_instance(content)
-                    
+
                 elif isinstance(content, AssignStmt):
                     self._validate_assign(content)
                 elif isinstance(content, AlwaysComb):
