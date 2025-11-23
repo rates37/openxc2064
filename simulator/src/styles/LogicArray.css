@@ -1,6 +1,6 @@
 .LogicArrayViewport {
     width: 100%;
-    height: 100vh; /* Adjust as needed, or use flex-grow if parent allows */
+    height: 98vh; /* Adjust as needed, or use flex-grow if parent allows */
     overflow: hidden;
     border: 1px solid #ccc;
     position: relative;

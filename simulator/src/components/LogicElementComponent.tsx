@@ -11,13 +11,22 @@ type LogicElementComponentProps = {
     logicElement: LogicElement;
     x: number;
     y: number;
+    onClick?: (element: LogicElement) => void;
 };
 
-export const LogicElementComponent: React.FC<LogicElementComponentProps> = ({ logicElement, x, y }) => {
+export const LogicElementComponent: React.FC<LogicElementComponentProps> = ({ logicElement, x, y, onClick }) => {
     const [nodes, setNodes] = React.useState<React.JSX.Element | null>(null);
     const [switches, setSwitches] = React.useState<React.JSX.Element | null>(null);
 
     const clb = logicElement;
+
+    // TODO: Handle logic element click to open modal
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onClick) {
+            onClick(logicElement);
+        }
+    };
 
 
     useEffect(() => {
@@ -111,14 +120,13 @@ export const LogicElementComponent: React.FC<LogicElementComponentProps> = ({ lo
                 break;
         }
 
-        console.log(allSwitches);
         setNodes(<>{allNodes.map((node, index) => <NodeComponent key={index + "-"} x={x + node.x} y={y + node.y} />)}</>);
         setSwitches(<>{allSwitches.map((sw, index) => <SwitchComponent key={index + "s"} x={x + sw.x} y={y + sw.y} />)}</>);
     }, []);
 
 
     return <>
-        <div className="LogicElement" style={{ left: x, top: y }}>{clb.id}</div>
+        <div className="LogicElement" style={{ left: x, top: y }} onClick={handleClick}>{clb.id}</div>
         {nodes}
         {switches}
     </>

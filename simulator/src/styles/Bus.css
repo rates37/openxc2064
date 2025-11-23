@@ -1,4 +1,5 @@
 .Bus {
     position: absolute;
-    background-color: black;
+    /* background-color: black; */
+    border: 1px dashed gray;
 }

@@ -7,6 +7,7 @@ import "./styles/LogicArray.css";
 import { NodeComponent } from './components/NodeComponent';
 import { BusComponent } from './components/BusComponent';
 import { XC2064 } from './constants';
+import LogicElementModal from './components/modals/LogicElementModal';
 
 const LogicArray: React.FC = () => {
   const context: SimulatorContextType = useContext(SimulatorContext);
@@ -16,13 +17,33 @@ const LogicArray: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [busses, setBuses] = useState<React.JSX.Element | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedElement, setSelectedElement] = useState<LogicElement | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // TODO: Handle logic element selection and modal display
+  const handleLogicElementClick = (element: LogicElement) => {
+    setSelectedElement(element);
+    setIsModalOpen(true);
+  };
+
+  // TODO: Implement save logic for logic element changes
+  const handleSaveElement = (element: LogicElement) => {
+    // Save logic would go here
+    console.log('Saving element:', element);
+  };
 
   useEffect(() => {
     console.log("Logic elements updated:", context.logicElements);
 
     const elements = context.logicElements.map((logicElementRow, y) => (
       logicElementRow.map((logicElement, x) =>
-        <LogicElementComponent key={`${y}-${x}`} logicElement={logicElement} x={x * 190} y={y * 190} />
+        <LogicElementComponent 
+          key={`${y}-${x}`} 
+          logicElement={logicElement} 
+          x={x * 190} 
+          y={y * 190}
+          onClick={handleLogicElementClick}
+        />
       )
     ));
 
@@ -116,6 +137,12 @@ const LogicArray: React.FC = () => {
       </div>
 
     </div>
+    <LogicElementModal 
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      element={selectedElement}
+      onSave={handleSaveElement}
+    />
   </>;
 }
 
