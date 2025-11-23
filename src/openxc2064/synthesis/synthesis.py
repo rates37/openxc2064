@@ -1,5 +1,6 @@
 from ..hdl import ast_nodes as ast
 from .rtl_nodes import *
+from .elaborator import SymbolInfo
 
 
 class SynthesisException(Exception):
@@ -16,33 +17,31 @@ def parse_verilog_literal(val_str: str) -> tuple[int, int]:
     val_str = val_str.strip()
     if "'" in val_str:
         parts = val_str.split("'")
-        
+
         # width:
         width_str = parts[0]
         width = int(width_str) if width_str else 32
-        
+
         # base / value:
         rest = parts[1]
         base_char = rest[0].lower()
         digits = rest[1:]
-        base_map = {
-            'b': 2,
-            'o': 8,
-            'd': 10,
-            'h': 16
-        }
+        base_map = {"b": 2, "o": 8, "d": 10, "h": 16}
         if base_char not in base_map:
             raise ValueError(f"Unknown base '{base_char}' in literal: `{val_str}`")
         val = int(digits, base_map[base_char])
         return val, width
-    
+
     else:
         # assume plain decimal:
         return int(val_str), 32
 
+
 class Synthesiser:
     # takes an AST and converts to a Netlist
-    def __init__(self, module_library: dict[str, tuple[ast.Module, dict]]) -> None:
+    def __init__(
+        self, module_library: dict[str, tuple[ast.Module, dict[str, SymbolInfo]]]
+    ) -> None:
         self.library = module_library
         self.netlist: Netlist | None = None
         self.const_count = 0
@@ -73,7 +72,7 @@ class Synthesiser:
             net = parent_netlist.create_net(name_flat, symbol.width)
             local_net_map[name] = net
 
-            if instance_name == "":
+            if instance_name == "": # if top level module
                 if symbol.direction == ast.Direction.INPUT:
                     parent_netlist.add_input(name, net)
                     parent_netlist.inputs.append(net)
@@ -138,8 +137,7 @@ class Synthesiser:
             if expr.name not in net_map:
                 raise SynthesisException(f"Unknown signal '{expr.name}'.")
             return net_map[expr.name]
-        
-        
+
         elif isinstance(expr, ast.Number):
             val, width = parse_verilog_literal(expr.value)
             name = f"const_{self.const_count}_{expr.value}"
@@ -147,16 +145,16 @@ class Synthesiser:
             const_net = netlist.create_net(name, width=width)
             netlist.add_const(val, const_net)
             return const_net
-        
+
         elif isinstance(expr, ast.Indexed):
             # base
             base_name = expr.base.name
             if base_name not in net_map:
                 raise SynthesisException(f"Unknown signal '{base_name}'.")
             base_net = net_map[base_name]
-            
+
             out_net = netlist.create_net(f"temp_idx_{len(netlist.nets)}")
-            
+
             # handle single bit index:
             if expr.index:
                 # a single index "operation" is formatted as `INDEX:<bit>`
@@ -168,15 +166,14 @@ class Synthesiser:
                 # a range index "operation" is formatted as `SLICE:<msb>:<lsb>`
                 msb, lsb = expr.range.msb, expr.range.lsb
                 netlist.add_logic(f"SLICE:{msb}:{lsb}", [base_net], [out_net])
-                  
+
             return out_net
-        
-        
+
         elif isinstance(expr, ast.BinaryOp):
             left = self._get_net_expr(expr.left, net_map, netlist)
             right = self._get_net_expr(expr.right, net_map, netlist)
             out = netlist.create_net(f"temp_op_{len(netlist.nets)}")
-            
+
             op_map = {
                 "&": "AND",
                 "&&": "LOGIC_AND",  # todo: differentiate between bitwise and logical
@@ -186,32 +183,25 @@ class Synthesiser:
                 "+": "ADD",
                 "-": "SUB",
                 "==": "EQ",
-                "!=": "NEQ"
+                "!=": "NEQ",
             }
             if expr.op not in op_map:
                 raise SynthesisException(f"Operation '{expr.op}' not supported yet.")
-            
+
             netlist.add_logic(op_map[expr.op], [left, right], [out])
             return out
-        
-        
+
         elif isinstance(expr, ast.UnaryOp):
             operand = self._get_net_expr(expr.operand, net_map, netlist)
             out = netlist.create_net(f"temp_uop_{len(netlist.nets)}")
-            op_map = {
-                "!": "LOGIC_NOT",
-                "-": "NEG",
-                "~": "NOT"
-            }
+            op_map = {"!": "LOGIC_NOT", "-": "NEG", "~": "NOT"}
             if expr.op not in op_map:
                 raise SynthesisException(f"Operation '{expr.op}' not supported yet.")
             netlist.add_logic(op_map[expr.op], [operand], [out])
             return out
-        
-        
+
         elif isinstance(expr, ast.ParenExpr):
             return self._get_net_expr(expr.expr, net_map, netlist)
-
 
     def _synth_assign(
         self, stmt: ast.AssignStmt, net_map: dict[str, Net], netlist: Netlist
@@ -281,6 +271,7 @@ class Synthesiser:
                 new_scope = self._process_stmt_block(s, new_scope, net_map, netlist)
 
         elif isinstance(stmt, ast.IfStmt):
+            # todo: review this carefully
             cond = self._get_net_expr(stmt.condition, net_map, netlist)
             then_scope = self._process_stmt_block(
                 stmt.then_stmts, new_scope, net_map, netlist

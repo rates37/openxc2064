@@ -8,6 +8,7 @@
   "combinational",
   "netlist",
   "openxc",
-  "synthesised"
+  "synthesised",
+  "Synthesiser"
 ]
 }

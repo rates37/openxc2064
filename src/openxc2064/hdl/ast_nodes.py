@@ -57,19 +57,19 @@ class RegDecl:
 @dataclass
 class UnaryOp:
     op: str
-    operand: "Expression"
+    operand: Expression
 
 
 @dataclass
 class BinaryOp:
-    left: "Expression"
+    left: Expression
     op: str
-    right: "Expression"
+    right: Expression
 
 
 @dataclass
 class ParenExpr:
-    expr: "Expression"
+    expr: Expression
 
 
 @dataclass(frozen=True)
@@ -118,13 +118,13 @@ class ProcAssignStmt:
 @dataclass
 class IfStmt:
     condition: Expression
-    then_stmts: "Statement"
-    else_stmts: "Statement" | None = None
+    then_stmts: Statement
+    else_stmts: Statement | None = None
 
 
 @dataclass
 class BlockStmt:
-    statements: list["Statement"]
+    statements: list[Statement]
 
 
 Statement = ProcAssignStmt | IfStmt | BlockStmt

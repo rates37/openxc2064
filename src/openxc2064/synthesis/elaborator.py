@@ -46,13 +46,23 @@ class HDLElaborator:
         self.driven_signals: set[tuple[str, int]] = (
             set()
         )  # signals that have been driven stored as (name, bit_index) tuples
+        self.module_symbol_tables: dict[str, dict[str, SymbolInfo]] = {}
+
+    def get_library(self) -> dict[str, tuple[Module, dict[str, SymbolInfo]]]:
+        # ensure AST is validated first
+        self.validate()
+
+        library = {}
+        for mod_name, symbol_table in self.module_symbol_tables.items():
+            library[mod_name] = (self.modules[mod_name], symbol_table)
+        return library
 
     def validate(self) -> None:
         # iterates over all modules and validates them
         for module_name, module in self.modules.items():
             if module_name not in self.validated_modules:
                 self.elaborate(module)
-                self.validated_modules.add(module_name)
+                # self.validated_modules.add(module_name)
 
     def elaborate(self, module: Module) -> None:
         # validate a single module
@@ -68,9 +78,8 @@ class HDLElaborator:
         self.elaboration_stack.add(module.name)
         self.current_module = module.name
         self.symbol_table = {}
-        self.driven_signals = (
-            set()
-        )  # clear set of driven signals when evaluating new module
+        # clear set of driven signals when evaluating new module
+        self.driven_signals = set()
 
         try:
             # collect symbols from ports:
@@ -88,13 +97,21 @@ class HDLElaborator:
                         raise HDLValidationError(
                             f"Unknown module '{content.module_name}'."
                         )
-                    current_driven_signals = (
-                        self.driven_signals
-                    )  # store currently driven signals before elaborating new module
+                    # store currently driven signals before elaborating new module
+                    current_driven_signals = self.driven_signals  
+                    current_symbols = self.symbol_table
+                    current_module_name = self.current_module
+                    
+                    # recurse:
                     self.elaborate(self.modules[content.module_name])
-                    self.driven_signals = current_driven_signals  # restore driven signals after the new module has been elaborated.
+                    
+                    # restore state:
+                    self.driven_signals = current_driven_signals
+                    self.symbol_table = current_symbols
+                    self.current_module = current_module_name
+                    
                     self._validate_instance(content)
-                    pass
+                    
                 elif isinstance(content, AssignStmt):
                     self._validate_assign(content)
                 elif isinstance(content, AlwaysComb):
@@ -103,7 +120,8 @@ class HDLElaborator:
                     self._validate_always_seq(content)
                 else:
                     pass  # ! todo: other cases here
-                self.validated_modules.add(module.name)
+            self.validated_modules.add(module.name)
+            self.module_symbol_tables[module.name] = self.symbol_table.copy()
         except HDLValidationError as e:
             raise e
         finally:
@@ -277,15 +295,12 @@ class HDLElaborator:
 
         # validate connections:
         target_ports = {port.name: port for port in target_module.ports}
-        connected_ports = set()
 
         for connection in instance.connections:
             if connection.port_name not in target_ports:
                 raise HDLValidationError(
                     f"Port '{connection.port_name}' does not exist in module '{instance.module_name}'."
                 )
-
-            connected_ports.add(connection.port_name)
 
             # validate expression connected to the port:
             self._validate_expression(connection.expr)
