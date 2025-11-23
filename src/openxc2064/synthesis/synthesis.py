@@ -10,6 +10,36 @@ class SynthesisException(Exception):
         super().__init__(self.message)
 
 
+def parse_verilog_literal(val_str: str) -> tuple[int, int]:
+    # parse a Verilog style number literal (e.g., `4'b1010`, `123`, `'hFF`)
+    # assumes a 32 bit width if not specified
+    val_str = val_str.strip()
+    if "'" in val_str:
+        parts = val_str.split("'")
+        
+        # width:
+        width_str = parts[0]
+        width = int(width_str) if width_str else 32
+        
+        # base / value:
+        rest = parts[1]
+        base_char = rest[0].lower()
+        digits = rest[1:]
+        base_map = {
+            'b': 2,
+            'o': 8,
+            'd': 10,
+            'h': 16
+        }
+        if base_char not in base_map:
+            raise ValueError(f"Unknown base '{base_char}' in literal: `{val_str}`")
+        val = int(digits, base_map[base_char])
+        return val, width
+    
+    else:
+        # assume plain decimal:
+        return int(val_str), 32
+
 class Synthesiser:
     # takes an AST and converts to a Netlist
     def __init__(self, module_library: dict[str, tuple[ast.Module, dict]]) -> None:
@@ -111,13 +141,35 @@ class Synthesiser:
         
         
         elif isinstance(expr, ast.Number):
+            val, width = parse_verilog_literal(expr.value)
             name = f"const_{self.const_count}_{expr.value}"
             self.const_count += 1
-            const_net = netlist.create_net(name)
-            
-            val = int(expr.value) # todo: account for different base / bitwidth specified in Number.value like `4'b0110`
+            const_net = netlist.create_net(name, width=width)
             netlist.add_const(val, const_net)
             return const_net
+        
+        elif isinstance(expr, ast.Indexed):
+            # base
+            base_name = expr.base.name
+            if base_name not in net_map:
+                raise SynthesisException(f"Unknown signal '{base_name}'.")
+            base_net = net_map[base_name]
+            
+            out_net = netlist.create_net(f"temp_idx_{len(netlist.nets)}")
+            
+            # handle single bit index:
+            if expr.index:
+                # a single index "operation" is formatted as `INDEX:<bit>`
+                idx_val = expr.index.index
+                netlist.add_logic(f"INDEX:{idx_val}", [base_net], [out_net])
+
+            # handle range slide:
+            elif expr.range:
+                # a range index "operation" is formatted as `SLICE:<msb>:<lsb>`
+                msb, lsb = expr.range.msb, expr.range.lsb
+                netlist.add_logic(f"SLICE:{msb}:{lsb}", [base_net], [out_net])
+                  
+            return out_net
         
         
         elif isinstance(expr, ast.BinaryOp):
@@ -127,12 +179,14 @@ class Synthesiser:
             
             op_map = {
                 "&": "AND",
-                "&&": "AND",  # todo: differentiate between bitwise and logical
+                "&&": "LOGIC_AND",  # todo: differentiate between bitwise and logical
                 "|": "OR",
-                "||": "OR",
+                "||": "LOGIC_OR",
                 "^": "XOR",
                 "+": "ADD",
-                "==": "EQ"
+                "-": "SUB",
+                "==": "EQ",
+                "!=": "NEQ"
             }
             if expr.op not in op_map:
                 raise SynthesisException(f"Operation '{expr.op}' not supported yet.")
@@ -145,7 +199,8 @@ class Synthesiser:
             operand = self._get_net_expr(expr.operand, net_map, netlist)
             out = netlist.create_net(f"temp_uop_{len(netlist.nets)}")
             op_map = {
-                "!": "NOT",
+                "!": "LOGIC_NOT",
+                "-": "NEG",
                 "~": "NOT"
             }
             if expr.op not in op_map:
@@ -156,14 +211,13 @@ class Synthesiser:
         
         elif isinstance(expr, ast.ParenExpr):
             return self._get_net_expr(expr.expr, net_map, netlist)
-        
-        else:
-            raise SynthesisException(f"Expression type '{type(expr)}' not supported.")
+
 
     def _synth_assign(
         self, stmt: ast.AssignStmt, net_map: dict[str, Net], netlist: Netlist
     ) -> None:
         rhs = self._get_net_expr(stmt.rhs, net_map, netlist)
+        # todo: fix since might not be driving entire name if indexed
         lhs_name = (
             stmt.lhs.name
             if isinstance(stmt.lhs, ast.Identifier)
@@ -192,6 +246,7 @@ class Synthesiser:
             else block.signal.base.name
         )
         clk_net = net_map[clk_name]
+        edge_type = block.edge
 
         initial_scope = {}
         final_scope = self._process_stmt_block(
@@ -201,7 +256,7 @@ class Synthesiser:
         for name, next_net in final_scope.items():
             if name in net_map:
                 q_net = net_map[name]
-                netlist.add_dff([next_net, clk_net], [q_net])
+                netlist.add_dff([next_net, clk_net], [q_net], edge=edge_type)
 
     def _process_stmt_block(
         self,
