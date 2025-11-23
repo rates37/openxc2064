@@ -7,6 +7,7 @@
   "bitstream",
   "combinational",
   "netlist",
-  "openxc"
+  "openxc",
+  "synthesised"
 ]
 }
