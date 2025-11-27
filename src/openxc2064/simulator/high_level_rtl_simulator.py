@@ -34,6 +34,7 @@ class RTLSimulator:
             "ADD": lambda x: x[0] + x[1] if len(x) >= 2 else 0,
             "SUB": lambda x: x[0] - x[1] if len(x) >= 2 else 0,
             "NEQ": lambda x: 1 if (x[0] != x[1]) else 0 if len(x) >= 2 else 0,
+            "EQ":  lambda x: 1 if (x[0] == x[1]) else 0 if len(x) >= 2 else 0,
             "MUX": self._mux_op,
             # todo: indexing
         }
@@ -127,7 +128,7 @@ class RTLSimulator:
         return 0  # fallback
 
     def _mask_value(self, value: int, width: int) -> int:
-        # masks a value to fit within specified bit width using 2's comp
+        # masks a value to fit within specified bit width
         if width <= 0:
             return 0
         return value & ((1 << width) - 1)  # value & {width{1'b1}}
