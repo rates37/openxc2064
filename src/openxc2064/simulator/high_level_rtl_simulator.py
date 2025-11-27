@@ -41,22 +41,49 @@ class RTLSimulator:
         self._initialise()
 
     def set(self, port_name: str, value: int) -> None:
-        pass
+        if port_name not in self.input_ports:
+            raise ValueError(f"Input port '{port_name}' not found in design.")
+
+        net_name = self.input_ports[port_name]
+        net = self.net_name_to_net[net_name]
+
+        value_masked = self._mask_value(value, net.width)
+        self.net_values[net_name] = value_masked
 
     def get(self, port_name: str) -> int:
-        return 0
+        # gets current value of output port (using unsigned binary)
+        if port_name not in self.output_ports:
+            raise ValueError(f"Output port '{port_name}' not found in design.")
+        net_name = self.output_ports[port_name]
+        return self.net_values.get(net_name, 0)
 
     def get_net(self, net_name: str) -> int:
-        return 0
+        # get current value of internal net (basically only for debugging since net name is created automatically by the synthesiser)
+        if net_name in self.net_values:
+            return self.net_values[net_name]
+        raise ValueError(f"Net '{net_name}' not found in design.")
 
     def get_net_signed(self, net_name: str) -> int:
-        return 0
+        if net_name not in self.net_values:
+            raise ValueError(f"Net '{net_name}' not found in design.")
+        net = self.net_name_to_net[net_name]
+        value = self.net_values[net_name]
+        width = net.width
+
+        if value & (1 << (width - 1)):  # if it's a negative value
+            return value - (1 << width)
+        return value
 
     def step(self) -> None:
-        pass
+        # cheap implementation right now, # todo need to somehow intertwine the dff updates and the propagate comb?
+        self._update_dffs()
+
+        self._propagate_comb()
+
+        self.prev_net_values = self.net_values.copy()
 
     def reset(self) -> None:
-        pass
+        self._initialise()  # realise it does the same thing lol
 
     # Private methods:
 
