@@ -13,7 +13,7 @@ class Net:
     )  # the component inputs that this net drives
 
     def __repr__(self) -> str:
-        return f"Net[{self.name}]"
+        return f"Net[{self.name}[width={self.width}]]"
 
 
 @dataclass
