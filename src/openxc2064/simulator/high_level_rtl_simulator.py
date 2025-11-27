@@ -40,6 +40,24 @@ class RTLSimulator:
 
         self._initialise()
 
+    def set(self, port_name: str, value: int) -> None:
+        pass
+
+    def get(self, port_name: str) -> int:
+        return 0
+
+    def get_net(self, net_name: str) -> int:
+        return 0
+
+    def get_net_signed(self, net_name: str) -> int:
+        return 0
+
+    def step(self) -> None:
+        pass
+
+    def reset(self) -> None:
+        pass
+
     # Private methods:
 
     def _initialise(self) -> None:
@@ -89,7 +107,7 @@ class RTLSimulator:
 
     def _propagate_comb(self, max_iterations: int = 50) -> None:
         # propagate logic through combinational logic until stable
-        for _iteration in range(max_iterations):
+        for _ in range(max_iterations):
             changed_flag = False
 
             for n in self.netlist.nodes:
@@ -106,8 +124,14 @@ class RTLSimulator:
                             changed_flag = True
 
                 elif isinstance(n, DFF):
-                    # todo
-                    pass
+                    q_value = self.dff_state.get(n.id, 0)
+                    if n.outputs:
+                        output_net = n.outputs[0]
+                        q_value_masked = self._mask_value(q_value, output_net.width)
+                        prev_value = self.net_values.get(output_net.name, 0)
+                        if prev_value != q_value_masked:
+                            self.net_values[output_net.name] = q_value_masked
+                            changed_flag = True
 
             if not changed_flag:
                 break
@@ -121,3 +145,30 @@ class RTLSimulator:
             return self.ops[gate.op](input_values)
         else:
             raise ValueError(f"Unknown operation: '{gate.op}'")
+
+    def _detect_edge(self, net_name: str, edge_type: str) -> bool:
+        # detects if a specific edge type occurred on a net
+        # edge_type should be 'posedge' or 'negedge'
+        prev_value = self.prev_net_values.get(net_name, 0)
+        curr_value = self.net_values.get(net_name, 0)
+
+        if edge_type == "posedge":
+            return prev_value == 0 and curr_value == 1
+        elif edge_type == "negedge":
+            return prev_value == 1 and curr_value == 0
+        else:
+            raise ValueError(f"Unknown edge_type: '{edge_type}'")
+
+    def _update_dffs(self) -> None:
+        # check all dffs for clock edges and update state accordingly
+        for n in self.netlist.nodes:
+            if isinstance(n, DFF):  # inputs: [D, CLK]
+                if len(n.inputs) >= 2:
+                    clk_net_name = n.inputs[1].name
+
+                    # check if appropriate edge occurred:
+                    if self._detect_edge(clk_net_name, n.edge):
+                        d_net = n.inputs[0]
+                        d_value = self.net_values.get(d_net.name, 0)
+                        d_value_masked = self._mask_value(d_value, d_net.width)
+                        self.dff_state[n.id] = d_value_masked
