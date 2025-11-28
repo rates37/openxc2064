@@ -92,6 +92,7 @@ def test_synth_binary_op_width_propagation() -> None:
     assert len(eq_gate[0].outputs) == 1
     assert eq_gate[0].outputs[0].width == 1
 
+
 def test_synth_unary_ops() -> None:
     symbols = {
         "a": create_symbol("a", 4, Direction.INPUT),
@@ -117,6 +118,7 @@ def test_synth_unary_ops() -> None:
 
     assert neg_gate[0].outputs[0].width == 4 # width preserved
     assert not_gate[0].outputs[0].width == 1 # only 1 bit
+
 
 def test_synth_slicing_indexing() -> None:
     symbols = {
@@ -145,6 +147,7 @@ def test_synth_slicing_indexing() -> None:
     assert len(slice_gate) == 1
     assert slice_gate[0].outputs[0].width == 3 # 4,3,2 = 3 bits
 
+
 def test_synth_constants() -> None:
     symbols = {"y": create_symbol("y", 4, Direction.OUTPUT)}
     contents = [
@@ -158,6 +161,7 @@ def test_synth_constants() -> None:
     assert len(const_node) == 1
     assert const_node[0].value == 9
     assert const_node[0].outputs[0].width == 4
+
 
 def test_synth_mux() -> None:
     symbols = {
@@ -222,7 +226,93 @@ def test_synth_dff() -> None:
     assert dff[0].inputs[1].name == "clk"
 
 
+def test_synth_submodule() -> None:
+    sub_syms = {
+        "in_sig": create_symbol("in_sig", 1, Direction.INPUT),
+        "out_sig": create_symbol("out_sig", 1, Direction.OUTPUT)
+    }
+    sub_contents = [AssignStmt(Identifier("out_sig"), UnaryOp("!", Identifier("in_sig")))]
+    sub_mod = Module("inv", [], sub_contents)
+    
+    # Top level Module
+    top_syms = {
+        "a": create_symbol("a", 1, Direction.INPUT),
+        "z": create_symbol("z", 1, Direction.OUTPUT)
+    }
+    # inv u0 (.in_sig(a), .out_sig(z));
+    inst = Instance(
+        module_name="inv",
+        instance_name="u0",
+        params=[],
+        connections=[
+            Connection("in_sig", Identifier("a")),
+            Connection("out_sig", Identifier("z"))
+        ]
+    )
+    top_mod = Module("top", [], [inst])
+    
+    lib = {
+        "inv": (sub_mod, sub_syms),
+        "top": (top_mod, top_syms)
+    }
+    
+    synth = Synthesiser(lib)
+    netlist = synth.synthesise("top")
+    
+    # Look for flattened names
+    # Logic: a -> BUF -> u0_in_sig -> LOGIC_NOT -> u0_out_sig -> BUF -> z
+    flattened_nets = [n.name for n in netlist.nets]
+    assert "u0_in_sig" in flattened_nets
+    assert "u0_out_sig" in flattened_nets
 
 
-if __name__ == "__main__":
-    test_synth_mux()
+#! Test for Synthesis Exceptions:
+def test_synth_error_unknown_signal() -> None:
+    symbols = {}
+    contents = [AssignStmt(Identifier("y"), Identifier("x"))] # x undefined
+    lib = create_mock_library("test", contents, symbols)
+    synth = Synthesiser(lib)
+    
+    with pytest.raises(SynthesisException) as exc:
+        synth.synthesise("test")
+    assert "Unknown signal 'x'" in str(exc.value)
+
+
+def test_synth_error_unknown_module() -> None:
+    inst = Instance("bad_mod", [], "u0", [])
+    lib = create_mock_library("test", [inst], {})
+    synth = Synthesiser(lib)
+    
+    with pytest.raises(SynthesisException) as exc:
+        synth.synthesise("test")
+    assert "Unknown module 'bad_mod'" in str(exc.value)
+
+
+def test_synth_error_unknown_port() -> None:
+    sub_mod = Module("sub", [], [])
+    lib = {
+        "sub": (sub_mod, {}),
+        "top": (Module("top", [], [
+            Instance("sub", [], "u0", [Connection("bad_port", Identifier("x"))])
+        ]), {"x": create_symbol("x", 1, Direction.INPUT)})
+    }
+    synth = Synthesiser(lib)
+    
+    with pytest.raises(SynthesisException) as exc:
+        synth.synthesise("top")
+    assert "Port 'bad_port' not found" in str(exc.value)
+
+
+def test_synth_error_indexed_missing_range() -> None:
+    invalid_idx = Indexed(base=Identifier("a"), index=None, range=None)
+    contents = [AssignStmt(Identifier("b"), invalid_idx)]
+    symbols = {
+        "a": create_symbol("a", 4, Direction.INPUT),
+        "b": create_symbol("b", 1, Direction.OUTPUT)
+    }
+    lib = create_mock_library("test", contents, symbols)
+    synth = Synthesiser(lib)
+    
+    with pytest.raises(SynthesisException) as exc:
+        synth.synthesise("test")
+    assert "Indexed expression missing index or range" in str(exc.value)
