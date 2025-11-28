@@ -117,3 +117,112 @@ def test_synth_unary_ops() -> None:
 
     assert neg_gate[0].outputs[0].width == 4 # width preserved
     assert not_gate[0].outputs[0].width == 1 # only 1 bit
+
+def test_synth_slicing_indexing() -> None:
+    symbols = {
+        "bus": create_symbol("bus", 8, Direction.INPUT),
+        "bit_out": create_symbol("bit_out", 1, Direction.OUTPUT),
+        "slice_out": create_symbol("slice_out", 3, Direction.OUTPUT),
+    }
+    
+    # bit_out = bus[2];
+    # slice_out = bus[4:2]; (3 bits)
+    contents = [
+        AssignStmt(Identifier("bit_out"), Indexed(Identifier("bus"), index=Index("2"))),
+        AssignStmt(Identifier("slice_out"), Indexed(Identifier("bus"), range=Range(4, 2))),
+    ]
+    lib = create_mock_library("test", contents, symbols)
+    synth = Synthesiser(lib)
+    netlist = synth.synthesise("test")
+    
+    # Check Index Gate
+    idx_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"]
+    assert len(idx_gate) == 1
+    assert idx_gate[0].outputs[0].width == 1
+    
+    # Check Slice Gate
+    slice_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"]
+    assert len(slice_gate) == 1
+    assert slice_gate[0].outputs[0].width == 3 # 4,3,2 = 3 bits
+
+def test_synth_constants() -> None:
+    symbols = {"y": create_symbol("y", 4, Direction.OUTPUT)}
+    contents = [
+        AssignStmt(Identifier("y"), Number("4'b1001"))
+    ]
+    lib = create_mock_library("test", contents, symbols)
+    synth = Synthesiser(lib)
+    netlist = synth.synthesise("test")
+    
+    const_node = [n for n in netlist.nodes if isinstance(n, Constant)]
+    assert len(const_node) == 1
+    assert const_node[0].value == 9
+    assert const_node[0].outputs[0].width == 4
+
+def test_synth_mux() -> None:
+    symbols = {
+        "sel": create_symbol("sel", 1, Direction.INPUT),
+        "a": create_symbol("a", 4, Direction.INPUT),
+        "b": create_symbol("b", 4, Direction.INPUT),
+        "y": create_symbol("y", 4, Direction.OUTPUT),
+    }
+    
+    # if (sel) y = a; else y = b;
+    if_stmt = IfStmt(
+        condition=Identifier("sel"),
+        then_stmts=ProcAssignStmt(Identifier("y"), "=", Identifier("a")),
+        else_stmts=ProcAssignStmt(Identifier("y"), "=", Identifier("b"))
+    )
+    contents = [AlwaysComb(stmt=if_stmt)]
+    lib = create_mock_library("test", contents, symbols)
+    
+    synth = Synthesiser(lib)
+    netlist = synth.synthesise("test")
+    
+    mux = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "MUX"]
+    assert len(mux) == 1
+    # MUX inputs = [Cond, Else, Then] -> [sel, b, a]
+    mux_inputs = mux[0].inputs
+    assert len(mux_inputs) == 3
+
+    assert mux_inputs[0].name == "sel"
+    assert mux_inputs[0].width == 1
+
+    assert mux_inputs[1].name == "b"
+    assert mux_inputs[1].width == 4
+
+    assert mux_inputs[2].name == "a"
+    assert mux_inputs[2].width == 4
+
+    # MUX output width should match inputs
+    assert len(mux[0].outputs) == 1
+    assert mux[0].outputs[0].width == 4
+
+
+def test_synth_dff() -> None:
+    symbols = {
+        "clk": create_symbol("clk", 1, Direction.INPUT),
+        "d": create_symbol("d", 1, Direction.INPUT),
+        "q": create_symbol("q", 1, Direction.OUTPUT, is_reg=True),
+    }
+    
+    # always : seq @(negedge clk) q <= d;
+    stmt = ProcAssignStmt(Identifier("q"), "<=", Identifier("d"))
+    contents = [AlwaysSeq(edge="negedge", signal=Identifier("clk"), statements=stmt)]
+    
+    lib = create_mock_library("test", contents, symbols)
+    synth = Synthesiser(lib)
+    netlist = synth.synthesise("test")
+    
+    dff = [n for n in netlist.nodes if isinstance(n, DFF)]
+    assert len(dff) == 1
+    assert dff[0].edge == "negedge"
+    assert len(dff[0].inputs) == 2
+    assert dff[0].inputs[0].name == "d"
+    assert dff[0].inputs[1].name == "clk"
+
+
+
+
+if __name__ == "__main__":
+    test_synth_mux()
