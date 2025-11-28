@@ -62,6 +62,8 @@ class Synthesiser:
     def _compile_module_instance(
         self, module_name: str, instance_name: str, parent_netlist: Netlist
     ) -> None:
+        if module_name not in self.library:
+            raise SynthesisException(f"Unknown module '{module_name}'.")
         module_ast, symbol_table = self.library[module_name]
         prefix = f"{instance_name}_" if instance_name else ""
         local_net_map: dict[str, Net] = {}
@@ -112,7 +114,7 @@ class Synthesiser:
             port_name = c.port_name
             parent_expr = c.expr
             parent_net = self._get_net_expr(parent_expr, current_scope, netlist)
-            child_net_name = f"{child_prefix}{port_name}"
+            child_net_name = f"{child_prefix}_{port_name}"
             child_net = next(
                 (n for n in netlist.nets if n.name == child_net_name), None
             )
