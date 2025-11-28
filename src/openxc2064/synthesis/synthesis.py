@@ -311,6 +311,11 @@ class Synthesiser:
                         f"mux_{v}_{len(netlist.nets)}", width=mux_width
                     )
                     netlist.add_logic("MUX", [cond, e_net, t_net], [mux_out])
+                    # note the order of inputs list ^^^^^^^^^^^^ is intentional
+                    # if cond=0, then the else block gets run -> i.e., index 0 in inputs[1..]
+                    # if cond=1 then the then block gets run -> i.e., index 1 in inputs[1..]
+                    # allows you to use cond+1 as the index to choose which of the inputs propagates
+                    # the output
                     merged[v] = mux_out
                 elif t_net:
                     merged[v] = t_net
