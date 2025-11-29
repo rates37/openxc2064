@@ -124,7 +124,7 @@ REG: "reg"
 RANGE: "[" NUMBER ":" NUMBER "]" // e.g., [7:0]
 INDEX: "[" NUMBER "]" // e.g., [3]
 IDENT: /[a-zA-Z_][a-zA-Z0-9_]*/ // Identifiers (alphanumeric string starting with letter or underscore)
-NUMBER: /[0-9]+('[bh][0-9A-Fa-f]+)?/
+NUMBER: /[0-9]+('[bodh][0-9A-Fa-f]+)?/
 COMMENT: /\/\/[^\n]*/ // Single line comment
 MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
 %ignore /[ \t\r\n]+/ // Ignore whitespace
