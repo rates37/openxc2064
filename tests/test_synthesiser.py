@@ -1,8 +1,8 @@
 import pytest
 
+from openxc2064.hdl import parse_hdl
 from openxc2064.hdl.ast_nodes import *
-from openxc2064.synthesis import SymbolInfo
-from openxc2064.synthesis import Synthesiser, SynthesisException, parse_verilog_literal
+from openxc2064.synthesis import SymbolInfo, Synthesiser, SynthesisException, parse_verilog_literal, HDLElaborator
 from openxc2064.synthesis.rtl_nodes import LogicGate, DFF, Constant, Input, Net
 
 # helper functions:
@@ -316,3 +316,208 @@ def test_synth_error_indexed_missing_range() -> None:
     with pytest.raises(SynthesisException) as exc:
         synth.synthesise("test")
     assert "Indexed expression missing index or range" in str(exc.value)
+
+
+#! Integration tests with Parser/Elaborator
+# Same tests as above, but using the parser and elaborator 
+#  rather than manually constructing the elaborator output
+
+
+def test_int_synth_basic_assign_and_ports() -> None:
+    HDL_CONTENTS = """module test(input a, output b);
+    assign b = a;
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+
+    # Check inputs
+    assert len(netlist.inputs) == 1
+    assert netlist.inputs[0].name == "a"
+
+    # Check outputs
+    assert len(netlist.outputs) == 1
+    assert netlist.outputs[0].name == "b"
+
+    # Check Logic (should be a BUF gate)
+    buffs = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "BUF"]
+    assert len(buffs) == 1
+    assert buffs[0].inputs[0].name == "a"
+    assert buffs[0].outputs[0].name == "b"
+
+
+def test_int_synth_binary_op_width_propagation() -> None:
+    HDL_CONTENTS = """module test(input [3:0] a, input [3:0] b, output [3:0] res_add, output res_eq);
+    assign res_add = a+b;
+    assign res_eq = a == b;
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+
+    # find gate instances
+    add_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "ADD"]
+    eq_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "EQ"]
+
+    # Verify add output width (Should be max of its inputs = max(4,4) = 4)
+    assert len(add_gate) == 1
+    assert len(add_gate[0].outputs) == 1
+    assert add_gate[0].outputs[0].width == 4
+
+    # Verify eq output width (Should be 1 since arithmetic == produces 0 or 1 single bit output)
+    assert len(eq_gate) == 1
+    assert len(eq_gate[0].outputs) == 1
+    assert eq_gate[0].outputs[0].width == 1
+
+
+def test_int_synth_unary_ops() -> None:
+    HDL_CONTENTS = """module test(input [3:0] a, output [3:0] y_neg, output y_not);
+    assign y_neg = -a;
+    assign y_not = !a;
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+
+    
+    neg_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "NEG"]
+    not_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"]
+
+    assert len(neg_gate) == 1
+    assert len(not_gate) == 1
+
+    assert neg_gate[0].outputs[0].width == 4 # width preserved
+    assert not_gate[0].outputs[0].width == 1 # only 1 bit
+
+
+def test_int_synth_slicing_indexing() -> None:
+    HDL_CONTENTS = """module test(input [7:0] bus, output [2:0] slice_out, output bit_out);
+    assign bit_out = bus[2];
+    assign slice_out = bus[4:2];
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+    
+    # Check Index Gate
+    idx_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"]
+    assert len(idx_gate) == 1
+    assert idx_gate[0].outputs[0].width == 1
+    
+    # Check Slice Gate
+    slice_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"]
+    assert len(slice_gate) == 1
+    assert slice_gate[0].outputs[0].width == 3 # 4,3,2 = 3 bits
+
+
+def test_int_synth_constants() -> None:
+    HDL_CONTENTS = """module test(output [3:0] y);
+    assign y = 4'b1001;
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+
+    
+    const_node = [n for n in netlist.nodes if isinstance(n, Constant)]
+    assert len(const_node) == 1
+    assert const_node[0].value == 9
+    assert const_node[0].outputs[0].width == 4
+
+
+def test_int_synth_mux() -> None:
+    HDL_CONTENTS = """module test(input sel, input [3:0] a, input [3:0] b, output reg [3:0] y);
+    always : comb begin
+        if (sel)
+            y = a;
+        else
+            y = b;
+    end
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+    
+    mux = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "MUX"]
+    assert len(mux) == 1
+    # MUX inputs = [Cond, Else, Then] -> [sel, b, a]
+    mux_inputs = mux[0].inputs
+    assert len(mux_inputs) == 3
+
+    assert mux_inputs[0].name == "sel"
+    assert mux_inputs[0].width == 1
+
+    assert mux_inputs[1].name == "b"
+    assert mux_inputs[1].width == 4
+
+    assert mux_inputs[2].name == "a"
+    assert mux_inputs[2].width == 4
+
+    # MUX output width should match inputs
+    assert len(mux[0].outputs) == 1
+    assert mux[0].outputs[0].width == 4
+
+
+def test_int_synth_dff() -> None:
+    HDL_CONTENTS = """module test(input clk, input d, output reg q);
+    always : seq @(negedge clk) 
+        q <= d;
+endmodule"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+    
+    dff = [n for n in netlist.nodes if isinstance(n, DFF)]
+    assert len(dff) == 1
+    assert dff[0].edge == "negedge"
+    assert len(dff[0].inputs) == 2
+    assert dff[0].inputs[0].name == "d"
+    assert dff[0].inputs[1].name == "clk"
+
+
+def test_int_synth_submodule() -> None:
+    HDL_CONTENTS = """module inv(input in_sig, output out_sig);
+    assign out_sig = !in_sig;
+endmodule
+
+module test(input a, output z);
+    inv u0 (.in_sig(a), .out_sig(z));
+endmodule
+"""
+    ast = parse_hdl(HDL_CONTENTS)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("test")
+    
+    # Look for flattened names
+    # Logic: a -> BUF -> u0_in_sig -> LOGIC_NOT -> u0_out_sig -> BUF -> z
+    flattened_nets = [n.name for n in netlist.nets]
+    assert "u0_in_sig" in flattened_nets
+    assert "u0_out_sig" in flattened_nets
+
+
+if __name__ == "__main__":
+    test_int_synth_submodule()
