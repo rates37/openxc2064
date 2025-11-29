@@ -2,23 +2,34 @@ import pytest
 
 from openxc2064.hdl import parse_hdl
 from openxc2064.hdl.ast_nodes import *
-from openxc2064.synthesis import SymbolInfo, Synthesiser, SynthesisException, parse_verilog_literal, HDLElaborator
+from openxc2064.synthesis import (
+    SymbolInfo,
+    Synthesiser,
+    SynthesisException,
+    parse_verilog_literal,
+    HDLElaborator,
+)
 from openxc2064.synthesis.rtl_nodes import LogicGate, DFF, Constant, Input, Net
 
 # helper functions:
 
 
-def create_symbol(name: str, width: int = 1, direction: Direction | None = None, is_reg: bool = False) -> SymbolInfo:
-    return SymbolInfo(name=name, is_reg=is_reg, msb=width-1, lsb=0, direction=direction)
+def create_symbol(
+    name: str, width: int = 1, direction: Direction | None = None, is_reg: bool = False
+) -> SymbolInfo:
+    return SymbolInfo(
+        name=name, is_reg=is_reg, msb=width - 1, lsb=0, direction=direction
+    )
 
 
 def create_mock_library(
     module_name: str,
     contents: list[WireDecl | RegDecl | AssignStmt | Instance | AlwaysComb | AlwaysSeq],
-    symbols: dict[str, SymbolInfo]
+    symbols: dict[str, SymbolInfo],
 ) -> dict[str, tuple[Module, dict[str, SymbolInfo]]]:
     mod = Module(name=module_name, ports=[], contents=contents)
     return {module_name: (mod, symbols)}
+
 
 #! Tests:
 
@@ -35,7 +46,7 @@ def test_parse_verilog_literal() -> None:
 def test_synth_basic_assign_and_ports() -> None:
     symbols = {
         "a": create_symbol("a", 1, Direction.INPUT),
-        "b": create_symbol("b", 1, Direction.OUTPUT)
+        "b": create_symbol("b", 1, Direction.OUTPUT),
     }
     contents = [AssignStmt(lhs=Identifier("b"), rhs=Identifier("a"))]
     lib = create_mock_library("test", contents, symbols)
@@ -63,15 +74,17 @@ def test_synth_binary_op_width_propagation() -> None:
         "a": create_symbol("a", 4, Direction.INPUT),
         "b": create_symbol("b", 4, Direction.INPUT),
         "res_add": create_symbol("res_add", 4, Direction.OUTPUT),
-        "res_eq": create_symbol("res_eq", 1, Direction.OUTPUT)
+        "res_eq": create_symbol("res_eq", 1, Direction.OUTPUT),
     }
     # res_add = a + b;
     # res_eq = a == b;
     contents = [
-        AssignStmt(Identifier("res_add"), BinaryOp(
-            Identifier("a"), "+", Identifier("b"))),
-        AssignStmt(Identifier("res_eq"), BinaryOp(
-            Identifier("a"), "==", Identifier("b")))
+        AssignStmt(
+            Identifier("res_add"), BinaryOp(Identifier("a"), "+", Identifier("b"))
+        ),
+        AssignStmt(
+            Identifier("res_eq"), BinaryOp(Identifier("a"), "==", Identifier("b"))
+        ),
     ]
     lib = create_mock_library("test", contents, symbols)
 
@@ -99,7 +112,7 @@ def test_synth_unary_ops() -> None:
         "y_neg": create_symbol("y_neg", 4, Direction.OUTPUT),
         "y_not": create_symbol("y_not", 1, Direction.OUTPUT),
     }
-    
+
     # y_neg = -a;
     # y_not = !a;
     contents = [
@@ -109,15 +122,17 @@ def test_synth_unary_ops() -> None:
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
     netlist = synth.synthesise("test")
-    
+
     neg_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "NEG"]
-    not_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"]
+    not_gate = [
+        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"
+    ]
 
     assert len(neg_gate) == 1
     assert len(not_gate) == 1
 
-    assert neg_gate[0].outputs[0].width == 4 # width preserved
-    assert not_gate[0].outputs[0].width == 1 # only 1 bit
+    assert neg_gate[0].outputs[0].width == 4  # width preserved
+    assert not_gate[0].outputs[0].width == 1  # only 1 bit
 
 
 def test_synth_slicing_indexing() -> None:
@@ -126,37 +141,41 @@ def test_synth_slicing_indexing() -> None:
         "bit_out": create_symbol("bit_out", 1, Direction.OUTPUT),
         "slice_out": create_symbol("slice_out", 3, Direction.OUTPUT),
     }
-    
+
     # bit_out = bus[2];
     # slice_out = bus[4:2]; (3 bits)
     contents = [
         AssignStmt(Identifier("bit_out"), Indexed(Identifier("bus"), index=Index("2"))),
-        AssignStmt(Identifier("slice_out"), Indexed(Identifier("bus"), range=Range(4, 2))),
+        AssignStmt(
+            Identifier("slice_out"), Indexed(Identifier("bus"), range=Range(4, 2))
+        ),
     ]
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
     netlist = synth.synthesise("test")
-    
+
     # Check Index Gate
-    idx_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"]
+    idx_gate = [
+        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"
+    ]
     assert len(idx_gate) == 1
     assert idx_gate[0].outputs[0].width == 1
-    
+
     # Check Slice Gate
-    slice_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"]
+    slice_gate = [
+        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"
+    ]
     assert len(slice_gate) == 1
-    assert slice_gate[0].outputs[0].width == 3 # 4,3,2 = 3 bits
+    assert slice_gate[0].outputs[0].width == 3  # 4,3,2 = 3 bits
 
 
 def test_synth_constants() -> None:
     symbols = {"y": create_symbol("y", 4, Direction.OUTPUT)}
-    contents = [
-        AssignStmt(Identifier("y"), Number("4'b1001"))
-    ]
+    contents = [AssignStmt(Identifier("y"), Number("4'b1001"))]
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
     netlist = synth.synthesise("test")
-    
+
     const_node = [n for n in netlist.nodes if isinstance(n, Constant)]
     assert len(const_node) == 1
     assert const_node[0].value == 9
@@ -170,19 +189,19 @@ def test_synth_mux() -> None:
         "b": create_symbol("b", 4, Direction.INPUT),
         "y": create_symbol("y", 4, Direction.OUTPUT),
     }
-    
+
     # if (sel) y = a; else y = b;
     if_stmt = IfStmt(
         condition=Identifier("sel"),
         then_stmts=ProcAssignStmt(Identifier("y"), "=", Identifier("a")),
-        else_stmts=ProcAssignStmt(Identifier("y"), "=", Identifier("b"))
+        else_stmts=ProcAssignStmt(Identifier("y"), "=", Identifier("b")),
     )
     contents = [AlwaysComb(stmt=if_stmt)]
     lib = create_mock_library("test", contents, symbols)
-    
+
     synth = Synthesiser(lib)
     netlist = synth.synthesise("test")
-    
+
     mux = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "MUX"]
     assert len(mux) == 1
     # MUX inputs = [Cond, Else, Then] -> [sel, b, a]
@@ -209,15 +228,15 @@ def test_synth_dff() -> None:
         "d": create_symbol("d", 1, Direction.INPUT),
         "q": create_symbol("q", 1, Direction.OUTPUT, is_reg=True),
     }
-    
+
     # always : seq @(negedge clk) q <= d;
     stmt = ProcAssignStmt(Identifier("q"), "<=", Identifier("d"))
     contents = [AlwaysSeq(edge="negedge", signal=Identifier("clk"), statements=stmt)]
-    
+
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
     netlist = synth.synthesise("test")
-    
+
     dff = [n for n in netlist.nodes if isinstance(n, DFF)]
     assert len(dff) == 1
     assert dff[0].edge == "negedge"
@@ -229,15 +248,17 @@ def test_synth_dff() -> None:
 def test_synth_submodule() -> None:
     sub_syms = {
         "in_sig": create_symbol("in_sig", 1, Direction.INPUT),
-        "out_sig": create_symbol("out_sig", 1, Direction.OUTPUT)
+        "out_sig": create_symbol("out_sig", 1, Direction.OUTPUT),
     }
-    sub_contents = [AssignStmt(Identifier("out_sig"), UnaryOp("!", Identifier("in_sig")))]
+    sub_contents = [
+        AssignStmt(Identifier("out_sig"), UnaryOp("!", Identifier("in_sig")))
+    ]
     sub_mod = Module("inv", [], sub_contents)
-    
+
     # Top level Module
     top_syms = {
         "a": create_symbol("a", 1, Direction.INPUT),
-        "z": create_symbol("z", 1, Direction.OUTPUT)
+        "z": create_symbol("z", 1, Direction.OUTPUT),
     }
     # inv u0 (.in_sig(a), .out_sig(z));
     inst = Instance(
@@ -246,19 +267,16 @@ def test_synth_submodule() -> None:
         params=[],
         connections=[
             Connection("in_sig", Identifier("a")),
-            Connection("out_sig", Identifier("z"))
-        ]
+            Connection("out_sig", Identifier("z")),
+        ],
     )
     top_mod = Module("top", [], [inst])
-    
-    lib = {
-        "inv": (sub_mod, sub_syms),
-        "top": (top_mod, top_syms)
-    }
-    
+
+    lib = {"inv": (sub_mod, sub_syms), "top": (top_mod, top_syms)}
+
     synth = Synthesiser(lib)
     netlist = synth.synthesise("top")
-    
+
     # Look for flattened names
     # Logic: a -> BUF -> u0_in_sig -> LOGIC_NOT -> u0_out_sig -> BUF -> z
     flattened_nets = [n.name for n in netlist.nets]
@@ -269,10 +287,10 @@ def test_synth_submodule() -> None:
 #! Test for Synthesis Exceptions:
 def test_synth_error_unknown_signal() -> None:
     symbols = {}
-    contents = [AssignStmt(Identifier("y"), Identifier("x"))] # x undefined
+    contents = [AssignStmt(Identifier("y"), Identifier("x"))]  # x undefined
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
-    
+
     with pytest.raises(SynthesisException) as exc:
         synth.synthesise("test")
     assert "Unknown signal 'x'" in str(exc.value)
@@ -282,7 +300,7 @@ def test_synth_error_unknown_module() -> None:
     inst = Instance("bad_mod", [], "u0", [])
     lib = create_mock_library("test", [inst], {})
     synth = Synthesiser(lib)
-    
+
     with pytest.raises(SynthesisException) as exc:
         synth.synthesise("test")
     assert "Unknown module 'bad_mod'" in str(exc.value)
@@ -292,12 +310,17 @@ def test_synth_error_unknown_port() -> None:
     sub_mod = Module("sub", [], [])
     lib = {
         "sub": (sub_mod, {}),
-        "top": (Module("top", [], [
-            Instance("sub", [], "u0", [Connection("bad_port", Identifier("x"))])
-        ]), {"x": create_symbol("x", 1, Direction.INPUT)})
+        "top": (
+            Module(
+                "top",
+                [],
+                [Instance("sub", [], "u0", [Connection("bad_port", Identifier("x"))])],
+            ),
+            {"x": create_symbol("x", 1, Direction.INPUT)},
+        ),
     }
     synth = Synthesiser(lib)
-    
+
     with pytest.raises(SynthesisException) as exc:
         synth.synthesise("top")
     assert "Port 'bad_port' not found" in str(exc.value)
@@ -308,18 +331,18 @@ def test_synth_error_indexed_missing_range() -> None:
     contents = [AssignStmt(Identifier("b"), invalid_idx)]
     symbols = {
         "a": create_symbol("a", 4, Direction.INPUT),
-        "b": create_symbol("b", 1, Direction.OUTPUT)
+        "b": create_symbol("b", 1, Direction.OUTPUT),
     }
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
-    
+
     with pytest.raises(SynthesisException) as exc:
         synth.synthesise("test")
     assert "Indexed expression missing index or range" in str(exc.value)
 
 
 #! Integration tests with Parser/Elaborator
-# Same tests as above, but using the parser and elaborator 
+# Same tests as above, but using the parser and elaborator
 #  rather than manually constructing the elaborator output
 
 
@@ -330,7 +353,7 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
 
@@ -357,7 +380,7 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
 
@@ -384,19 +407,20 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
 
-    
     neg_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "NEG"]
-    not_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"]
+    not_gate = [
+        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"
+    ]
 
     assert len(neg_gate) == 1
     assert len(not_gate) == 1
 
-    assert neg_gate[0].outputs[0].width == 4 # width preserved
-    assert not_gate[0].outputs[0].width == 1 # only 1 bit
+    assert neg_gate[0].outputs[0].width == 4  # width preserved
+    assert not_gate[0].outputs[0].width == 1  # only 1 bit
 
 
 def test_int_synth_slicing_indexing() -> None:
@@ -407,19 +431,23 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
-    
+
     # Check Index Gate
-    idx_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"]
+    idx_gate = [
+        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"
+    ]
     assert len(idx_gate) == 1
     assert idx_gate[0].outputs[0].width == 1
-    
+
     # Check Slice Gate
-    slice_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"]
+    slice_gate = [
+        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"
+    ]
     assert len(slice_gate) == 1
-    assert slice_gate[0].outputs[0].width == 3 # 4,3,2 = 3 bits
+    assert slice_gate[0].outputs[0].width == 3  # 4,3,2 = 3 bits
 
 
 def test_int_synth_constants() -> None:
@@ -429,11 +457,10 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
 
-    
     const_node = [n for n in netlist.nodes if isinstance(n, Constant)]
     assert len(const_node) == 1
     assert const_node[0].value == 9
@@ -452,10 +479,10 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
-    
+
     mux = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "MUX"]
     assert len(mux) == 1
     # MUX inputs = [Cond, Else, Then] -> [sel, b, a]
@@ -484,10 +511,10 @@ endmodule"""
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
-    
+
     dff = [n for n in netlist.nodes if isinstance(n, DFF)]
     assert len(dff) == 1
     assert dff[0].edge == "negedge"
@@ -508,10 +535,10 @@ endmodule
     ast = parse_hdl(HDL_CONTENTS)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-    
+
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("test")
-    
+
     # Look for flattened names
     # Logic: a -> BUF -> u0_in_sig -> LOGIC_NOT -> u0_out_sig -> BUF -> z
     flattened_nets = [n.name for n in netlist.nets]
