@@ -675,3 +675,168 @@ def test_shift_register() -> None:
                 assert sim.get("q2") == pattern[i-2]
             if i >= 3:
                 assert sim.get("q3") == pattern[i-3]
+
+
+def test_alu() -> None:
+    netlist = Netlist("simple_alu")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    op = netlist.create_net("op", 1)  # 0=add, 1=sub
+    result = netlist.create_net("result", 8)
+    add_result = netlist.create_net("add_result", 8)
+    sub_result = netlist.create_net("sub_result", 8)
+
+    netlist.inputs = [a, b, op]
+    netlist.outputs = [result]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_input("op", op)
+
+    netlist.add_logic("ADD", [a, b], [add_result])
+    netlist.add_logic("SUB", [a, b], [sub_result])
+    netlist.add_logic("MUX", [op, add_result, sub_result], [result])
+
+    sim = RTLSimulator(netlist)
+
+    # addition
+    sim.set("a", 20)
+    sim.set("b", 15)
+    sim.set("op", 0)
+    sim.step()
+    assert sim.get("result") == 35
+
+    # subtraction
+    sim.set("op", 1)
+    sim.step()
+    assert sim.get("result") == 5
+
+
+def test_simple_state_machine() -> None:
+    netlist = Netlist("fsm_2state")
+
+    clk = netlist.create_net("clk", 1)
+    inp = netlist.create_net("inp", 1)
+    state = netlist.create_net("state", 1)
+    state_next = netlist.create_net("state_next", 1)
+
+    netlist.inputs = [clk, inp]
+    netlist.outputs = [state]
+
+    netlist.add_input("clk", clk)
+    netlist.add_input("inp", inp)
+
+    # Next state = inp XOR state
+    netlist.add_logic("XOR", [inp, state], [state_next])
+    netlist.add_dff([state_next, clk], [state], edge="posedge")
+
+    sim = RTLSimulator(netlist)
+
+    # Initialise with clock low and input low
+    sim.set("inp", 0)
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("state") == 0
+    # state=0, inp=0, so state_next=0
+
+    # Change input while clock still low
+    # combinational logic to settles before next edge
+    sim.set("inp", 1)
+    sim.step()
+    # state=0, inp=1, so state_next is 1
+    # state output is still 0 because no clock edge yet
+    assert sim.get("state") == 0
+
+    # trigger rising edge
+    sim.set("clk", 1)
+    sim.step()
+    # Rising edge captures state_next=1
+    assert sim.get("state") == 1
+
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("state") == 1
+
+    sim.set("inp", 0)
+    sim.step()
+    # state=1, inp=0, so state_next = 1 (no change)
+
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("state") == 1
+
+
+def test_invalid_input_port() -> None:
+    netlist = Netlist("test")
+    inp = netlist.create_net("inp")
+    netlist.inputs = [inp]
+    netlist.add_input("inp", inp)
+
+    sim = RTLSimulator(netlist)
+
+    with pytest.raises(ValueError):
+        sim.set("nonexistent", 5)
+
+
+def test_invalid_output_port() -> None:
+    netlist = Netlist("test")
+    out = netlist.create_net("out")
+    netlist.outputs = [out]
+
+    sim = RTLSimulator(netlist)
+
+    with pytest.raises(ValueError):
+        sim.get("nonexistent")
+
+
+def test_invalid_net_name() -> None:
+    netlist = Netlist("test")
+
+    sim = RTLSimulator(netlist)
+
+    with pytest.raises(ValueError):
+        sim.get_net("nonexistent")
+
+
+def test_zero_width_ports() -> None:
+    netlist = Netlist("zero_width")
+
+    inp = netlist.create_net("inp", 0)
+    out = netlist.create_net("out", 0)
+
+    netlist.inputs = [inp]
+    netlist.outputs = [out]
+
+    netlist.add_input("inp", inp)
+    netlist.add_logic("BUF", [inp], [out])
+
+    sim = RTLSimulator(netlist)
+    # todo: what should this behaviour be? It's uncommon to arise from source code so not really important
+    sim.set("inp", 999)
+    sim.step()
+    assert sim.get("out") == 0
+
+
+def test_multiple_changes_before_step() -> None:
+    netlist = Netlist("multi_change")
+
+    inp = netlist.create_net("inp", 8)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [inp]
+    netlist.outputs = [out]
+
+    netlist.add_input("inp", inp)
+    netlist.add_logic("BUF", [inp], [out])
+
+    sim = RTLSimulator(netlist)
+
+    # Change input multiple times
+    sim.set("inp", 10)
+    sim.set("inp", 20)
+    sim.set("inp", 30)
+
+    # Only last value takes effect
+    sim.step()
+    assert sim.get("out") == 30
