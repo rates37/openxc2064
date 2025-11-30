@@ -840,3 +840,56 @@ def test_multiple_changes_before_step() -> None:
     # Only last value takes effect
     sim.step()
     assert sim.get("out") == 30
+
+
+def test_chained_gates() -> None:
+    netlist = Netlist("gate_chain")
+
+    inp = netlist.create_net("inp", 8)
+    n1 = netlist.create_net("n1", 8)
+    n2 = netlist.create_net("n2", 8)
+    n3 = netlist.create_net("n3", 8)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [inp]
+    netlist.outputs = [out]
+
+    netlist.add_input("inp", inp)
+    netlist.add_logic("BUF", [inp], [n1])
+    netlist.add_logic("BUF", [n1], [n2])
+    netlist.add_logic("BUF", [n2], [n3])
+    netlist.add_logic("BUF", [n3], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("inp", 123)
+    sim.step()
+
+    assert sim.get("out") == 123
+    assert sim.get_net("n1") == 123
+    assert sim.get_net("n2") == 123
+    assert sim.get_net("n3") == 123
+
+
+def test_fanout() -> None:
+    # drive multiple outputs with a single net
+    netlist = Netlist("fanout")
+
+    inp = netlist.create_net("inp", 8)
+    out1 = netlist.create_net("out1", 8)
+    out2 = netlist.create_net("out2", 8)
+
+    netlist.inputs = [inp]
+    netlist.outputs = [out1, out2]
+
+    netlist.add_input("inp", inp)
+    netlist.add_logic("BUF", [inp], [out1])
+    netlist.add_logic("BUF", [inp], [out2])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("inp", 67)
+    sim.step()
+
+    assert sim.get("out1") == 67
+    assert sim.get("out2") == 67
