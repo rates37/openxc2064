@@ -386,3 +386,81 @@ def test_inequality() -> None:
     sim.set("b", 5)
     sim.step()
     assert sim.get("out") == 0
+
+
+def test_addition() -> None:
+    netlist = Netlist("add_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    sum_out = netlist.create_net("sum", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [sum_out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("ADD", [a, b], [sum_out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 67)
+    sim.set("b", 41)
+    sim.step()
+    assert sim.get("sum") == 108
+
+    sim.set("a", 21)
+    sim.set("b", 54)
+    sim.step()
+    assert sim.get("sum") == 75
+
+
+def test_subtraction() -> None:
+    netlist = Netlist("sub_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    diff_out = netlist.create_net("diff", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [diff_out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("SUB", [a, b], [diff_out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 25)
+    sim.set("b", 10)
+    sim.step()
+    assert sim.get("diff") == 15
+
+    sim.set("a", 250)
+    sim.set("b", 190)
+    sim.step()
+    assert sim.get("diff") == 60
+
+
+def test_subtraction_negative_result() -> None:
+    netlist = Netlist("sub_negative")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    diff_out = netlist.create_net("diff", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [diff_out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("SUB", [a, b], [diff_out])
+
+    sim = RTLSimulator(netlist)
+
+    # -15 wraps to 241 in unsigned
+    sim.set("a", 10)
+    sim.set("b", 25)
+    sim.step()
+    assert sim.get("diff") == 241  # -15 2's complement
+    assert sim.get_net_signed("diff") == -15
