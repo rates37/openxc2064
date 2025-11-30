@@ -1,6 +1,7 @@
 import pytest
 from openxc2064.synthesis.rtl_nodes import Netlist, Net, LogicGate, DFF, Input, Constant
 from openxc2064.simulator import RTLSimulator
+from itertools import permutations
 
 
 def test_simple_wire() -> None:
@@ -583,3 +584,91 @@ def test_dff_negedge() -> None:
     sim.set("clk", 0)
     sim.step()
     assert sim.get("q") == 67
+
+
+def test_counter() -> None:
+    netlist = Netlist("counter")
+
+    clk = netlist.create_net("clk", 1)
+    reset = netlist.create_net("reset", 1)
+    count = netlist.create_net("count", 8)
+    count_next = netlist.create_net("count_next", 8)
+    one = netlist.create_net("one", 8)
+    zero = netlist.create_net("zero", 8)
+    count_or_zero = netlist.create_net("count_or_zero", 8)
+
+    netlist.inputs = [clk, reset]
+    netlist.outputs = [count]
+
+    netlist.add_input("clk", clk)
+    netlist.add_input("reset", reset)
+    netlist.add_const(1, one)
+    netlist.add_const(0, zero)
+
+    # count_next = count + 1
+    netlist.add_logic("ADD", [count, one], [count_next])
+
+    # if reset, output 0, else output count_next
+    netlist.add_logic("MUX", [reset, count_next, zero], [count_or_zero])
+
+    # store the count
+    netlist.add_dff([count_or_zero, clk], [count], edge="posedge")
+
+    sim = RTLSimulator(netlist)
+
+    # Reset
+    sim.set("reset", 1)
+    sim.set("clk", 0)
+    sim.step()
+
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("count") == 0
+
+    sim.set("reset", 0)
+    for i in range(1, 258):  # check overflow
+        sim.set("clk", 0)
+        sim.step()
+        sim.set("clk", 1)
+        sim.step()
+        assert sim.get("count") == (i % 256)
+
+
+def test_shift_register() -> None:
+    netlist = Netlist("shift_reg")
+
+    clk = netlist.create_net("clk", 1)
+    d_in = netlist.create_net("d_in", 1)
+    q0 = netlist.create_net("q0", 1)
+    q1 = netlist.create_net("q1", 1)
+    q2 = netlist.create_net("q2", 1)
+    q3 = netlist.create_net("q3", 1)
+
+    netlist.inputs = [clk, d_in]
+    netlist.outputs = [q0, q1, q2, q3]
+
+    netlist.add_input("clk", clk)
+    netlist.add_input("d_in", d_in)
+
+    # Chain of DFFs
+    netlist.add_dff([d_in, clk], [q0], edge="posedge")
+    netlist.add_dff([q0, clk], [q1], edge="posedge")
+    netlist.add_dff([q1, clk], [q2], edge="posedge")
+    netlist.add_dff([q2, clk], [q3], edge="posedge")
+
+    sim = RTLSimulator(netlist)
+
+    # test every possible pattern
+    for pattern in set(permutations([0, 0, 0, 0, 1, 1, 1, 1], 4)):
+
+        for bit in pattern:
+            sim.set("d_in", bit)
+            sim.set("clk", 0)
+            sim.step()
+            sim.set("clk", 1)
+            sim.step()
+
+        assert sim.get("q3") == pattern[0]
+        assert sim.get("q2") == pattern[1]
+        assert sim.get("q1") == pattern[2]
+        assert sim.get("q0") == pattern[3]
