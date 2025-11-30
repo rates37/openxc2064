@@ -464,3 +464,122 @@ def test_subtraction_negative_result() -> None:
     sim.step()
     assert sim.get("diff") == 241  # -15 2's complement
     assert sim.get_net_signed("diff") == -15
+
+
+def test_2_to_1_mux() -> None:
+    netlist = Netlist("mux_2to1")
+
+    sel = netlist.create_net("sel", 1)
+    in0 = netlist.create_net("in0", 12)
+    in1 = netlist.create_net("in1", 12)
+    out = netlist.create_net("out", 12)
+
+    netlist.inputs = [sel, in0, in1]
+    netlist.outputs = [out]
+
+    netlist.add_input("sel", sel)
+    netlist.add_input("in0", in0)
+    netlist.add_input("in1", in1)
+    netlist.add_logic("MUX", [sel, in0, in1], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("in0", 420)
+    sim.set("in1", 69)
+
+    sim.set("sel", 0)
+    sim.step()
+    assert sim.get("out") == 420
+
+    sim.set("sel", 1)
+    sim.step()
+    assert sim.get("out") == 69
+
+
+def test_dff_posedge() -> None:
+    netlist = Netlist("dff_posedge")
+
+    d = netlist.create_net("d", 12)
+    clk = netlist.create_net("clk", 1)
+    q = netlist.create_net("q", 12)
+
+    netlist.inputs = [d, clk]
+    netlist.outputs = [q]
+
+    netlist.add_input("d", d)
+    netlist.add_input("clk", clk)
+    netlist.add_dff([d, clk], [q], edge="posedge")
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("d", 0)
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("q") == 0
+
+    sim.set("d", 420)
+    sim.step()
+    assert sim.get("q") == 0  # Q should not change yet
+
+    # Rising edge should capture D
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 420
+
+    # Change D while clk is high
+    sim.set("d", 69)
+    sim.step()
+    assert sim.get("q") == 420  # Q should not change
+
+    # Falling edge should not capture (posedge only)
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("q") == 420
+
+    # Rising edge
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 69
+
+
+def test_dff_negedge() -> None:
+    netlist = Netlist("dff_negedge")
+
+    d = netlist.create_net("d", 12)
+    clk = netlist.create_net("clk", 1)
+    q = netlist.create_net("q", 12)
+
+    netlist.inputs = [d, clk]
+    netlist.outputs = [q]
+
+    netlist.add_input("d", d)
+    netlist.add_input("clk", clk)
+    netlist.add_dff([d, clk], [q], edge="negedge")
+
+    sim = RTLSimulator(netlist)
+
+    # Start with clock high
+    sim.set("d", 0)
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 0
+
+    sim.set("d", 37)
+    sim.step()
+    assert sim.get("q") == 0
+
+    # Falling edge capture D
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("q") == 37
+
+    # Rising edge should not capture (negedge only)
+    sim.set("d", 67)
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 37
+
+    # Falling edge
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("q") == 67
