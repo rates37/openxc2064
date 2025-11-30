@@ -222,3 +222,167 @@ def test_negative_values_twos_complement() -> None:
     sim.step()
     assert sim.get("out") == 8
     assert sim.get_net_signed("out") == -8
+
+
+def test_and_gate() -> None:
+    netlist = Netlist("and_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("AND", [a, b], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 0b11110000)
+    sim.set("b", 0b10101010)
+    sim.step()
+    assert sim.get("out") == 0b10100000
+
+    sim.set("a", 0b11111111)
+    sim.set("b", 0b00000000)
+    sim.step()
+    assert sim.get("out") == 0b00000000
+
+
+def test_or_gate() -> None:
+    netlist = Netlist("or_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("OR", [a, b], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 0b11110000)
+    sim.set("b", 0b10101010)
+    sim.step()
+    assert sim.get("out") == 0b11111010
+
+    sim.set("a", 0b11111111)
+    sim.set("b", 0b00000000)
+    sim.step()
+    assert sim.get("out") == 0b11111111
+
+
+def test_xor_gate() -> None:
+    netlist = Netlist("xor_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("XOR", [a, b], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 0b11110000)
+    sim.set("b", 0b10101010)
+    sim.step()
+    assert sim.get("out") == 0b01011010
+
+    sim.set("a", 0b11111111)
+    sim.set("b", 0b00000000)
+    sim.step()
+    assert sim.get("out") == 0b11111111
+
+    sim.set("a", 0b00000000)
+    sim.set("b", 0b00000000)
+    sim.step()
+    assert sim.get("out") == 0b00000000
+
+    sim.set("a", 0b11111111)
+    sim.set("b", 0b11111111)
+    sim.step()
+    assert sim.get("out") == 0b00000000
+
+
+def test_not_gate() -> None:
+    netlist = Netlist("not_test")
+
+    inp = netlist.create_net("inp", 8)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [inp]
+    netlist.outputs = [out]
+
+    netlist.add_input("inp", inp)
+    netlist.add_logic("NOT", [inp], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("inp", 0b10101010)
+    sim.step()
+    assert sim.get("out") == 0b01010101
+
+
+def test_equality() -> None:
+    netlist = Netlist("eq_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    out = netlist.create_net("out", 1)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("EQ", [a, b], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 5)
+    sim.set("b", 5)
+    sim.step()
+    assert sim.get("out") == 1
+
+    sim.set("a", 5)
+    sim.set("b", 3)
+    sim.step()
+    assert sim.get("out") == 0
+
+
+def test_inequality() -> None:
+    netlist = Netlist("neq_test")
+
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    out = netlist.create_net("out", 1)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("NEQ", [a, b], [out])
+
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 5)
+    sim.set("b", 3)
+    sim.step()
+    assert sim.get("out") == 1
+
+    sim.set("a", 5)
+    sim.set("b", 5)
+    sim.step()
+    assert sim.get("out") == 0
