@@ -117,12 +117,115 @@ def test_bitwise_not() -> None:
     ast = parse_hdl(hdl)
     elaborator = HDLElaborator(ast)
     symbols = elaborator.get_library()
-
     synth = Synthesiser(symbols)
     netlist = synth.synthesise("not_gate")
 
     sim = RTLSimulator(netlist)
     sim.set("a", 0b10101010)
     sim.step()
-
     assert sim.get("y") == 0b01010101
+
+
+def test_addition() -> None:
+    hdl = """
+        module adder(input [7:0] a, input [7:0] b, output [7:0] sum);
+            assign sum = a + b;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("adder")
+
+    sim = RTLSimulator(netlist)
+    sim.set("a", 25)
+    sim.set("b", 17)
+    sim.step()
+    assert sim.get("sum") == 42
+
+    sim.set("a", 69)
+    sim.set("b", 67)
+    sim.step()
+    assert sim.get("sum") == 136
+
+
+def test_subtraction() -> None:
+    hdl = """
+        module subtractor(input [7:0] a, input [7:0] b, output [7:0] diff);
+            assign diff = a - b;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("subtractor")
+
+    sim = RTLSimulator(netlist)
+    sim.set("a", 50)
+    sim.set("b", 20)
+    sim.step()
+    assert sim.get("diff") == 30
+
+    sim.set("a", 69)
+    sim.set("b", 67)
+    sim.step()
+    assert sim.get("diff") == 2
+
+
+def test_addition_overflow() -> None:
+    hdl = """
+        module adder_overflow(input [3:0] a, input [3:0] b, output [3:0] sum);
+            assign sum = a + b;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("adder_overflow")
+
+    sim = RTLSimulator(netlist)
+
+    # 15 + 1 = 16 wraps to 0
+    sim.set("a", 15)
+    sim.set("b", 1)
+    sim.step()
+    assert sim.get("sum") == 0
+
+    # 8 + 9 = 17 wraps to 1
+    sim.set("a", 8)
+    sim.set("b", 9)
+    sim.step()
+    assert sim.get("sum") == 1
+
+
+def test_subtraction_overflow() -> None:
+    hdl = """
+        module subtractor_overflow(input [3:0] a, input [3:0] b, output [3:0] diff);
+            assign diff = a - b;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("subtractor_overflow")
+    sim = RTLSimulator(netlist)
+
+    # 0 - 1 = -1 = 15
+    sim.set("a", 0)
+    sim.set("b", 1)
+    sim.step()
+    assert sim.get("diff") == 15
+
+    # 0 - 2 = -2 = 14
+    sim.set("a", 0)
+    sim.set("b", 2)
+    sim.step()
+    assert sim.get("diff") == 14
