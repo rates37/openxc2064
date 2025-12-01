@@ -229,3 +229,53 @@ def test_subtraction_overflow() -> None:
     sim.set("b", 2)
     sim.step()
     assert sim.get("diff") == 14
+
+
+def test_equality() -> None:
+    hdl = """
+        module eq_test(input [7:0] a, input [7:0] b, output equal);
+            assign equal = (a == b);
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("eq_test")
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 10)
+    sim.set("b", 10)
+    sim.step()
+    assert sim.get("equal") == 1
+
+    sim.set("a", 10)
+    sim.set("b", 20)
+    sim.step()
+    assert sim.get("equal") == 0
+
+
+def test_inequality() -> None:
+    hdl = """
+        module neq_test(input [7:0] a, input [7:0] b, output not_equal);
+            assign not_equal = (a != b);
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("neq_test")
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 10)
+    sim.set("b", 20)
+    sim.step()
+    assert sim.get("not_equal") == 1
+
+    sim.set("a", 10)
+    sim.set("b", 10)
+    sim.step()
+    assert sim.get("not_equal") == 0
