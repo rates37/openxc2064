@@ -105,3 +105,24 @@ def test_bitwise_xor() -> None:
     sim.set("b", 0b10101010)
     sim.step()
     assert sim.get("y") == 0b01011010
+
+
+def test_bitwise_not() -> None:
+    hdl = """
+        module not_gate(input [7:0] a, output [7:0] y);
+            assign y = ~a;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("not_gate")
+
+    sim = RTLSimulator(netlist)
+    sim.set("a", 0b10101010)
+    sim.step()
+
+    assert sim.get("y") == 0b01010101
