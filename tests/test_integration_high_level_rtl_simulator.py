@@ -398,3 +398,121 @@ def test_negedge_register() -> None:
     sim.set("clk", 1)
     sim.step()
     assert sim.get("q") == 67
+
+
+def test_mux_always() -> None:
+
+    hdl = """
+        module mux2to1(input sel, input [7:0] a, input [7:0] b, output reg [7:0] y);
+            always : comb begin
+                if (sel)
+                    y = b;
+                else
+                    y = a;
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("mux2to1")
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 42)
+    sim.set("b", 69)
+
+    sim.set("sel", 0)
+    sim.step()
+    assert sim.get("y") == 42
+
+    sim.set("sel", 1)
+    sim.step()
+    assert sim.get("y") == 69
+
+
+def test_priority_encoder() -> None:
+    hdl = """
+        module priority_encoder(input [3:0] data, output reg [1:0] out);
+            always : comb begin
+                if (data[3])
+                    out = 2'd3;
+                else if (data[2])
+                    out = 2'd2;
+                else if (data[1])
+                    out = 2'd1;
+                else
+                    out = 2'd0;
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("priority_encoder")
+    sim = RTLSimulator(netlist)
+
+    test_cases = [
+        (0b0001, 0),
+        (0b0010, 1),
+        (0b0100, 2),
+        (0b1000, 3),
+        (0b1111, 3),
+        (0b0110, 2),
+    ]
+
+    for data, expected in test_cases:
+        sim.set("data", data)
+        sim.step()
+        assert sim.get("out") == expected
+
+
+def test_alu() -> None:
+    hdl = """
+        module alu(input [7:0] a, input [7:0] b, input [1:0] op, output reg [7:0] result);
+            always : comb begin
+                if (op == 2'd0)
+                    result = a + b;
+                else if (op == 2'd1)
+                    result = a - b;
+                else if (op == 2'd2)
+                    result = a & b;
+                else
+                    result = a | b;
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("alu")
+    sim = RTLSimulator(netlist)
+    sim.set("a", 20)
+    sim.set("b", 10)
+
+    # ADD
+    sim.set("op", 0)
+    sim.step()
+    assert sim.get("result") == 30
+
+    # SUB
+    sim.set("op", 1)
+    sim.step()
+    assert sim.get("result") == 10
+
+    # AND
+    sim.set("a", 0b11110000)
+    sim.set("b", 0b10101010)
+    sim.set("op", 2)
+    sim.step()
+    assert sim.get("result") == 0b10100000
+
+    # OR
+    sim.set("op", 3)
+    sim.step()
+    assert sim.get("result") == 0b11111010
