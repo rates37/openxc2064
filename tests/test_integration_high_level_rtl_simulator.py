@@ -279,3 +279,122 @@ def test_inequality() -> None:
     sim.set("b", 10)
     sim.step()
     assert sim.get("not_equal") == 0
+
+
+def test_simple_register() -> None:
+    hdl = """
+        module simple_reg(input clk, input [7:0] d, output reg [7:0] q);
+            always : seq @(posedge clk)
+                q = d;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("simple_reg")
+    sim = RTLSimulator(netlist)
+
+    # Initial state
+    sim.set("d", 0)
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("q") == 0
+
+    # Set data
+    sim.set("d", 42)
+    sim.step()
+    assert sim.get("q") == 0  # Not captured yet
+
+    # Rising edge
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 42
+
+    # Change data while clk high
+    sim.set("d", 69)
+    sim.step()
+    assert sim.get("q") == 42  # no change
+
+    # Another cycle
+    sim.set("clk", 0)
+    sim.step()
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 69
+
+
+def test_counter_with_reset() -> None:
+    hdl = """
+        module counter(input clk, input reset, output reg [7:0] count);
+            always : seq @(posedge clk) begin
+                if (reset)
+                    count = 8'd0;
+                else
+                    count = count + 8'd1;
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("counter")
+    sim = RTLSimulator(netlist)
+
+    # Reset counter
+    sim.set("reset", 1)
+    sim.set("clk", 0)
+    sim.step()
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("count") == 0
+
+    # Count
+    sim.set("reset", 0)
+    for i in range(1, 258):  # check overflow back to 0
+        sim.set("clk", 0)
+        sim.step()
+        sim.set("clk", 1)
+        sim.step()
+        assert sim.get("count") == i % 256
+
+
+def test_negedge_register() -> None:
+    hdl = """
+        module negedge_reg(input clk, input [7:0] d, output reg [7:0] q);
+            always : seq @(negedge clk)
+                q = d;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("negedge_reg")
+    sim = RTLSimulator(netlist)
+
+    # Start with clock high
+    sim.set("d", 0)
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 0
+
+    # Set data
+    sim.set("d", 67)
+    sim.step()
+    assert sim.get("q") == 0
+
+    # Falling edge
+    sim.set("clk", 0)
+    sim.step()
+    assert sim.get("q") == 67
+
+    # Rising edge (no capture)
+    sim.set("d", 69)
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 67
