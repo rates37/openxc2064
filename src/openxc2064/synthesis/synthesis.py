@@ -157,20 +157,20 @@ class Synthesiser:
 
             # handle single bit index:
             if expr.index:
-                # a single index "operation" is formatted as `INDEX:<bit>`
+                # Output width is 1
+                out_net = netlist.create_net(f"temp_idx_{len(netlist.nets)}", width=1)
                 idx_val = expr.index.index
-                out_net = netlist.create_net(f"temp_idx_{len(netlist.nets)}")
+                # Store operation as "INDEX:<bit>"
                 netlist.add_logic(f"INDEX:{idx_val}", [base_net], [out_net])
                 return out_net
 
-            # handle range slide:
+            # handle range slice:
             elif expr.range:
-                # a range index "operation" is formatted as `SLICE:<msb>:<lsb>`
+                # Output width is derived from slice
                 msb, lsb = expr.range.msb, expr.range.lsb
                 width = abs(msb - lsb) + 1
-                out_net = netlist.create_net(
-                    f"temp_slice_{len(netlist.nets)}", width=width
-                )
+                out_net = netlist.create_net(f"temp_slice_{len(netlist.nets)}", width=width)
+                # Store operation as "SLICE:<msb>:<lsb>"
                 netlist.add_logic(f"SLICE:{msb}:{lsb}", [base_net], [out_net])
                 return out_net
 

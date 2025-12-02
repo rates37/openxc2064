@@ -23,7 +23,7 @@ class Range:
     lsb: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Index:
     index: str
 

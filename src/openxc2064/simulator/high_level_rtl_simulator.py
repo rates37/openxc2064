@@ -1,6 +1,7 @@
 from __future__ import annotations
 from ..synthesis.rtl_nodes import Net, Netlist, DFF, Input, Constant, LogicGate
-from typing import Callable
+from typing import Callable, Tuple, Optional
+import re
 
 
 class RTLSimulator:
@@ -25,53 +26,120 @@ class RTLSimulator:
         self.dff_state: dict[str, int] = {}
 
         # Operation function map:
-        self.ops: dict[str, Callable[[list], int]] = {
+        self.ops: dict[str, Callable[[list[int]], int]] = {
             "AND": lambda x: x[0] & x[1] if len(x) >= 2 else 0,
             "OR": lambda x: x[0] | x[1] if len(x) >= 2 else 0,
             "XOR": lambda x: x[0] ^ x[1] if len(x) >= 2 else 0,
             "NOT": lambda x: ~x[0] if len(x) >= 1 else 0,
+            "LOGIC_NOT": lambda x: 1 if x[0] == 0 else 0,
+            "NEG": lambda x: -x[0] if len(x) >= 1 else 0,
             "BUF": lambda x: x[0] if len(x) >= 1 else 0,
             "ADD": lambda x: x[0] + x[1] if len(x) >= 2 else 0,
             "SUB": lambda x: x[0] - x[1] if len(x) >= 2 else 0,
-            "NEQ": lambda x: 1 if (x[0] != x[1]) else 0 if len(x) >= 2 else 0,
-            "EQ":  lambda x: 1 if (x[0] == x[1]) else 0 if len(x) >= 2 else 0,
-            "MUX": self._mux_op,
-            # todo: indexing
+            "NEQ": lambda x: 1 if (x[0] != x[1]) else 0,
+            "EQ": lambda x: 1 if (x[0] == x[1]) else 0,
+            "LOGIC_AND": lambda x: 1 if (x[0] != 0 and x[1] != 0) else 0,
+            "LOGIC_OR": lambda x: 1 if (x[0] != 0 or x[1] != 0) else 0,
+            "MUX": lambda x: x[2] if x[0] else x[1],  # Sel, Else, Then
         }
 
         self._initialise()
 
-    def set(self, port_name: str, value: int) -> None:
+    def set(self, port_spec: str, value: int) -> None:
+        # Set an input port (or bits of a port) to a specific value
+        port_name, high_bit, low_bit = self._parse_port_spec(port_spec)
+
         if port_name not in self.input_ports:
             raise ValueError(f"Input port '{port_name}' not found in design.")
 
         net_name = self.input_ports[port_name]
         net = self.net_name_to_net[net_name]
 
-        value_masked = self._mask_value(value, net.width)
-        self.net_values[net_name] = value_masked
+        if high_bit is None:
+            # Setting entire port
+            masked_value = self._mask_value(value, net.width)
+            self.net_values[net_name] = masked_value
+        else:
+            # Setting specific bits
+            if high_bit >= net.width or low_bit >= net.width:
+                raise ValueError(
+                    f"Bit index out of range for port '{port_name}' "
+                    f"(width={net.width}, requested [{high_bit}:{low_bit}])"
+                )
 
-    def get(self, port_name: str) -> int:
-        # gets current value of output port (using unsigned binary)
+            # Get current value -> modify the bits -> set back
+            current = self.net_values.get(net_name, 0)
+            new_value = self._set_bits(
+                current, value, high_bit, low_bit, net.width)
+            self.net_values[net_name] = new_value
+
+    def get(self, port_spec: str) -> int:
+        port_name, high_bit, low_bit = self._parse_port_spec(port_spec)
+
         if port_name not in self.output_ports:
             raise ValueError(f"Output port '{port_name}' not found in design.")
+
         net_name = self.output_ports[port_name]
-        return self.net_values.get(net_name, 0)
+        value = self.net_values.get(net_name, 0)
 
-    def get_net(self, net_name: str) -> int:
-        # get current value of internal net (basically only for debugging since net name is created automatically by the synthesiser)
-        if net_name in self.net_values:
-            return self.net_values[net_name]
-        raise ValueError(f"Net '{net_name}' not found in design.")
+        if high_bit is None:
+            # Get entire port
+            return value
+        else:
+            # Gett specific bits
+            net = self.net_name_to_net[net_name]
+            if high_bit >= net.width or low_bit >= net.width:
+                raise ValueError(
+                    f"Bit index out of range for port '{port_name}' "
+                    f"(width={net.width}, requested [{high_bit}:{low_bit}])"
+                )
+            return self._extract_bits(value, high_bit, low_bit)
 
-    def get_net_signed(self, net_name: str) -> int:
+    def get_net(self, net_spec: str) -> int:
+        net_name, high_bit, low_bit = self._parse_port_spec(net_spec)
+
         if net_name not in self.net_values:
             raise ValueError(f"Net '{net_name}' not found in design.")
-        net = self.net_name_to_net[net_name]
-        value = self.net_values[net_name]
-        width = net.width
 
-        if value & (1 << (width - 1)):  # if it's a negative value
+        value = self.net_values[net_name]
+
+        if high_bit is None:
+            # Getting entire net
+            return value
+        else:
+            # Getting specific bits
+            net = self.net_name_to_net[net_name]
+            if high_bit >= net.width or low_bit >= net.width:
+                raise ValueError(
+                    f"Bit index out of range for net '{net_name}' "
+                    f"(width={net.width}, requested [{high_bit}:{low_bit}])"
+                )
+            return self._extract_bits(value, high_bit, low_bit)
+
+    def get_net_signed(self, net_spec: str) -> int:
+        net_name, high_bit, low_bit = self._parse_port_spec(net_spec)
+
+        if net_name not in self.net_values:
+            raise ValueError(f"Net '{net_name}' not found in design.")
+
+        net = self.net_name_to_net[net_name]
+
+        if high_bit is None:
+            # Get entire net
+            value = self.net_values[net_name]
+            width = net.width
+        else:
+            # Get specific bits
+            if high_bit >= net.width or low_bit >= net.width:
+                raise ValueError(
+                    f"Bit index out of range for net '{net_name}' "
+                    f"(width={net.width}, requested [{high_bit}:{low_bit}])"
+                )
+            value = self._extract_bits(
+                self.net_values[net_name], high_bit, low_bit)
+            width = high_bit - low_bit + 1
+
+        if value & (1 << (width - 1)):
             return value - (1 << width)
         return value
 
@@ -145,7 +213,8 @@ class RTLSimulator:
 
                     # update output nets:
                     for output_net in n.outputs:
-                        result_masked = self._mask_value(result, output_net.width)
+                        result_masked = self._mask_value(
+                            result, output_net.width)
                         prev_value = self.net_values.get(output_net.name, 0)
                         if prev_value != result_masked:
                             self.net_values[output_net.name] = result_masked
@@ -155,7 +224,8 @@ class RTLSimulator:
                     q_value = self.dff_state.get(n.id, 0)
                     if n.outputs:
                         output_net = n.outputs[0]
-                        q_value_masked = self._mask_value(q_value, output_net.width)
+                        q_value_masked = self._mask_value(
+                            q_value, output_net.width)
                         prev_value = self.net_values.get(output_net.name, 0)
                         if prev_value != q_value_masked:
                             self.net_values[output_net.name] = q_value_masked
@@ -172,6 +242,21 @@ class RTLSimulator:
         if gate.op in self.ops:
             return self.ops[gate.op](input_values)
         else:
+            if ":" in gate.op:
+                # must be a slice or index
+                parts = gate.op.split(':')
+                base_op = parts[0]
+
+                if base_op == "INDEX":
+                    idx = int(parts[1])
+                    return (input_values[0] >> idx) & 1
+
+                elif base_op == "SLICE":
+                    msb = int(parts[1])
+                    lsb = int(parts[2])
+                    mask = (1 << (abs(msb - lsb) + 1)) - 1
+                    return (input_values[0] >> lsb) & mask
+
             raise ValueError(f"Unknown operation: '{gate.op}'")
 
     def _detect_edge(self, net_name: str, edge_type: str) -> bool:
@@ -200,3 +285,53 @@ class RTLSimulator:
                         d_value = self.net_values.get(d_net.name, 0)
                         d_value_masked = self._mask_value(d_value, d_net.width)
                         self.dff_state[n.id] = d_value_masked
+
+    def _parse_port_spec(self, port_spec: str) -> Tuple[str, Optional[int], Optional[int]]:
+        # Parse a port specification like "a", "a[2]", or "a[3:1]"
+
+        # Match patterns: port_name[bit] or port_name[high:low] or port_name
+        match = re.match(
+            r'^([a-zA-Z_][a-zA-Z0-9_]*)(?:\[(\d+)(?::(\d+))?\])?$', port_spec)
+
+        if not match:
+            raise ValueError(f"Invalid port specification: '{port_spec}'")
+
+        port_name = match.group(1)
+
+        if match.group(2) is None:
+            # No indexing - full port
+            return (port_name, None, None)
+        elif match.group(3) is None:
+            # Single bit: port[bit]
+            bit = int(match.group(2))
+            return (port_name, bit, bit)
+        else:
+            # Range: port[high:low]
+            high_bit = int(match.group(2))
+            low_bit = int(match.group(3))
+            if high_bit < low_bit:
+                raise ValueError(
+                    f"Invalid bit range [{high_bit}:{low_bit}] - high must be >= low")
+            return (port_name, high_bit, low_bit)
+
+    def _extract_bits(self, value: int, high_bit: int, low_bit: int) -> int:
+        # Extract bits [high:low] from value
+        num_bits = high_bit - low_bit + 1
+        mask = (1 << num_bits) - 1
+        return (value >> low_bit) & mask
+
+    def _set_bits(self, original: int, new_bits: int, high_bit: int, low_bit: int, width: int) -> int:
+        # Set bits [high:low] in original value to new_bits.
+        # Returns the modified value, masked to the specified width.
+
+        num_bits = high_bit - low_bit + 1
+        mask = (1 << num_bits) - 1
+
+        # clear the target bits in original
+        clear_mask = ~(mask << low_bit)
+        cleared = original & clear_mask
+
+        # set the new bits
+        new_bits_masked = new_bits & mask
+        result = cleared | (new_bits_masked << low_bit)
+        return self._mask_value(result, width)
