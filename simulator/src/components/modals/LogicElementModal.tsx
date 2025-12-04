@@ -1,6 +1,8 @@
-import React from 'react';
+import React from "react";
 import "../../styles/Modal.css";
-import { LogicElement } from '../../models/LogicElement';
+import { LogicElement } from "../../models/LogicElement";
+import { Mux, Wire, Lut, Label, FlipFlop, ConnectionDot, EllipseNode } from "../modals/LogicElementPrimitives";
+
 
 type LogicElementModalProps = {
     isOpen: boolean;
@@ -8,56 +10,6 @@ type LogicElementModalProps = {
     element: LogicElement | null;
     onSave: (element: LogicElement) => void;
 };
-
-// Helper function to create a MUX trapezoid
-const Mux2 = ({ x, y, width = 20, height = 40 }: { x: number; y: number; width?: number; height?: number }) => {
-    const slope = 7;
-    const points = `${x},${y - height / 2} ${x + width},${y - height / 2 + slope} ${x + width},${y + height / 2 - slope} ${x},${y + height / 2}`;
-    return <polygon points={points} fill="none" stroke="#000" strokeWidth="2" />;
-};
-
-const Mux4 = ({ x, y, width = 20, height = 60 }: { x: number; y: number; width?: number; height?: number }) => {
-    const slope = 7;
-    const points = `${x},${y - height / 2} ${x + width},${y - height / 2 + slope} ${x + width},${y + height / 2 - slope} ${x},${y + height / 2}`;
-    return <polygon points={points} fill="none" stroke="#000" strokeWidth="2" />;
-} 
-
-// Helper function to create a connection dot
-const ConnectionDot = ({ x, y, r = 3 }: { x: number; y: number; r?: number }) => {
-    return <circle cx={x} cy={y} r={r} fill="#000" />;
-};
-
-// Helper function to create a label
-const Label = ({ x, y, text, bold = false, size = 14 }: { x: number; y: number; text: string; bold?: boolean; size?: number }) => {
-    return <text x={x} y={y} fontSize={size} fontWeight={bold ? "bold" : "normal"}>{text}</text>;
-};
-
-// Helper function to create a wire/line
-const Wire = ({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) => {
-    return <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth="2" />;
-};
-
-// Helper function to create a flip-flop
-const FlipFlop = ({ x, y, width = 60, height = 60 }: { x: number; y: number; width?: number; height?: number }) => {
-    return (
-        <>
-            <rect x={x} y={y} width={width} height={height} fill="none" stroke="#000" strokeWidth="2" />
-            <Label x={x + 10} y={y + 20} text="D" bold={true} />
-            <Label x={x + width - 15} y={y + 20} text="Q" bold={true} />
-            <Label x={x + 10} y={y + height - 10} text="S" size={12} />
-            <Label x={x + width - 15} y={y + height - 10} text="R" size={12} />
-        </>
-    );
-};
-
-const LUT = ({ x, y, width = 100, height = 140 }: { x: number; y: number; width?: number; height?: number }) => {
-    return (
-        <>
-            <rect x={x} y={y} width={width} height={height} fill="none" stroke="#000" strokeWidth="2" />
-            <Label x={x + 38} y={y + 75} text="LUT" bold={true} />
-        </>
-    );
-}
 
 const LogicElementModal: React.FC<LogicElementModalProps> = ({ isOpen, onClose, element, onSave }) => {
     if (!isOpen || !element) return null;
@@ -72,7 +24,7 @@ const LogicElementModal: React.FC<LogicElementModalProps> = ({ isOpen, onClose, 
             ...element,
             name,
             numInputs,
-            numOutputs
+            numOutputs,
         });
         onClose();
     };
@@ -81,215 +33,157 @@ const LogicElementModal: React.FC<LogicElementModalProps> = ({ isOpen, onClose, 
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <h2>{element.id} - Logic Element</h2>
-                
+
                 <svg className="le-diagram modal-logic" viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg">
-                    {/* Grid - 5px spacing */}
-                    {/* <defs>
-                        <pattern id="smallGrid" width="5" height="5" patternUnits="userSpaceOnUse">
-                            <path d="M 5 0 L 0 0 0 5" fill="none" stroke="rgba(200,200,200,0.3)" strokeWidth="0.5"/>
-                        </pattern>
-                        <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-                            <rect width="50" height="50" fill="url(#smallGrid)"/>
-                            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(150,150,150,0.5)" strokeWidth="1"/>
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" /> */}
-                    
-                    {/* Input labels */}
-                    <Label x={10} y={15} text="Inputs" bold={true} />
-                    <Label x={10} y={52} text="A" />
-                    <Label x={10} y={89} text="B" />
-                    <Label x={10} y={140} text="C" />
-                    <Label x={10} y={174} text="D" />
+                    <defs />
+                    <rect fill="#ffffff" width="100%" height="100%" x="0" y="0" />
 
-                    {/* Input lines - staggered for readability */}
-                    <Wire x1={30} y1={48} x2={180} y2={48} />
-                    <Wire x1={30} y1={85.3} x2={160} y2={85.3} />
-                    <Wire x1={30} y1={136.8} x2={140} y2={136.8} />
-                    <Wire x1={30} y1={170} x2={120} y2={170} />
+                    {/* --- Static Wiring Layer (Reconstructed from SVG data) --- */}
+                    <g className="wires">
+                        {/* Top/Initial Wires */}
+                        <Wire d="M 241.11 76 L 349.43 76 L 349.43 394 L 457.74 394.04" />
+                        <Wire d="M 137.11 40.04 L 121.1 40 L 121.1 62 L 137.11 62.04" />
+                        <Wire d="M 149.63 30.04 L 161.11 30.04" />
+                        <Wire d="M 149.63 72.04 L 161.11 72.04" />
+                        <Wire d="M 149.63 117.41 L 161.1 117.38 L 161.11 114.04" />
+                        <Wire d="M 137.11 117.41 L 78.57 117.38 L 20 118.29" />
+                        {/* Complex routing mid-section */}
+                        <Wire d="M 137.11 129.09 L 70 129.1 L 70 440 L 540 440 L 540 308 L 524 308" />
+                        <Wire d="M 137.11 105.72 L 121.1 105.71 L 121.1 82 L 137.11 82.04" />
+                        <Wire d="M 241.11 216 L 360 216 L 360 308 L 464 308" />
+                        <Wire d="M 137.11 180.04 L 121.1 180 L 121.1 202 L 137.11 202.04" />
+                        <Wire d="M 149.63 170.04 L 161.11 170.04" />
+                        <Wire d="M 149.63 212.04 L 161.11 212.04" />
+                        <Wire d="M 149.63 257.41 L 161.1 257.38 L 161.11 254.04" />
+                        <Wire d="M 137.11 269.09 L 104.05 269.1 L 70 269" />
+                        <Wire d="M 137.11 245.72 L 121.1 245.71 L 121.1 222 L 137.11 222.04" />
+                        <Wire d="M 20 19.9 L 78.57 19.9 L 137.11 20.04" />
+                        <Wire d="M 20 51.41 L 121 51" />
+                        <Wire d="M 20 93.41 L 121 93" />
+                        <Wire d="M 110.5 22 L 110.52 160 L 137.11 160.04" />
+                        <Wire d="M 100.5 53 L 100.52 191 L 121 191" />
+                        <Wire d="M 90.5 95 L 90.52 233 L 121 233" />
+                        <Wire d="M 90.5 95 L 90.52 334.1 L 384.11 334.06" />
+                        <Wire d="M 80.5 119 L 80.52 257 L 137.1 257" />
+                        {/* Output section wires */}
+                        <Wire d="M 524 308.1 L 540 308.1 L 540 132 L 707.1 132" />
+                        <Wire d="M 470.26 404.04 L 494 404.05 L 494 363.78" />
+                        <Wire d="M 457.74 404.04 L 81 404 L 80.5 119" />
+                        <Wire d="M 384.11 345.74 L 364 345.71 L 364 539 L 364 540" />
+                        <Wire d="M 384.11 322.37 L 350 322.39" />
+                        <Wire d="M 470.26 170.04 L 494 170.05 L 494 277.78" />
+                        <Wire d="M 457.74 160.04 L 360 160 L 360 0 L 110 0 L 110 18 L 109 18" />
+                        <Wire d="M 457.74 180.04 L 440 180 L 440 200" />
+                        {/* Right side outputs */}
+                        <Wire d="M 707.11 49.86 L 540 49.9 L 540 308.1 L 524 308.11" />
+                        <Wire d="M 719.63 49.86 L 749.81 49.86 L 780 49.86" />
+                        <Wire d="M 719.63 132.34 L 749.81 132.33 L 780 132.34" />
+                        <Wire d="M 690 142 L 690 61.52 L 707.11 61.54" />
+                        <Wire d="M 653 38 L 680.05 38 L 707.11 38.17" />
+                        <Wire d="M 651 40 L 651 120.71 L 707.11 120.65" />
+                        <Wire d="M 349 74 L 349 38 L 649 38" />
+                        <Wire d="M 360 214 L 360 170 L 457.74 170.04" />
+                        <Wire d="M 362 216 L 690 216 L 690 146" />
+                        <Wire d="M 690 144 L 710 144" />
+                        {/* Triangle / Inverter */}
+                        <path d="M 464 324.56 L 477 334.06 L 464 343.56 Z" fill="#ffffff" stroke="#000000" strokeMiterlimit="10" />
+                        {/* Small detail wires (Grounds) */}
+                        <Wire d="M 435 200 L 445 200" /> <Wire d="M 436 202 L 444 202" /> <Wire d="M 437 204 L 443 204" />{" "}
+                        <Wire d="M 438 206 L 442 206" />
+                        <Wire d="M 458 414 L 440 414 L 440 430" />
+                        <Wire d="M 435 430 L 445 430" /> <Wire d="M 436 432 L 444 432" /> <Wire d="M 437 434 L 443 434" />{" "}
+                        <Wire d="M 438 436 L 442 436" />
+                        <Wire d="M 446.89 334.06 L 464 334.06" />
+                        <Wire d="M 434.37 334.06 L 396.63 334.06" />
+                        <Wire d="M 434.37 322.37 L 415.71 322.38 L 415.74 333.84" />
+                        <Wire d="M 434 346 L 416 346 L 416 362" />
+                        <Wire d="M 411 362 L 421 362" /> <Wire d="M 412 364 L 420 364" /> <Wire d="M 413 366 L 419 366" />{" "}
+                        <Wire d="M 414 368 L 418 368" />
+                    </g>
 
-                    {/* A - vertical wire at x=180 */}
-                    <Wire x1={180} y1={48} x2={180} y2={223} />
-                    <ConnectionDot x={180} y={48} />
-                    <Wire x1={180} y1={48} x2={220} y2={48} />
-                    
-                    {/* B - vertical wire at x=160 */}
-                    <Wire x1={160} y1={85.3} x2={160} y2={260.3} />
-                    <ConnectionDot x={160} y={85.3} />
-                    
-                    {/* C - vertical wire at x=140 */}
-                    <Wire x1={140} y1={136.8} x2={140} y2={311.8} />
-                    <ConnectionDot x={140} y={136.8} />
+                    {/* --- Connection Dots --- */}
+                    <g className="connections">
+                        <ConnectionDot x={688} y={142} />
+                        <ConnectionDot x={538} y={306} />
+                        <ConnectionDot x={348} y={320} />
+                        <ConnectionDot x={538} y={131} />
+                        <ConnectionDot x={649} y={36} />
+                        <ConnectionDot x={347} y={74} />
+                        <ConnectionDot x={358} y={214} />
+                        <ConnectionDot x={68} y={267} />
+                        <ConnectionDot x={79} y={255} />
+                        <ConnectionDot x={89} y={231} />
+                        <ConnectionDot x={119} y={231} />
+                        <ConnectionDot x={119} y={189} />
+                        <ConnectionDot x={78} y={116} />
+                        <ConnectionDot x={88} y={91} />
+                        <ConnectionDot x={120} y={91} />
+                        <ConnectionDot x={99} y={50} />
+                        <ConnectionDot x={108} y={18} />
+                        <ConnectionDot x={119} y={49} />
+                        <ConnectionDot x={414} y={332} />
+                    </g>
 
-                    {/* D - vertical wire at x=120 */}
-                    <Wire x1={120} y1={170} x2={120} y2={345} />
-                    <ConnectionDot x={120} y={170} />
+                    <EllipseNode cx={432} cy={322} />
 
-                    {/* Input MUX */}
-                    <Mux2 x={85} y={325} />
-                    
-                    {/* Combinational Logic block - LUT 1 */}
-                    <LUT x={250} y={45} />
-                    <Mux2 x={220} y={57} />
-                    <Mux2 x={220} y={113.6} />
-                    <Mux4 x={220} y={170} />
-                    <Wire x1={240} y1={57} x2={250} y2={57} />
-                    <Wire x1={240} y1={113.6} x2={250} y2={113.6} />
-                    <Wire x1={240} y1={170} x2={250} y2={170} />
+                    {/* --- Editable Components --- */}
+                    <Mux key={"m6"} x={143.37} y={30.04} rotation={90} selected={false} />
+                    <Mux key={"m8"} x={143.37} y={72.04} rotation={90} selected={false} />
+                    <Mux key={"m13"} x={143.37} y={117.41} rotation={90} selected={false} />
+                    <Mux key={"m18"} x={143.37} y={170.04} rotation={90} selected={false} />
+                    <Mux key={"m20"} x={143.37} y={212.04} rotation={90} selected={false} />
+                    <Mux key={"m24"} x={143.37} y={257.41} rotation={90} selected={false} />
+                    <Mux key={"m46"} x={464} y={404.04} rotation={90} selected={false} />
+                    <Mux key={"m51"} x={390.37} y={334.06} rotation={90} selected={false} />
+                    <Mux key={"m56"} x={464} y={170.04} rotation={90} selected={false} />
+                    <Mux key={"m59"} x={713.37} y={49.86} rotation={90} selected={false} />
+                    <Mux key={"m61"} x={713.37} y={132.34} rotation={90} selected={false} />
+                    <Mux key={"m100"} x={440.63} y={334.06} rotation={90} selected={false} />
 
-                    {/* LUT1 - B input branches at center (85.3) between MUX1 and MUX2 */}
-                    <Wire x1={160} y1={85.3} x2={200} y2={85.3} />
-                    <ConnectionDot x={200} y={85.3} />
-                    <Wire x1={200} y1={85.3} x2={200} y2={66} />
-                    <Wire x1={200} y1={66} x2={220} y2={66} />
-                    <Wire x1={200} y1={85.3} x2={200} y2={104.6} />
-                    <Wire x1={200} y1={104.6} x2={220} y2={104.6} />
-                    
-                    {/* LUT1 - C input branches at center (136.8) between MUX2 and MUX3 */}
-                    <Wire x1={140} y1={136.8} x2={200} y2={136.8} />
-                    <ConnectionDot x={200} y={136.8} />
-                    <Wire x1={200} y1={136.8} x2={200} y2={122.6} />
-                    <Wire x1={200} y1={122.6} x2={220} y2={122.6} />
-                    <Wire x1={200} y1={136.8} x2={200} y2={150} />
-                    <Wire x1={200} y1={150} x2={220} y2={150} />
-                    
-                    {/* LUT1 - D input to MUX3 middle */}
-                    <Wire x1={120} y1={170} x2={220} y2={170} />
-                    <Wire x1={200} y1={190} x2={220} y2={190} />
+                    {/* LUTs */}
+                    <Lut x={161.11} y={16} width={80} height={120} label={"LUT 1"} />
+                    <Lut x={161.11} y={156} width={80} height={120} label={"LUT 2"} />
 
-                    {/* Combinational Logic block - LUT 2 */}
-                    <LUT x={250} y={220} />
-                    <Mux2 x={220} y={232} />
-                    <Mux2 x={220} y={288.6} />
-                    <Mux4 x={220} y={345} />
-                    <Wire x1={240} y1={232} x2={250} y2={232} />
-                    <Wire x1={240} y1={288.6} x2={250} y2={288.6} />
-                    <Wire x1={240} y1={345} x2={250} y2={345} />
+                    {/* D Flip-Flop */}
+                    <FlipFlop x={464} y={277.78} width={60} height={86} label={"D Flip-Flop"} />
 
-                    {/* LUT2 - A input from vertical wire */}
-                    <Wire x1={180} y1={223} x2={220} y2={223} />
-                    
-                    {/* LUT2 - B input branches at center (260.3) between MUX1 and MUX2 */}
-                    <Wire x1={160} y1={260.3} x2={200} y2={260.3} />
-                    <ConnectionDot x={160} y={260.3} />
-                    <ConnectionDot x={200} y={260.3} />
-                    <Wire x1={200} y1={260.3} x2={200} y2={241} />
-                    <Wire x1={200} y1={241} x2={220} y2={241} />
-                    <Wire x1={200} y1={260.3} x2={200} y2={279.6} />
-                    <Wire x1={200} y1={279.6} x2={220} y2={279.6} />
-                    
-                    {/* LUT2 - C input branches at center (311.8) between MUX2 and MUX3 */}
-                    <Wire x1={140} y1={311.8} x2={200} y2={311.8} />
-                    <ConnectionDot x={140} y={311.8} />
-                    <ConnectionDot x={200} y={311.8} />
-                    <Wire x1={200} y1={311.8} x2={200} y2={297.6} />
-                    <Wire x1={200} y1={297.6} x2={220} y2={297.6} />
-                    <Wire x1={200} y1={311.8} x2={200} y2={325} />
-                    <Wire x1={200} y1={325} x2={220} y2={325} />
+                    {/* Labels */}
+                    <Label x={10} y={23} text={"A"} bold={true} />
+                    <Label x={10} y={55} text={"B"} bold={true} />
+                    <Label x={10} y={97} text={"C"} bold={true} />
+                    <Label x={10} y={122} text={"D"} bold={true} />
+                    <Label x={250} y={210} text={"F"} bold={true} />
+                    <Label x={251} y={69} text={"G"} bold={true} />
+                    <Label x={364} y={554} text={"K"} bold={true} />
+                    <Label x={474} y={310} text={"D"} bold={true} />
+                    <Label x={514} y={310} text={"Q"} bold={true} />
+                    <Label x={494} y={353} text={"R"} bold={true} />
+                    <Label x={494} y={291} text={"S"} bold={true} />
+                    <Label x={790} y={53} text={"X"} bold={true} />
+                    <Label x={790} y={136} text={"Y"} bold={true} />
 
-                    
-                    {/* LUT2 - D input to MUX3 middle */}
-                    <Wire x1={120} y1={345} x2={220} y2={345} />
-                    <ConnectionDot x={120} y={345} />
-                    <Wire x1={200} y1={365} x2={220} y2={365} />
-
-                    {/* Output from LUT1 (labeled F) */}
-                    <Wire x1={350} y1={115} x2={420} y2={115} />
-                    <Label x={380} y={110} text="F" bold={true} />
-                    <ConnectionDot x={420} y={115} />
-                    
-                    {/* Output from LUT2 (labeled G) */}
-                    <Wire x1={350} y1={290} x2={420} y2={290} />
-                    <Label x={380} y={285} text="G" bold={true} />
-                    <ConnectionDot x={420} y={290} />
-
-                    {/* F branches to output MUX and flip-flop MUX */}
-                    <Wire x1={420} y1={115} x2={420} y2={50} />
-                    <Wire x1={420} y1={50} x2={545} y2={50} />
-                    <Wire x1={420} y1={115} x2={480} y2={115} />
-
-                    {/* G branches to flip-flop MUX and lower output MUX */}
-                    <Wire x1={420} y1={290} x2={420} y2={220} />
-                    <Wire x1={420} y1={220} x2={480} y2={220} />
-                    <Wire x1={420} y1={290} x2={420} y2={335} />
-                    <Wire x1={420} y1={335} x2={545} y2={335} />
-                    <ConnectionDot x={420} y={220} />
-                    <ConnectionDot x={420} y={335} />
-
-                    {/* Flip-flop D-Q */}
-                    <FlipFlop x={480} y={135} width={60} height={60} />
-                    
-                    {/* K MUX (controls flip-flop input) */}
-                    <Mux2 x={480} y={167.5} />
-                    <Label x={455} y={172} text="K" bold={true} />
-                    <Wire x1={500} y1={167.5} x2={510} y2={167.5} />
-                    <Wire x1={510} y1={167.5} x2={510} y2={152} />
-                    
-                    {/* D input to flip-flop */}
-                    <Wire x1={480} y1={152} x2={480} y2={150} />
-                    
-                    {/* Q output from flip-flop */}
-                    <Wire x1={540} y1={152} x2={570} y2={152} />
-                    <ConnectionDot x={570} y={152} />
-                    
-                    {/* Q feedback to K MUX top */}
-                    <Wire x1={570} y1={152} x2={570} y2={120} />
-                    <Wire x1={570} y1={120} x2={460} y2={120} />
-                    <Wire x1={460} y1={120} x2={460} y2={157.5} />
-                    <Wire x1={460} y1={157.5} x2={480} y2={157.5} />
-                    
-                    {/* Q forward to output MUXes */}
-                    <Wire x1={570} y1={152} x2={570} y2={68} />
-                    <Wire x1={570} y1={68} x2={545} y2={68} />
-                    <Wire x1={570} y1={152} x2={570} y2={325} />
-                    <Wire x1={570} y1={325} x2={545} y2={325} />
-
-                    {/* Clock input at bottom */}
-                    <Label x={10} y={450} text="Clock" bold={true} />
-                    <Wire x1={50} y1={446} x2={510} y2={446} />
-                    <Wire x1={510} y1={446} x2={510} y2={195} />
-                    
-                    {/* S and R inputs to flip-flop */}
-                    <Label x={465} y={205} text="S" size={12} />
-                    <Label x={555} y={205} text="R" size={12} />
-                    
-                    {/* Output MUXes */}
-                    {/* X output MUX */}
-                    <Mux2 x={545} y={59} />
-                    <Wire x1={565} y1={59} x2={620} y2={59} />
-                    <Wire x1={620} y1={59} x2={620} y2={100} />
-                    <Mux2 x={620} y={100} />
-                    <Wire x1={640} y1={100} x2={680} y2={100} />
-                    <Wire x1={680} y1={100} x2={680} y2={90} />
-                    <Wire x1={680} y1={90} x2={720} y2={90} />
-                    <Label x={730} y={95} text="X" bold={true} size={16} />
-                    
-                    {/* Y output MUX */}
-                    <Mux2 x={545} y={330} />
-                    <Wire x1={565} y1={330} x2={620} y2={330} />
-                    <Wire x1={620} y1={330} x2={620} y2={280} />
-                    <Mux2 x={620} y={280} />
-                    <Wire x1={640} y1={280} x2={680} y2={280} />
-                    <Wire x1={680} y1={280} x2={680} y2={290} />
-                    <Wire x1={680} y1={290} x2={720} y2={290} />
-                    <Label x={730} y={295} text="Y" bold={true} size={16} />
-                    
-                    {/* Output labels */}
-                    <Label x={730} y={15} text="Outputs" bold={true} />
 
                 </svg>
-                
+
                 <div className="modal-info">
-                    <p><strong>Element ID:</strong> {element.id}</p>
-                    <p><strong>Inputs:</strong> A, B, C, D, Clock</p>
-                    <p><strong>Outputs:</strong> X, Y</p>
-                    <p><strong>Components:</strong> Combinational Logic, MUXes, D Flip-Flop</p>
+                    <p>
+                        <strong>Element ID:</strong> {element.id}
+                    </p>
+                    <p>
+                        <strong>Inputs:</strong> A, B, C, D, Clock
+                    </p>
+                    <p>
+                        <strong>Outputs:</strong> X, Y
+                    </p>
+                    <p>
+                        <strong>Components:</strong> Combinational Logic, MUXes, D Flip-Flop
+                    </p>
                 </div>
-                
+
                 <button onClick={onClose}>Close</button>
             </div>
         </div>
     );
-}
+};
 
 export default LogicElementModal;
