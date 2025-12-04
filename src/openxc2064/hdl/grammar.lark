@@ -62,8 +62,11 @@ assign_stmt_lhs: IDENT
 ?expr_and: expr_and AND expr_eq   -> bin_op
          | expr_eq
 
-?expr_eq: expr_eq EQ expr_add   -> bin_op
-         | expr_add
+?expr_eq: expr_eq EQ expr_shift   -> bin_op
+         | expr_shift
+
+?expr_shift: expr_shift SHIFT expr_add -> bin_op
+           | expr_add
 
 ?expr_add: expr_add ADD expr_mul   -> bin_op
           | expr_mul
@@ -95,6 +98,7 @@ atom: IDENT         -> ident_only
 OR: "||"
 AND: "&&"
 EQ: "==" | "!="
+SHIFT: "<<" | ">>"
 ADD: "+" | "-"
 MUL: "*" | "/"
 BITWISE_OR: "|"

@@ -41,6 +41,8 @@ class RTLSimulator:
             "LOGIC_AND": lambda x: 1 if (x[0] != 0 and x[1] != 0) else 0,
             "LOGIC_OR": lambda x: 1 if (x[0] != 0 or x[1] != 0) else 0,
             "MUX": lambda x: x[2] if x[0] else x[1],  # Sel, Else, Then
+            "LSHIFT": lambda x: (x[0] << x[1]) if len(x) >= 2 else 0,
+            "RSHIFT": lambda x: (x[0] >> x[1]) if len(x) >= 2 else 0,
         }
 
         self._initialise()

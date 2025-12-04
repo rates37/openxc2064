@@ -190,6 +190,8 @@ class Synthesiser:
                 "-": "SUB",
                 "==": "EQ",
                 "!=": "NEQ",
+                "<<": "LSHIFT",
+                ">>": "RSHIFT",
             }
             if expr.op not in op_map:
                 raise SynthesisException(f"Operation '{expr.op}' not supported yet.")
