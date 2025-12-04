@@ -259,6 +259,25 @@ class RTLSimulator:
                     mask = (1 << (abs(msb - lsb) + 1)) - 1
                     return (input_values[0] >> lsb) & mask
 
+                elif base_op == "UPDATE":
+                    msb = int(parts[1])
+                    lsb = int(parts[2])
+                    width = abs(msb - lsb) + 1
+                    
+                    old_val = input_values[0]
+                    new_val = input_values[1]
+                    
+                    # Create mask for target bits
+                    mask = ((1 << width) - 1) << lsb
+                    
+                    # Clear bits in old_val
+                    cleared = old_val & ~mask
+                    
+                    # Shift new_val to position and mask
+                    shifted_new = (new_val << lsb) & mask
+                    
+                    return cleared | shifted_new
+
             raise ValueError(f"Unknown operation: '{gate.op}'")
 
     def _detect_edge(self, net_name: str, edge_type: str) -> bool:

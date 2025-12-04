@@ -279,12 +279,36 @@ class Synthesiser:
 
         if isinstance(stmt, ast.ProcAssignStmt):
             rhs = self._get_net_expr(stmt.expr, net_map, netlist)
-            lhs_name = (
-                stmt.target.name
-                if isinstance(stmt.target, ast.Identifier)
-                else stmt.target.base.name
-            )
-            new_scope[lhs_name] = rhs
+            
+            if isinstance(stmt.target, ast.Identifier):
+                lhs_name = stmt.target.name
+                new_scope[lhs_name] = rhs
+            elif isinstance(stmt.target, ast.Indexed):
+                lhs_name = stmt.target.base.name
+                
+                # Get current value (old_net)
+                old_net = new_scope.get(lhs_name)
+                if not old_net:
+                    old_net = net_map.get(lhs_name)
+                if not old_net:
+                     raise SynthesisException(f"Cannot assign to unknown signal '{lhs_name}'.")
+
+                if stmt.target.index:
+                    # Single bit assignment: target[i] = rhs
+                    idx = int(stmt.target.index.index)
+                    msb = idx
+                    lsb = idx
+                elif stmt.target.range:
+                    # Slice assignment: target[msb:lsb] = rhs
+                    msb = int(stmt.target.range.msb)
+                    lsb = int(stmt.target.range.lsb)
+                else:
+                    raise SynthesisException("Indexed assignment missing index or range.")
+
+                new_net = netlist.create_net(f"partial_result_{len(netlist.nets)}", width=old_net.width)
+                netlist.add_logic(f"UPDATE:{msb}:{lsb}", [old_net, rhs], [new_net])
+                
+                new_scope[lhs_name] = new_net
 
         elif isinstance(stmt, ast.BlockStmt):
             for s in stmt.statements:
@@ -306,8 +330,17 @@ class Synthesiser:
             merged = new_scope.copy()
 
             for v in all_vars:
-                t_net = then_scope.get(v, new_scope.get(v))
-                e_net = else_scope.get(v, new_scope.get(v))
+                t_net = then_scope.get(v)
+                if not t_net:
+                    t_net = new_scope.get(v)
+                if not t_net:
+                    t_net = net_map.get(v)
+
+                e_net = else_scope.get(v)
+                if not e_net:
+                    e_net = new_scope.get(v)
+                if not e_net:
+                    e_net = net_map.get(v)
 
                 if t_net != e_net and t_net and e_net:
                     mux_width = max(t_net.width, e_net.width)
