@@ -151,9 +151,7 @@ def test_duplicate_output_port():
             ports=[
                 Port(name="in1", direction=Direction.INPUT, is_reg=False),
                 Port(name="out1", direction=Direction.OUTPUT, is_reg=False),
-                Port(
-                    name="out1", direction=Direction.OUTPUT, is_reg=False
-                ),  # duplicate
+                Port(name="out1", direction=Direction.OUTPUT, is_reg=False),  # duplicate
             ],
             contents=[],
         )
@@ -368,9 +366,7 @@ def test_undeclared_identifier_binary_op():
                 WireDecl("known"),
                 AssignStmt(
                     lhs=Identifier("w"),
-                    rhs=BinaryOp(
-                        left=Identifier("known"), op="+", right=Identifier("missing")
-                    ),
+                    rhs=BinaryOp(left=Identifier("known"), op="+", right=Identifier("missing")),
                 ),
             ],
         )
@@ -392,9 +388,7 @@ def test_undeclared_indexed_unary_op():
                     lhs=Identifier("w"),
                     rhs=UnaryOp(
                         op="!",
-                        operand=Indexed(
-                            base=Identifier("missing_arr"), index=Index("1")
-                        ),
+                        operand=Indexed(base=Identifier("missing_arr"), index=Index("1")),
                     ),
                 ),
             ],
@@ -442,9 +436,7 @@ def test_always_comb_valid():
                 RegDecl("r"),
                 WireDecl("w"),
                 AlwaysComb(
-                    stmt=ProcAssignStmt(
-                        target=Identifier("r"), op="=", expr=Identifier("w")
-                    )
+                    stmt=ProcAssignStmt(target=Identifier("r"), op="=", expr=Identifier("w"))
                 ),
             ],
         )
@@ -463,9 +455,7 @@ def test_always_comb_assign_to_wire():
                 WireDecl("w_in"),
                 WireDecl("w_out"),
                 AlwaysComb(
-                    stmt=ProcAssignStmt(
-                        target=Identifier("w_out"), op="=", expr=Identifier("w_in")
-                    )
+                    stmt=ProcAssignStmt(target=Identifier("w_out"), op="=", expr=Identifier("w_in"))
                 ),
             ],
         )
@@ -510,9 +500,7 @@ def test_always_seq_undeclared_sensitivity():
                 AlwaysSeq(
                     edge="posedge",
                     signal=Identifier("clk_missing"),
-                    statements=ProcAssignStmt(
-                        target=Identifier("q"), op="<=", expr=Number("0")
-                    ),
+                    statements=ProcAssignStmt(target=Identifier("q"), op="<=", expr=Number("0")),
                 ),
             ],
         )
@@ -568,9 +556,7 @@ def test_instance_port_mismatch():
 
 def test_instance_output_driving_reg():
     # test that output port of a module instance cannot drive a reg in the parent
-    child = Module(
-        name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[]
-    )
+    child = Module(name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[])
     top = Module(
         name="top",
         ports=[],
@@ -592,9 +578,7 @@ def test_instance_output_driving_reg():
 
 def test_instance_output_driving_constant():
     # test that output port can't be connected to a constant number
-    child = Module(
-        name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[]
-    )
+    child = Module(name="child", ports=[Port(name="out", direction=Direction.OUTPUT)], contents=[])
     top = Module(
         name="top",
         ports=[],
@@ -632,9 +616,7 @@ def test_two_drivers_for_signal():
 
 
 def test_two_drivers_assign_instance():
-    child = Module(
-        name="child", ports=[Port(Direction.OUTPUT, name="c_out")], contents=[]
-    )
+    child = Module(name="child", ports=[Port(Direction.OUTPUT, name="c_out")], contents=[])
 
     top = Module(
         name="top",
@@ -695,9 +677,7 @@ def test_single_driver_multiple_assign_single_block():
                         # 2nd assignment in the same block: Should NOT error
                         IfStmt(
                             condition=Identifier("cond"),
-                            then_stmts=ProcAssignStmt(
-                                Identifier("r"), "=", Number("1")
-                            ),
+                            then_stmts=ProcAssignStmt(Identifier("r"), "=", Number("1")),
                         ),
                     ]
                 )

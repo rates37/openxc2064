@@ -3,6 +3,7 @@ import pytest
 from openxc2064.hdl import parse_hdl
 from openxc2064.synthesis import HDLElaborator, Synthesiser
 from openxc2064.simulator import RTLSimulator
+from itertools import permutations
 
 
 def test_simple_assign() -> None:
@@ -29,7 +30,6 @@ def test_simple_assign() -> None:
 
 
 def test_constant_output() -> None:
-
     hdl = """
         module constant_test(output [3:0] y);
             assign y = 4'b0110;
@@ -401,7 +401,6 @@ def test_negedge_register() -> None:
 
 
 def test_mux_always() -> None:
-
     hdl = """
         module mux2to1(input sel, input [7:0] a, input [7:0] b, output reg [7:0] y);
             always : comb begin
@@ -516,3 +515,178 @@ def test_alu() -> None:
     sim.set("op", 3)
     sim.step()
     assert sim.get("result") == 0b11111010
+
+
+def test_state_machine() -> None:
+    hdl = """
+        module fsm(input clk, input reset, input go, output reg done);
+            reg [1:0] state;
+            
+            always : seq @(posedge clk) begin
+                if (reset) begin
+                    state = 2'd0;
+                    done = 1'd0;
+                end else begin
+                    if (state == 2'd0) begin
+                        if (go)
+                            state = 2'd1;
+                        done = 1'd0;
+                    end else if (state == 2'd1) begin
+                        state = 2'd2;
+                        done = 1'd0;
+                    end else if (state == 2'd2) begin
+                        state = 2'd0;
+                        done = 1'd1;
+                    end
+                end
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("fsm")
+    sim = RTLSimulator(netlist)
+
+    # Helper to do a clock cycle
+    def clock_cycle():
+        sim.set("clk", 0)
+        sim.step()
+        sim.set("clk", 1)
+        sim.step()
+
+    # Reset
+    sim.set("reset", 1)
+    sim.set("go", 0)
+    clock_cycle()
+    assert sim.get("done") == 0
+
+    # Stay idle
+    sim.set("reset", 0)
+    clock_cycle()
+    assert sim.get("done") == 0
+
+    # Start FSM
+    sim.set("go", 1)
+    clock_cycle()
+    assert sim.get("done") == 0
+
+    sim.set("go", 0)
+
+    # Go through states
+    clock_cycle()  # State 1 -> 2
+    # assert sim.get("done") == 0
+
+    clock_cycle()  # State 2 -> 0, assert done
+    assert sim.get("done") == 1
+
+    clock_cycle()  # Back to idle
+    assert sim.get("done") == 0
+
+
+def test_shift_register_hdl() -> None:
+    hdl = """
+        module shift_reg(input clk, input d_in, output reg [3:0] q);
+            always : seq @(posedge clk) begin
+                q[3] = q[2];
+                q[2] = q[1];
+                q[1] = q[0];
+                q[0] = d_in;
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("shift_reg")
+
+    sim = RTLSimulator(netlist)
+
+    # test every possible pattern
+    for pattern in set(permutations([0, 0, 0, 0, 1, 1, 1, 1], 4)):
+        sim.set("clk", 0)
+        sim.step()
+        for i, bit in enumerate(pattern):
+            sim.set("d_in", bit)
+            sim.set("clk", 0)
+            sim.step()
+            sim.set("clk", 1)
+            sim.step()
+
+            # check outputs:
+            assert sim.get("q[0]") == pattern[i]
+            if i >= 1:
+                assert sim.get("q[1]") == pattern[i - 1]
+            if i >= 2:
+                assert sim.get("q[2]") == pattern[i - 2]
+            if i >= 3:
+                assert sim.get("q[3]") == pattern[i - 3]
+
+
+def test_simple_sequential() -> None:
+    hdl = """
+        module simple_sequential(input clk, input d_in, output reg [1:0] q);
+            always : seq @(posedge clk) begin
+                q[1] = q[0];
+                q[0] = d_in;
+            end
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("simple_sequential")
+
+    sim = RTLSimulator(netlist)
+
+    # test an example sequence:
+    sim.set("clk", 0)
+    sim.set("d_in", 0)
+    sim.step()
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q[0]") == 0
+
+    sim.set("d_in", 1)
+    sim.set("clk", 0)
+    sim.step()
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q[0]") == 1
+    assert sim.get("q[1]") == 0
+
+
+def test_shift_operators() -> None:
+    hdl = """
+        module shifter(input [7:0] a, input [2:0] amt, output [7:0] l_res, output [7:0] r_res);
+            assign l_res = a << amt;
+            assign r_res = a >> amt;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("shifter")
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 0b00010001)  # 17
+    sim.set("amt", 2)
+    sim.step()
+    assert sim.get("l_res") == 0b01000100  # 68
+    assert sim.get("r_res") == 0b00000100  # 4
+
+    sim.set("a", 0b11110000)
+    sim.set("amt", 4)
+    sim.step()
+    assert sim.get("l_res") == 0b00000000  # 8bit overflow
+    assert sim.get("r_res") == 0b00001111

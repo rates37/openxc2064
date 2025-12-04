@@ -8,9 +8,7 @@ class Net:
     name: str
     width: int = 1
     source: Node | None = None  # the component/input driving this net
-    sinks: list[Node] = field(
-        default_factory=list
-    )  # the component inputs that this net drives
+    sinks: list[Node] = field(default_factory=list)  # the component inputs that this net drives
 
     def __repr__(self) -> str:
         return f"Net[{self.name}[width={self.width}]]"
@@ -95,9 +93,7 @@ class Netlist:
         self.nodes.append(g)
         return g
 
-    def add_dff(
-        self, inputs: list[Net], outputs: list[Net], edge: str = "posedge"
-    ) -> DFF:
+    def add_dff(self, inputs: list[Net], outputs: list[Net], edge: str = "posedge") -> DFF:
         d = DFF(f"dff{len(self.nodes)}", inputs, outputs, edge=edge)
         self.nodes.append(d)
         return d

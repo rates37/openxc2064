@@ -170,9 +170,7 @@ class ASTBuilder(Transformer):
             return IfStmt(condition=condition, then_stmts=then_stmts, else_stmts=None)
         elif len(items) == 3:
             condition, then_stmts, else_stmts = items
-            return IfStmt(
-                condition=condition, then_stmts=then_stmts, else_stmts=else_stmts
-            )
+            return IfStmt(condition=condition, then_stmts=then_stmts, else_stmts=else_stmts)
         raise ValueError(f"Invalid if_stmt with items: {items}")
 
     def param(self, items: list) -> Param:

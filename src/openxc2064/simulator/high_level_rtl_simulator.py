@@ -41,6 +41,8 @@ class RTLSimulator:
             "LOGIC_AND": lambda x: 1 if (x[0] != 0 and x[1] != 0) else 0,
             "LOGIC_OR": lambda x: 1 if (x[0] != 0 or x[1] != 0) else 0,
             "MUX": lambda x: x[2] if x[0] else x[1],  # Sel, Else, Then
+            "LSHIFT": lambda x: (x[0] << x[1]) if len(x) >= 2 else 0,
+            "RSHIFT": lambda x: (x[0] >> x[1]) if len(x) >= 2 else 0,
         }
 
         self._initialise()
@@ -69,8 +71,7 @@ class RTLSimulator:
 
             # Get current value -> modify the bits -> set back
             current = self.net_values.get(net_name, 0)
-            new_value = self._set_bits(
-                current, value, high_bit, low_bit, net.width)
+            new_value = self._set_bits(current, value, high_bit, low_bit, net.width)
             self.net_values[net_name] = new_value
 
     def get(self, port_spec: str) -> int:
@@ -135,8 +136,7 @@ class RTLSimulator:
                     f"Bit index out of range for net '{net_name}' "
                     f"(width={net.width}, requested [{high_bit}:{low_bit}])"
                 )
-            value = self._extract_bits(
-                self.net_values[net_name], high_bit, low_bit)
+            value = self._extract_bits(self.net_values[net_name], high_bit, low_bit)
             width = high_bit - low_bit + 1
 
         if value & (1 << (width - 1)):
@@ -213,8 +213,7 @@ class RTLSimulator:
 
                     # update output nets:
                     for output_net in n.outputs:
-                        result_masked = self._mask_value(
-                            result, output_net.width)
+                        result_masked = self._mask_value(result, output_net.width)
                         prev_value = self.net_values.get(output_net.name, 0)
                         if prev_value != result_masked:
                             self.net_values[output_net.name] = result_masked
@@ -224,8 +223,7 @@ class RTLSimulator:
                     q_value = self.dff_state.get(n.id, 0)
                     if n.outputs:
                         output_net = n.outputs[0]
-                        q_value_masked = self._mask_value(
-                            q_value, output_net.width)
+                        q_value_masked = self._mask_value(q_value, output_net.width)
                         prev_value = self.net_values.get(output_net.name, 0)
                         if prev_value != q_value_masked:
                             self.net_values[output_net.name] = q_value_masked
@@ -244,7 +242,7 @@ class RTLSimulator:
         else:
             if ":" in gate.op:
                 # must be a slice or index
-                parts = gate.op.split(':')
+                parts = gate.op.split(":")
                 base_op = parts[0]
 
                 if base_op == "INDEX":
@@ -256,6 +254,25 @@ class RTLSimulator:
                     lsb = int(parts[2])
                     mask = (1 << (abs(msb - lsb) + 1)) - 1
                     return (input_values[0] >> lsb) & mask
+
+                elif base_op == "UPDATE":
+                    msb = int(parts[1])
+                    lsb = int(parts[2])
+                    width = abs(msb - lsb) + 1
+
+                    old_val = input_values[0]
+                    new_val = input_values[1]
+
+                    # Create mask for target bits
+                    mask = ((1 << width) - 1) << lsb
+
+                    # Clear bits in old_val
+                    cleared = old_val & ~mask
+
+                    # Shift new_val to position and mask
+                    shifted_new = (new_val << lsb) & mask
+
+                    return cleared | shifted_new
 
             raise ValueError(f"Unknown operation: '{gate.op}'")
 
@@ -290,8 +307,7 @@ class RTLSimulator:
         # Parse a port specification like "a", "a[2]", or "a[3:1]"
 
         # Match patterns: port_name[bit] or port_name[high:low] or port_name
-        match = re.match(
-            r'^([a-zA-Z_][a-zA-Z0-9_]*)(?:\[(\d+)(?::(\d+))?\])?$', port_spec)
+        match = re.match(r"^([a-zA-Z_][a-zA-Z0-9_]*)(?:\[(\d+)(?::(\d+))?\])?$", port_spec)
 
         if not match:
             raise ValueError(f"Invalid port specification: '{port_spec}'")
@@ -310,8 +326,7 @@ class RTLSimulator:
             high_bit = int(match.group(2))
             low_bit = int(match.group(3))
             if high_bit < low_bit:
-                raise ValueError(
-                    f"Invalid bit range [{high_bit}:{low_bit}] - high must be >= low")
+                raise ValueError(f"Invalid bit range [{high_bit}:{low_bit}] - high must be >= low")
             return (port_name, high_bit, low_bit)
 
     def _extract_bits(self, value: int, high_bit: int, low_bit: int) -> int:
@@ -320,7 +335,9 @@ class RTLSimulator:
         mask = (1 << num_bits) - 1
         return (value >> low_bit) & mask
 
-    def _set_bits(self, original: int, new_bits: int, high_bit: int, low_bit: int, width: int) -> int:
+    def _set_bits(
+        self, original: int, new_bits: int, high_bit: int, low_bit: int, width: int
+    ) -> int:
         # Set bits [high:low] in original value to new_bits.
         # Returns the modified value, masked to the specified width.
 
