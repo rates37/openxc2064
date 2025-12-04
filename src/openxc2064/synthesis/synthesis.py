@@ -39,18 +39,14 @@ def parse_verilog_literal(val_str: str) -> tuple[int, int]:
 
 class Synthesiser:
     # takes an AST and converts to a Netlist
-    def __init__(
-        self, module_library: dict[str, tuple[ast.Module, dict[str, SymbolInfo]]]
-    ) -> None:
+    def __init__(self, module_library: dict[str, tuple[ast.Module, dict[str, SymbolInfo]]]) -> None:
         self.library = module_library
         self.netlist: Netlist | None = None
         self.const_count = 0
 
     def synthesise(self, top_module_name: str) -> Netlist:
         if top_module_name not in self.library:
-            raise SynthesisException(
-                f"Top level module '{top_module_name}' not found in project."
-            )
+            raise SynthesisException(f"Top level module '{top_module_name}' not found in project.")
 
         self.netlist = Netlist(top_module_name)
         self._compile_module_instance(
@@ -115,9 +111,7 @@ class Synthesiser:
             parent_expr = c.expr
             parent_net = self._get_net_expr(parent_expr, current_scope, netlist)
             child_net_name = f"{child_prefix}_{port_name}"
-            child_net = next(
-                (n for n in netlist.nets if n.name == child_net_name), None
-            )
+            child_net = next((n for n in netlist.nets if n.name == child_net_name), None)
 
             if not child_net:
                 raise SynthesisException(
@@ -132,9 +126,7 @@ class Synthesiser:
             elif port_symbol.direction == ast.Direction.OUTPUT:
                 netlist.add_logic("BUF", [child_net], [parent_net])
 
-    def _get_net_expr(
-        self, expr: ast.Expression, net_map: dict[str, Net], netlist: Netlist
-    ) -> Net:
+    def _get_net_expr(self, expr: ast.Expression, net_map: dict[str, Net], netlist: Netlist) -> Net:
         if isinstance(expr, ast.Identifier):
             if expr.name not in net_map:
                 raise SynthesisException(f"Unknown signal '{expr.name}'.")
@@ -228,28 +220,18 @@ class Synthesiser:
     ) -> None:
         rhs = self._get_net_expr(stmt.rhs, net_map, netlist)
         # todo: fix since might not be driving entire name if indexed
-        lhs_name = (
-            stmt.lhs.name
-            if isinstance(stmt.lhs, ast.Identifier)
-            else stmt.lhs.base.name
-        )
+        lhs_name = stmt.lhs.name if isinstance(stmt.lhs, ast.Identifier) else stmt.lhs.base.name
         lhs = net_map[lhs_name]
         netlist.add_logic("BUF", [rhs], [lhs])
 
-    def _synth_comb(
-        self, block: ast.AlwaysComb, net_map: dict[str, Net], netlist: Netlist
-    ) -> None:
+    def _synth_comb(self, block: ast.AlwaysComb, net_map: dict[str, Net], netlist: Netlist) -> None:
         initial_scope = {}
-        final_scope = self._process_stmt_block(
-            block.stmt, initial_scope, net_map, netlist
-        )
+        final_scope = self._process_stmt_block(block.stmt, initial_scope, net_map, netlist)
         for name, driving_name in final_scope.items():
             target = net_map[name]
             netlist.add_logic("BUF", [driving_name], [target])
 
-    def _synth_seq(
-        self, block: ast.AlwaysSeq, net_map: dict[str, Net], netlist: Netlist
-    ) -> None:
+    def _synth_seq(self, block: ast.AlwaysSeq, net_map: dict[str, Net], netlist: Netlist) -> None:
         clk_name = (
             block.signal.name
             if isinstance(block.signal, ast.Identifier)
@@ -259,9 +241,7 @@ class Synthesiser:
         edge_type = block.edge
 
         initial_scope = {}
-        final_scope = self._process_stmt_block(
-            block.statements, initial_scope, net_map, netlist
-        )
+        final_scope = self._process_stmt_block(block.statements, initial_scope, net_map, netlist)
 
         for name, next_net in final_scope.items():
             if name in net_map:
@@ -279,19 +259,19 @@ class Synthesiser:
 
         if isinstance(stmt, ast.ProcAssignStmt):
             rhs = self._get_net_expr(stmt.expr, net_map, netlist)
-            
+
             if isinstance(stmt.target, ast.Identifier):
                 lhs_name = stmt.target.name
                 new_scope[lhs_name] = rhs
             elif isinstance(stmt.target, ast.Indexed):
                 lhs_name = stmt.target.base.name
-                
+
                 # Get current value (old_net)
                 old_net = new_scope.get(lhs_name)
                 if not old_net:
                     old_net = net_map.get(lhs_name)
                 if not old_net:
-                     raise SynthesisException(f"Cannot assign to unknown signal '{lhs_name}'.")
+                    raise SynthesisException(f"Cannot assign to unknown signal '{lhs_name}'.")
 
                 if stmt.target.index:
                     # Single bit assignment: target[i] = rhs
@@ -305,9 +285,11 @@ class Synthesiser:
                 else:
                     raise SynthesisException("Indexed assignment missing index or range.")
 
-                new_net = netlist.create_net(f"partial_result_{len(netlist.nets)}", width=old_net.width)
+                new_net = netlist.create_net(
+                    f"partial_result_{len(netlist.nets)}", width=old_net.width
+                )
                 netlist.add_logic(f"UPDATE:{msb}:{lsb}", [old_net, rhs], [new_net])
-                
+
                 new_scope[lhs_name] = new_net
 
         elif isinstance(stmt, ast.BlockStmt):
@@ -317,14 +299,10 @@ class Synthesiser:
         elif isinstance(stmt, ast.IfStmt):
             # todo: review this carefully
             cond = self._get_net_expr(stmt.condition, net_map, netlist)
-            then_scope = self._process_stmt_block(
-                stmt.then_stmts, new_scope, net_map, netlist
-            )
+            then_scope = self._process_stmt_block(stmt.then_stmts, new_scope, net_map, netlist)
             else_scope = new_scope
             if stmt.else_stmts:
-                else_scope = self._process_stmt_block(
-                    stmt.else_stmts, new_scope, net_map, netlist
-                )
+                else_scope = self._process_stmt_block(stmt.else_stmts, new_scope, net_map, netlist)
 
             all_vars = set(then_scope.keys()) | set(else_scope.keys())
             merged = new_scope.copy()
@@ -344,9 +322,7 @@ class Synthesiser:
 
                 if t_net != e_net and t_net and e_net:
                     mux_width = max(t_net.width, e_net.width)
-                    mux_out = netlist.create_net(
-                        f"mux_{v}_{len(netlist.nets)}", width=mux_width
-                    )
+                    mux_out = netlist.create_net(f"mux_{v}_{len(netlist.nets)}", width=mux_width)
                     netlist.add_logic("MUX", [cond, e_net, t_net], [mux_out])
                     # note the order of inputs list ^^^^^^^^^^^^ is intentional
                     # if cond=0, then the else block gets run -> i.e., index 0 in inputs[1..]

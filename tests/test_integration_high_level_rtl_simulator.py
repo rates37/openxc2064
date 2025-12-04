@@ -30,7 +30,6 @@ def test_simple_assign() -> None:
 
 
 def test_constant_output() -> None:
-
     hdl = """
         module constant_test(output [3:0] y);
             assign y = 4'b0110;
@@ -402,7 +401,6 @@ def test_negedge_register() -> None:
 
 
 def test_mux_always() -> None:
-
     hdl = """
         module mux2to1(input sel, input [7:0] a, input [7:0] b, output reg [7:0] y);
             always : comb begin
@@ -623,11 +621,11 @@ def test_shift_register_hdl() -> None:
             # check outputs:
             assert sim.get("q[0]") == pattern[i]
             if i >= 1:
-                assert sim.get("q[1]") == pattern[i-1]
+                assert sim.get("q[1]") == pattern[i - 1]
             if i >= 2:
-                assert sim.get("q[2]") == pattern[i-2]
+                assert sim.get("q[2]") == pattern[i - 2]
             if i >= 3:
-                assert sim.get("q[3]") == pattern[i-3]
+                assert sim.get("q[3]") == pattern[i - 3]
 
 
 def test_simple_sequential() -> None:

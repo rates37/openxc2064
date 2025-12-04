@@ -17,9 +17,7 @@ from openxc2064.synthesis.rtl_nodes import LogicGate, DFF, Constant, Input, Net
 def create_symbol(
     name: str, width: int = 1, direction: Direction | None = None, is_reg: bool = False
 ) -> SymbolInfo:
-    return SymbolInfo(
-        name=name, is_reg=is_reg, msb=width - 1, lsb=0, direction=direction
-    )
+    return SymbolInfo(name=name, is_reg=is_reg, msb=width - 1, lsb=0, direction=direction)
 
 
 def create_mock_library(
@@ -79,12 +77,8 @@ def test_synth_binary_op_width_propagation() -> None:
     # res_add = a + b;
     # res_eq = a == b;
     contents = [
-        AssignStmt(
-            Identifier("res_add"), BinaryOp(Identifier("a"), "+", Identifier("b"))
-        ),
-        AssignStmt(
-            Identifier("res_eq"), BinaryOp(Identifier("a"), "==", Identifier("b"))
-        ),
+        AssignStmt(Identifier("res_add"), BinaryOp(Identifier("a"), "+", Identifier("b"))),
+        AssignStmt(Identifier("res_eq"), BinaryOp(Identifier("a"), "==", Identifier("b"))),
     ]
     lib = create_mock_library("test", contents, symbols)
 
@@ -124,9 +118,7 @@ def test_synth_unary_ops() -> None:
     netlist = synth.synthesise("test")
 
     neg_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "NEG"]
-    not_gate = [
-        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"
-    ]
+    not_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"]
 
     assert len(neg_gate) == 1
     assert len(not_gate) == 1
@@ -146,25 +138,19 @@ def test_synth_slicing_indexing() -> None:
     # slice_out = bus[4:2]; (3 bits)
     contents = [
         AssignStmt(Identifier("bit_out"), Indexed(Identifier("bus"), index=Index("2"))),
-        AssignStmt(
-            Identifier("slice_out"), Indexed(Identifier("bus"), range=Range(4, 2))
-        ),
+        AssignStmt(Identifier("slice_out"), Indexed(Identifier("bus"), range=Range(4, 2))),
     ]
     lib = create_mock_library("test", contents, symbols)
     synth = Synthesiser(lib)
     netlist = synth.synthesise("test")
 
     # Check Index Gate
-    idx_gate = [
-        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"
-    ]
+    idx_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"]
     assert len(idx_gate) == 1
     assert idx_gate[0].outputs[0].width == 1
 
     # Check Slice Gate
-    slice_gate = [
-        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"
-    ]
+    slice_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"]
     assert len(slice_gate) == 1
     assert slice_gate[0].outputs[0].width == 3  # 4,3,2 = 3 bits
 
@@ -250,9 +236,7 @@ def test_synth_submodule() -> None:
         "in_sig": create_symbol("in_sig", 1, Direction.INPUT),
         "out_sig": create_symbol("out_sig", 1, Direction.OUTPUT),
     }
-    sub_contents = [
-        AssignStmt(Identifier("out_sig"), UnaryOp("!", Identifier("in_sig")))
-    ]
+    sub_contents = [AssignStmt(Identifier("out_sig"), UnaryOp("!", Identifier("in_sig")))]
     sub_mod = Module("inv", [], sub_contents)
 
     # Top level Module
@@ -412,9 +396,7 @@ endmodule"""
     netlist = synth.synthesise("test")
 
     neg_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "NEG"]
-    not_gate = [
-        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"
-    ]
+    not_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "LOGIC_NOT"]
 
     assert len(neg_gate) == 1
     assert len(not_gate) == 1
@@ -436,16 +418,12 @@ endmodule"""
     netlist = synth.synthesise("test")
 
     # Check Index Gate
-    idx_gate = [
-        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"
-    ]
+    idx_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "INDEX:2"]
     assert len(idx_gate) == 1
     assert idx_gate[0].outputs[0].width == 1
 
     # Check Slice Gate
-    slice_gate = [
-        n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"
-    ]
+    slice_gate = [n for n in netlist.nodes if isinstance(n, LogicGate) and n.op == "SLICE:4:2"]
     assert len(slice_gate) == 1
     assert slice_gate[0].outputs[0].width == 3  # 4,3,2 = 3 bits
 

@@ -660,7 +660,6 @@ def test_shift_register() -> None:
 
     # test every possible pattern
     for pattern in set(permutations([0, 0, 0, 0, 1, 1, 1, 1], 4)):
-
         for i, bit in enumerate(pattern):
             sim.set("d_in", bit)
             sim.set("clk", 0)
@@ -670,11 +669,11 @@ def test_shift_register() -> None:
             # check outputs:
             assert sim.get("q0") == pattern[i]
             if i >= 1:
-                assert sim.get("q1") == pattern[i-1]
+                assert sim.get("q1") == pattern[i - 1]
             if i >= 2:
-                assert sim.get("q2") == pattern[i-2]
+                assert sim.get("q2") == pattern[i - 2]
             if i >= 3:
-                assert sim.get("q3") == pattern[i-3]
+                assert sim.get("q3") == pattern[i - 3]
 
 
 def test_alu() -> None:

@@ -94,9 +94,7 @@ class HDLElaborator:
                 elif isinstance(content, Instance):
                     # recursively validate instantiated module FIRST
                     if content.module_name not in self.modules:
-                        raise HDLValidationError(
-                            f"Unknown module '{content.module_name}'."
-                        )
+                        raise HDLValidationError(f"Unknown module '{content.module_name}'.")
                     # store currently driven signals before elaborating new module
                     current_driven_signals = self.driven_signals
                     current_symbols = self.symbol_table
@@ -174,20 +172,14 @@ class HDLElaborator:
         # Check LHS is in known symbols:
         lhs_name = self._get_target_name(stmt.lhs)
         if lhs_name not in self.symbol_table:
-            raise HDLValidationError(
-                f"Undeclared signal '{lhs_name}' in LHS of assignment."
-            )
+            raise HDLValidationError(f"Undeclared signal '{lhs_name}' in LHS of assignment.")
 
         symbol = self.symbol_table[lhs_name]
         # continuous assignments must target wires or (non-reg) output ports
         if symbol.is_reg:
-            raise HDLValidationError(
-                f"Illegal continuous assignment to register '{lhs_name}'."
-            )
+            raise HDLValidationError(f"Illegal continuous assignment to register '{lhs_name}'.")
         if symbol.direction == Direction.INPUT:
-            raise HDLValidationError(
-                f"Illegal continuous assignment to input '{lhs_name}'"
-            )
+            raise HDLValidationError(f"Illegal continuous assignment to input '{lhs_name}'")
 
         # mark signal as driven:
         self._check_and_mark_driven(stmt.lhs)
@@ -201,9 +193,7 @@ class HDLElaborator:
         # recursive expression validator to check all signals used in expression exist
         if isinstance(expr, Identifier):
             if expr.name not in self.symbol_table:
-                raise HDLValidationError(
-                    f"Undeclared identifier '{expr.name}' used in expression"
-                )
+                raise HDLValidationError(f"Undeclared identifier '{expr.name}' used in expression")
 
         elif isinstance(expr, Number):
             return  # number always valid
@@ -237,9 +227,7 @@ class HDLElaborator:
     def _validate_always_seq(self, block: AlwaysSeq) -> None:
         sens_name = self._get_target_name(block.signal)
         if sens_name not in self.symbol_table:
-            raise HDLValidationError(
-                f"Undeclared signal used in sensitivity list: '{sens_name}'"
-            )
+            raise HDLValidationError(f"Undeclared signal used in sensitivity list: '{sens_name}'")
 
         targets = self._collect_procedural_targets(block.statements)
         for t in targets:
@@ -247,9 +235,7 @@ class HDLElaborator:
 
         self._validate_statement(block.statements, allow_reg_assignment=True)
 
-    def _validate_statement(
-        self, stmt: Statement, allow_reg_assignment: bool = False
-    ) -> None:
+    def _validate_statement(self, stmt: Statement, allow_reg_assignment: bool = False) -> None:
         # recursive statement validator:
 
         if isinstance(stmt, BlockStmt):
@@ -339,19 +325,14 @@ class HDLElaborator:
             )
 
     def _check_and_mark_driven(self, target: Identifier | Indexed) -> None:
-
         bits_to_drive = self._resolve_target_bits(target)
 
         for name, bit_idx in bits_to_drive:
             if (name, bit_idx) in self.driven_signals:
-                raise HDLValidationError(
-                    f"Multiple drivers for signal '{name}[{bit_idx}]'."
-                )
+                raise HDLValidationError(f"Multiple drivers for signal '{name}[{bit_idx}]'.")
             self.driven_signals.add((name, bit_idx))
 
-    def _resolve_target_bits(
-        self, target: Identifier | Indexed
-    ) -> list[tuple[str, int]]:
+    def _resolve_target_bits(self, target: Identifier | Indexed) -> list[tuple[str, int]]:
         name = self._get_target_name(target)
         symbol = self._get_symbol(name)
 
@@ -369,8 +350,9 @@ class HDLElaborator:
                     return [(name, idx)]
                 except ValueError:
                     # should not be permitted by the grammar, but will assume this error means all bits of the signal are driven
-                    start, end = min(symbol.lsb, symbol.msb), min(
-                        symbol.lsb, symbol.msb
+                    start, end = (
+                        min(symbol.lsb, symbol.msb),
+                        min(symbol.lsb, symbol.msb),
                     )
                     return [(name, i) for i in range(start, end + 1)]
             elif target.range is not None:
