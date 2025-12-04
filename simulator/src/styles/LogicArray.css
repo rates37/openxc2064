@@ -33,3 +33,10 @@
     font-weight: bold;
     font-size: 14px;
 }
+
+.LogicElementIOLabel {
+    position: absolute;
+    font-size: 8px;
+
+}
+

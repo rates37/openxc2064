@@ -20,36 +20,32 @@ const LogicArray: React.FC = () => {
   const [selectedElement, setSelectedElement] = useState<LogicElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // TODO: Handle logic element selection and modal display
   const handleLogicElementClick = (element: LogicElement) => {
     setSelectedElement(element);
     setIsModalOpen(true);
   };
 
-  // TODO: Implement save logic for logic element changes
   const handleSaveElement = (element: LogicElement) => {
-    // Save logic would go here
-    console.log('Saving element:', element);
+    context.updateLogicElement(element);
   };
 
-  useEffect(() => {
-    console.log("Logic elements updated:", context.logicElements);
-
-    const elements = context.logicElements.map((logicElementRow, y) => (
+  setTimeout(() => {
+  const elements = context.logicElements.map((logicElementRow, y) => (
       logicElementRow.map((logicElement, x) =>
         <LogicElementComponent 
           key={`${y}-${x}`} 
-          logicElement={logicElement} 
+          i={y}
+          j={x}
           x={x * 190} 
           y={y * 190}
+          scale={scale}
           onClick={handleLogicElementClick}
         />
       )
-    ));
+  ));
 
-    setLogicElementDisplay(<>{elements}</>);
-
-  }, [context.logicElements]);
+  setLogicElementDisplay(<>{elements}</>);
+}, 1000);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -98,6 +94,32 @@ const LogicArray: React.FC = () => {
         x: x - (x - prev.x) * ratio,
         y: y - (y - prev.y) * ratio
       }));
+
+      if (scale < 1.5 && newScale >= 1.5) {
+        // Change the "LogicElementIOLabel" css class in the LogicArray.css to have larger font size
+        const styleSheet = document.styleSheets[0];
+        const rules = styleSheet.cssRules || styleSheet.rules;
+        for (let i = 0; i < rules.length; i++) {
+          const rule = rules[i];
+          if (rule instanceof CSSStyleRule && rule.selectorText === '.LogicElementIOLabel') {
+            rule.style.fontSize = '8px';
+            break;
+          }
+        }
+      } else if (scale >= 1.5 && newScale < 1.5) {
+        // Change the "LogicElementIOLabel" css class in the LogicArray.css to have smaller font size
+        const styleSheet = document.styleSheets[0];
+        const rules = styleSheet.cssRules || styleSheet.rules;
+        for (let i = 0; i < rules.length; i++) {
+          const rule = rules[i];
+          if (rule instanceof CSSStyleRule && rule.selectorText === '.LogicElementIOLabel') {
+            rule.style.fontSize = '0px';
+            break;
+          }
+        }
+      }
+    
+
       setScale(newScale);
     }
   };
@@ -137,12 +159,14 @@ const LogicArray: React.FC = () => {
       </div>
 
     </div>
+
     <LogicElementModal 
       isOpen={isModalOpen}
       onClose={() => setIsModalOpen(false)}
       element={selectedElement}
       onSave={handleSaveElement}
     />
+    
   </>;
 }
 

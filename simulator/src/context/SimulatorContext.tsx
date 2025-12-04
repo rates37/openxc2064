@@ -9,6 +9,7 @@ export type SimulatorContextType = {
 
     // Functions
     setLogicElements: (logicElements: LogicElement[][]) => void;
+    updateLogicElement: (element: LogicElement) => void;
 };
 
 
@@ -28,6 +29,7 @@ export const SimulatorContextProvider: React.FC<{ children: React.ReactNode }> =
     const contextValue: SimulatorContextType = {
         logicElements: logicElements,
         setLogicElements: setLogicElements,
+        updateLogicElement: (element: LogicElement) => updateLogicElement(element, contextValue),
     };
 
     return (
@@ -57,4 +59,13 @@ const initialiseLogicElements = (): LogicElement[][] => {
     }
 
     return clbs;
+}
+
+const updateLogicElement = (element: LogicElement, context: SimulatorContextType) => {
+    const updatedElements = context.logicElements.map(row => 
+        row.map(el => el.id === element.id ? element : el)
+    );
+
+    console.log("Updating logic element:", updatedElements);
+    context.setLogicElements(updatedElements);
 }

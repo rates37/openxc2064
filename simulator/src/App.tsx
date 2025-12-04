@@ -7,7 +7,9 @@ import { SimulatorContext, SimulatorContextType } from './context/SimulatorConte
 
 const App: React.FC = () => {
   return <>
+  <div style={{userSelect: 'none'}}>
     <LogicArray />
+  </div>
   </>
 }
 

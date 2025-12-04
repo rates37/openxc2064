@@ -5,6 +5,7 @@
     border-width: 2px;
     position: absolute;
     border-color: black;
+    /* background-color: rgba(0, 0, 0, 0); */
     background-color: white;
     z-index: 10;
     

@@ -1,5 +1,19 @@
 .Bus {
     position: absolute;
     /* background-color: black; */
-    border: 1px dashed gray;
+    border: 1px dotted lightgray;
+    stroke: 0px;
+}
+
+
+.NodeBus {
+    position: absolute;
+    border: 2px solid black;
+    z-index: -1;
+}
+
+.NodeBusActive {
+    position: absolute;
+    border: 2px solid red;
+    z-index: -1;
 }
