@@ -516,3 +516,31 @@ def test_alu() -> None:
     sim.set("op", 3)
     sim.step()
     assert sim.get("result") == 0b11111010
+
+
+def test_shift_operators() -> None:
+    hdl = """
+        module shifter(input [7:0] a, input [2:0] amt, output [7:0] l_res, output [7:0] r_res);
+            assign l_res = a << amt;
+            assign r_res = a >> amt;
+        endmodule
+        """
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("shifter")
+    sim = RTLSimulator(netlist)
+
+    sim.set("a", 0b00010001) # 17
+    sim.set("amt", 2)
+    sim.step()
+    assert sim.get("l_res") == 0b01000100 # 68
+    assert sim.get("r_res") == 0b00000100 # 4
+
+    sim.set("a", 0b11110000)
+    sim.set("amt", 4)
+    sim.step()
+    assert sim.get("l_res") == 0b00000000 # 8-bit overflow
+    assert sim.get("r_res") == 0b00001111
