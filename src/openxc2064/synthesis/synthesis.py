@@ -62,6 +62,8 @@ class Synthesiser:
     def _compile_module_instance(
         self, module_name: str, instance_name: str, parent_netlist: Netlist
     ) -> None:
+        if module_name not in self.library:
+            raise SynthesisException(f"Unknown module '{module_name}'.")
         module_ast, symbol_table = self.library[module_name]
         prefix = f"{instance_name}_" if instance_name else ""
         local_net_map: dict[str, Net] = {}
@@ -112,7 +114,7 @@ class Synthesiser:
             port_name = c.port_name
             parent_expr = c.expr
             parent_net = self._get_net_expr(parent_expr, current_scope, netlist)
-            child_net_name = f"{child_prefix}{port_name}"
+            child_net_name = f"{child_prefix}_{port_name}"
             child_net = next(
                 (n for n in netlist.nets if n.name == child_net_name), None
             )
@@ -153,26 +155,30 @@ class Synthesiser:
                 raise SynthesisException(f"Unknown signal '{base_name}'.")
             base_net = net_map[base_name]
 
-            out_net = netlist.create_net(f"temp_idx_{len(netlist.nets)}")
-
             # handle single bit index:
             if expr.index:
-                # a single index "operation" is formatted as `INDEX:<bit>`
+                # Output width is 1
+                out_net = netlist.create_net(f"temp_idx_{len(netlist.nets)}", width=1)
                 idx_val = expr.index.index
+                # Store operation as "INDEX:<bit>"
                 netlist.add_logic(f"INDEX:{idx_val}", [base_net], [out_net])
+                return out_net
 
-            # handle range slide:
+            # handle range slice:
             elif expr.range:
-                # a range index "operation" is formatted as `SLICE:<msb>:<lsb>`
+                # Output width is derived from slice
                 msb, lsb = expr.range.msb, expr.range.lsb
+                width = abs(msb - lsb) + 1
+                out_net = netlist.create_net(f"temp_slice_{len(netlist.nets)}", width=width)
+                # Store operation as "SLICE:<msb>:<lsb>"
                 netlist.add_logic(f"SLICE:{msb}:{lsb}", [base_net], [out_net])
+                return out_net
 
-            return out_net
+            raise SynthesisException("Indexed expression missing index or range.")
 
         elif isinstance(expr, ast.BinaryOp):
             left = self._get_net_expr(expr.left, net_map, netlist)
             right = self._get_net_expr(expr.right, net_map, netlist)
-            out = netlist.create_net(f"temp_op_{len(netlist.nets)}")
 
             op_map = {
                 "&": "AND",
@@ -188,15 +194,27 @@ class Synthesiser:
             if expr.op not in op_map:
                 raise SynthesisException(f"Operation '{expr.op}' not supported yet.")
 
+            # determine width:
+            is_comparison = expr.op in ["==", "!=", "&&", "||"]
+            if is_comparison:
+                out_width = 1
+            else:
+                out_width = max(left.width, right.width)
+            out = netlist.create_net(f"temp_op_{len(netlist.nets)}", width=out_width)
             netlist.add_logic(op_map[expr.op], [left, right], [out])
             return out
 
         elif isinstance(expr, ast.UnaryOp):
             operand = self._get_net_expr(expr.operand, net_map, netlist)
-            out = netlist.create_net(f"temp_uop_{len(netlist.nets)}")
+
             op_map = {"!": "LOGIC_NOT", "-": "NEG", "~": "NOT"}
             if expr.op not in op_map:
                 raise SynthesisException(f"Operation '{expr.op}' not supported yet.")
+            if expr.op == "!":
+                out_width = 1
+            else:
+                out_width = operand.width
+            out = netlist.create_net(f"temp_uop_{len(netlist.nets)}", width=out_width)
             netlist.add_logic(op_map[expr.op], [operand], [out])
             return out
 
@@ -290,8 +308,16 @@ class Synthesiser:
                 e_net = else_scope.get(v, new_scope.get(v))
 
                 if t_net != e_net and t_net and e_net:
-                    mux_out = netlist.create_net(f"mux_{v}_{len(netlist.nets)}")
+                    mux_width = max(t_net.width, e_net.width)
+                    mux_out = netlist.create_net(
+                        f"mux_{v}_{len(netlist.nets)}", width=mux_width
+                    )
                     netlist.add_logic("MUX", [cond, e_net, t_net], [mux_out])
+                    # note the order of inputs list ^^^^^^^^^^^^ is intentional
+                    # if cond=0, then the else block gets run -> i.e., index 0 in inputs[1..]
+                    # if cond=1 then the then block gets run -> i.e., index 1 in inputs[1..]
+                    # allows you to use cond+1 as the index to choose which of the inputs propagates
+                    # the output
                     merged[v] = mux_out
                 elif t_net:
                     merged[v] = t_net
