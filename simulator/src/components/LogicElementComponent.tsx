@@ -203,20 +203,38 @@ export const LogicElementComponent: React.FC<LogicElementComponentProps> = ({ i,
 
 
     return <>
-        <div className="LogicElement" style={{ left: x, top: y }} onClick={handleClick}>
-            {logicElement.id}
+        <g className="LogicElement" transform={`translate(${x}, ${y})`}>
+            <rect 
+                x={0} 
+                y={0} 
+                width={50} 
+                height={80} 
+                fill="white" 
+                stroke="black" 
+                strokeWidth={2}
+                onClick={handleClick}
+                style={{ cursor: 'pointer' }}
+            />
+            <text 
+                x={25} 
+                y={45} 
+                textAnchor="middle" 
+                fontSize={14} 
+                fontWeight="bold"
+                pointerEvents="none"
+            >
+                {logicElement.id}
+            </text>
 
-            <>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', top: '0px', left: '83%', transform: 'translateX(-50%)', pointerEvents: 'none' }}>A</div>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', bottom: '2px', left: '53%', transform: 'translateX(-50%)', pointerEvents: 'none' }}>D</div>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', top: '27px', left: '2px', pointerEvents: 'none' }}>B</div>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', top: '42px', left: '2px', pointerEvents: 'none' }}>C</div>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', bottom: '10px', left: '2px', pointerEvents: 'none' }}>K</div>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', top: '8px', right: '2px', pointerEvents: 'none' }}>X</div>
-                <div className="LogicElementIOLabel" style={{ position: 'absolute', bottom: '2px', right: '2px', pointerEvents: 'none' }}>Y</div>
-            </>
-
-        </div>
+            {/* IO Labels */}
+            <text className="LogicElementIOLabel" x={42} y={8} fontSize={8} pointerEvents="none">A</text>
+            <text className="LogicElementIOLabel" x={27} y={78} fontSize={8} pointerEvents="none">D</text>
+            <text className="LogicElementIOLabel" x={2} y={30} fontSize={8} pointerEvents="none">B</text>
+            <text className="LogicElementIOLabel" x={2} y={45} fontSize={8} pointerEvents="none">C</text>
+            <text className="LogicElementIOLabel" x={2} y={72} fontSize={8} pointerEvents="none">K</text>
+            <text className="LogicElementIOLabel" x={43} y={12} fontSize={8} pointerEvents="none">X</text>
+            <text className="LogicElementIOLabel" x={43} y={78} fontSize={8} pointerEvents="none">Y</text>
+        </g>
         {nodes}
         {switches}
         {busses}

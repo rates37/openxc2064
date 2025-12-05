@@ -129,9 +129,7 @@ export class LogicElement {
             this.outputs["Y"] = this.nets["net_Y"];
 
             // D Flip-Flop
-            console.log(prev_clk_net2, this.nets["clk_net2"]);
             if (this.nets["clk_net2"] === 1 && prev_clk_net2 === 0) {
-                console.log("LATCH");
                 this.nets["net_Q"] = this.nets["net_F"];
             }
 

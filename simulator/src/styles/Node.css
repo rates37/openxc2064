@@ -1,12 +1,7 @@
 .Node {
-    width: 5px;
-    height: 5px;
-    border-style: solid;
-    border-width: 2px;
-    position: absolute;
-    border-color: black;
-    /* background-color: rgba(0, 0, 0, 0); */
-    background-color: white;
-    z-index: 10;
-    
+    cursor: pointer;
+}
+
+.Node:hover {
+    stroke-width: 2;
 }

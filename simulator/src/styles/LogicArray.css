@@ -13,30 +13,17 @@
 }
 
 .LogicArray {
-    width: fit-content;
-    /* border: 2px solid #000; */
-    padding: 10px;
     background-color: white;
     position: absolute;
     transform-origin: 0 0; /* Important for the zoom math */
 }
 
 .LogicElement {
-    border: 2px solid #000;
-    background-color: white;
-    width: 50px;
-    height: 80px;
-    position: absolute;
-    justify-content: center;
-    align-items: center;
-    display: flex;
-    font-weight: bold;
-    font-size: 14px;
+    cursor: pointer;
 }
 
 .LogicElementIOLabel {
-    position: absolute;
     font-size: 8px;
-
+    user-select: none;
 }
 

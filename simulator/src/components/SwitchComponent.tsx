@@ -7,8 +7,14 @@ type SwitchComponentProps = {
 };
 
 export const SwitchComponent: React.FC<SwitchComponentProps> = ({ x, y }) => {
-    return <div 
+    return <rect 
         className="Switch" 
-        style={{ left: x, top: y }}
-    ></div>;
+        x={x}
+        y={y}
+        width={5}
+        height={5}
+        fill="#ccc"
+        stroke="black"
+        strokeWidth={0.5}
+    />;
 }

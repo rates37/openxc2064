@@ -62,10 +62,12 @@ const initialiseLogicElements = (): LogicElement[][] => {
 }
 
 const updateLogicElement = (element: LogicElement, context: SimulatorContextType) => {
-    const updatedElements = context.logicElements.map(row => 
-        row.map(el => el.id === element.id ? element : el)
-    );
+    const elementRow = context.logicElements.findIndex(row => row.some(el => el.id === element.id));
+    if (elementRow === -1) return;
 
-    console.log("Updating logic element:", updatedElements);
-    context.setLogicElements(updatedElements);
+    const elementToUpdate = context.logicElements[elementRow].findIndex(el => el.id === element.id);
+    if (elementToUpdate === -1) return;
+
+    context.logicElements[elementRow][elementToUpdate] = element;
+    context.setLogicElements([...context.logicElements]);
 }

@@ -9,7 +9,25 @@ type BusComponentProps = {
 
 
 export const BusComponent: React.FC<BusComponentProps> = ({horizontal, point, length}) => {
-    return <div className="Bus" style={
-        {top: horizontal ? point : -110, left: horizontal ? -180 : point, width: horizontal ? length : 1, height: horizontal ? 1 : length}
-    }></div>; 
+    if (horizontal) {
+        return <line 
+            className="Bus" 
+            x1={-180}
+            y1={point}
+            x2={-180 + length}
+            y2={point}
+            stroke="black"
+            strokeWidth={1}
+        />;
+    } else {
+        return <line 
+            className="Bus" 
+            x1={point}
+            y1={-110}
+            x2={point}
+            y2={-110 + length}
+            stroke="black"
+            strokeWidth={1}
+        />;
+    }
 }

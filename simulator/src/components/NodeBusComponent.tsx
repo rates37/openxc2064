@@ -23,7 +23,13 @@ export const NodeBusComponent: React.FC<NodeBusComponentProps> = ({x1, y1, x2, y
         }
     }, [context.logicElements, nets, nodeID]);
 
-    return <div className={`NodeBus${active ? "Active" : ""}`} style={
-        {top: y1, left: x1, width: x2 - x1, height: y2 - y1}
-    }></div>; 
+    return <line 
+        className={`NodeBus${active ? "Active" : ""}`}
+        x1={x1}
+        y1={y1}
+        x2={x2}
+        y2={y2}
+        stroke={active ? "red" : "black"}
+        strokeWidth={active ? 2 : 1}
+    />; 
 }
