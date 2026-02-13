@@ -1,7 +1,13 @@
+import React, { useEffect, useState } from "react";
+import { SimulatorContext, SimulatorContextType } from "../context/SimulatorContext";
+// import { LogicElement } from "../models/LogicElement";
 
 export class LogicElement {
     id: string;
 
+    x: number;
+    y: number;
+    
     muxConfig: { [key: string]: number } = {
         "m6": 0,
         "m8": 0,
@@ -59,11 +65,38 @@ export class LogicElement {
         "clk_net2": 0,
     };
 
+    public init_nets(context: SimulatorContextType): void {
+        for (const net of ["A", "B", "C", "D", "K", "X", "Y"]) {
+            context.setNet(this.id + ":" + net, 0);
+        }
+    }
 
-
-    public simulate(): void {
+    public simulate(context?: SimulatorContextType): void {
         let prev_nets = { ...this.nets };
         let prev_clk_net2 = this.nets["clk_net2"];
+
+        if (context) {
+            // Update inputs from global nets
+            // A
+            const aNet = context.getNet(this.id + ":A");
+            if (aNet !== undefined) this.inputs["A"] = aNet;
+
+            // B
+            const bNet = context.getNet(this.id + ":B");
+            if (bNet !== undefined) this.inputs["B"] = bNet;
+
+            // C
+            const cNet = context.getNet(this.id + ":C");
+            if (cNet !== undefined) this.inputs["C"] = cNet;
+
+            // D
+            const dNet = context.getNet(this.id + ":D");
+            if (dNet !== undefined) this.inputs["D"] = dNet;
+
+            // K
+            const kNet = context.getNet(this.id + ":K");
+            if (kNet !== undefined) this.inputs["K"] = kNet;
+        }
 
         this.nets["net_A"] = this.inputs["A"];
         this.nets["net_B"] = this.inputs["B"];
@@ -144,5 +177,35 @@ export class LogicElement {
             console.log(".");
 
         } while (JSON.stringify(prev_nets) !== JSON.stringify(this.nets));
+
+        if (context) {
+            // Update global nets from outputs
+            context.setNet(this.id + ":X", this.outputs["X"]);
+            context.setNet(this.id + ":Y", this.outputs["Y"]);
+        }
     } 
+
+    public getNeighbour(dir: "up" | "down" | "left" | "right", logicElements: LogicElement[][]): LogicElement | null {
+        // const context = React.useContext(SimulatorContext);
+        const rowIndex = logicElements.findIndex(row => row.some(el => el.id === this.id));
+        if (rowIndex === -1) return null;
+
+        const colIndex = logicElements[rowIndex].findIndex(el => el.id === this.id);
+        if (colIndex === -1) return null;
+
+        // console.log(`Getting neighbour of ${this.id} at (${rowIndex}, ${colIndex}) to the ${dir}`);
+        switch (dir) {
+            case "up":
+                return rowIndex > 0 ? logicElements[rowIndex - 1][colIndex] : null;
+            case "down":
+                return rowIndex < logicElements.length - 1 ? logicElements[rowIndex + 1][colIndex] : null;
+            case "left":
+                return colIndex > 0 ? logicElements[rowIndex][colIndex - 1] : null;
+            case "right":
+                return colIndex < logicElements[rowIndex].length - 1 ? logicElements[rowIndex][colIndex + 1] : null;
+            default:
+                return null;
+        }
+
+    }   
 }

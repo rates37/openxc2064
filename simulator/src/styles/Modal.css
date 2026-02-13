@@ -5,8 +5,6 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -15,8 +13,6 @@
 
 .modal-content {
     background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
     padding: 30px;
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -92,4 +88,51 @@
 
 .modal-content button:active {
     transform: translateY(0);
+}
+
+.matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 1px;
+    margin-bottom: 20px;
+}
+
+.matrix-row {
+    display: contents;
+    
+}
+
+.matrix-cell {
+    width: 20px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ccc;
+    border-radius: 1px;
+    cursor: pointer;
+    background-color: white;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.matrix-cell.active {
+    background-color: #4caf50;
+    color: white;
+    border-color: #4caf50;
+}
+
+.matrix-cell.disabled {
+    background-color: #f0f0f0;
+    color: #ccc;
+    cursor: not-allowed;
+    border-color: #eee;
+}
+
+.matrix-cell:hover:not(.disabled) {
+    background-color: #e0e0e0;
+}
+
+.matrix-cell.active:hover:not(.disabled) {
+    background-color: #45a049;
 }

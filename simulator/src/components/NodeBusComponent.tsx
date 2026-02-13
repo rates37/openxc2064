@@ -9,27 +9,37 @@ type NodeBusComponentProps = {
     x2: number;
     y2: number;
     nodeID: string;
-    nets: {[key: string]: 0 | 1};
-};  
+    strokeWidth?: number;
+    stroke?: string;
+};
 
-    
-export const NodeBusComponent: React.FC<NodeBusComponentProps> = ({x1, y1, x2, y2, nodeID, nets}) => {
+
+export const NodeBusComponent: React.FC<NodeBusComponentProps> = ({ x1, y1, x2, y2, nodeID, strokeWidth, stroke }) => {
     const [active, setActive] = React.useState(false);
-    const context  = React.useContext(SimulatorContext);
-    
-    useEffect(() => {   
-        if (nets && nodeID in nets) {
-            setActive(nets[nodeID] === 1);
-        }
-    }, [context.logicElements, nets, nodeID]);
+    const context = React.useContext(SimulatorContext);
 
-    return <line 
+    // console.log(nodeID);
+
+    useEffect(() => {
+        // console.log("NodeBusComponent useEffect", context.globalNets, nodeID);
+
+        const netValue = context.getNet(nodeID);
+
+        if (netValue !== undefined) {
+            setActive(netValue === 1);
+        } else {
+            setActive(false);
+        }
+
+    }, [context.globalNets, nodeID]);
+
+    return <line
         className={`NodeBus${active ? "Active" : ""}`}
         x1={x1}
         y1={y1}
         x2={x2}
         y2={y2}
-        stroke={active ? "red" : "black"}
-        strokeWidth={active ? 2 : 1}
-    />; 
+        stroke={active ? "red" : (stroke || "black")}
+        strokeWidth={active ? 2 : (strokeWidth || 1)}
+    />;
 }
