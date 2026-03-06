@@ -95,7 +95,7 @@ graph LR
     NetB -. dangling sink .-> DEAD1
 ```
 
-** Netlist reconstruction**
+**Netlist reconstruction**
 
 In the final step, we rebuild the netlist by removing the dangling sinks and reassigning the drivers of each node to their new locations. The live nets iterate through their `sink` lists and sever any invalid connections to dead components, leaving a minimised graph.
 
