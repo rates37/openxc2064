@@ -211,8 +211,26 @@ class Optimiser:
                     changed = True
 
             elif node.op == "MUX":
-                # todo: implement this
-                pass
+                if len(node.inputs) == 3:
+                    sel_net = node.inputs[0]
+                    true_net = node.inputs[1]
+                    false_net = node.inputs[2]
+
+                    if sel_net in const_inputs:
+                        if sel_net.source.value == 1:
+                            replace_with_buf(true_net)
+                        else:
+                            replace_with_buf(false_net)
+                        changed = True
+                    elif true_net in const_inputs and false_net in const_inputs:
+                        t_val = true_net.source.value
+                        f_val = false_net.source.value
+                        if t_val == 1 and f_val == 0:
+                            replace_with_buf(sel_net)
+                            changed = True
+                        elif t_val == 0 and f_val == 1:
+                            replace_with_not(sel_net)
+                            changed = True
         
 
         return changed
