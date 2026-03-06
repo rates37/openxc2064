@@ -118,7 +118,7 @@ class Optimiser:
             if not isinstance(node, LogicGate):
                 continue
             
-            const_inputs = [n for n in node.inputs if n.source is not None and isinstance(net.source, Constant)]
+            const_inputs = [n for n in node.inputs if n.source is not None and isinstance(n.source, Constant)]
             if len(const_inputs) == 0:
                 continue
 
@@ -146,7 +146,7 @@ class Optimiser:
                     changed = True
                 
                 # A & 1 = A
-                elif len(const_inputs) == 1 and len(node.inputs == 2):
+                elif len(const_inputs) == 1 and len(node.inputs) == 2:
                     # if the const_inputs value == 0, then the first if statement would be executed
                     # so at this point, const_inputs[0] must be 1
                     non_const = next(net for net in node.inputs if net not in const_inputs)
@@ -188,7 +188,7 @@ class Optimiser:
                     non_const = next(net for net in node.inputs if net not in const_inputs)
 
                     # A ^ 0 = A
-                    if val == 0:
+                    if v == 0:
                         replace_with_buf(non_const)
                     
                     # A ^ 1 = ~A
@@ -200,7 +200,7 @@ class Optimiser:
             elif node.op == "NOT":
                 if len(const_inputs) == 1:
                     v = const_inputs[0].source.value
-                    replace_with_const(1 if val == 0 else 0)
+                    replace_with_const(1 if v == 0 else 0)
                     changed = True
                 
             
