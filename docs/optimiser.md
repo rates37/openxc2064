@@ -151,3 +151,27 @@ We can apply these reductions to a MUX:
     Conversely, if `True=0` and `False=1`, the MUX acts as an Inverter (`NOT S`), so can be replaced by a `NOT` gate.
 
 ---
+
+
+## 3. Structural Boolean Simplification
+
+While Constant Folding eliminates logic driven by static values (`1` or `0`), we can also simplify logic driven by dynamic variables (nets) by comparing the *structure* of their inputs. The `_simplify_logic` method acts as a very simple algebraic reducer for these combinatorial patterns.
+
+### Identity Laws
+Sometimes, due to previous optimisations or poorly written user HDL, a logic gate might receive the exact same net on multiple inputs. We can take advantage of this to simplify the logic:
+* `A AND A = A`
+* `A OR A = A`
+* `MUX(S, A, A) = A`: If a MUX chooses between `A` and `A`, the selector doesn't matter; the output is always `A`. If these patterns are detected, the gate is simply replaced by a buffer passing `A` through.
+* `A XOR A = 0`: Since the inputs are identical, they never differ. This replaces the gate with a `Constant(0)`.
+
+### Inverse Laws
+By checking if one input is driven by a `NOT` gate that originates from the other input, we can identify inversely related signals (e.g., `A` and `NOT A`).
+*   `A AND (NOT A) = 0`: They can never both be true.
+*   `A OR (NOT A) = 1`: One of them must be true.
+*   `A XOR (NOT A) = 1`: They are guaranteed to differ.
+
+### Double Inversion
+If a `NOT` gate is fed by another `NOT` gate, they cancel each other out.
+*   `NOT (NOT A) = A`
+The second `NOT` gate is replaced by a straightforward buffer passing `A`.
+
