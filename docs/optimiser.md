@@ -110,3 +110,44 @@ graph LR
     AND1 --> NetY(Net: y)
     NetY --> OutY[Output: y]
 ```
+
+---
+
+## 2. Constant Folding
+
+"Constant Folding" is the process of resolving logic at synthesis-time rather than allowing it to be computed in the circuit of the final design. If a gate's inputs are driven by stationary values (0 or 1), we can often determine the output immediately.
+
+We can apply a series of Boolean algebra identities to optimise, or "fold" these constants.
+
+### Boolean identities for Basic Gates
+
+When evaluating generic nodes (`AND`, `OR`, `XOR`, and `NOT`), we can use the identities laid out below:
+
+#### AND Gates:
+* **Annihilation**: `A AND 0 = 0` (If *any* input is 0, the output is guaranteed to be 0). In this case, the entire AND gate can be removed and replaced with a constant `0`.
+* **Identity**: `A AND 1 = A` (A 1 input has no restrictive effect, so the output perfectly mirrors the other input `A`). In this case, the entire AND gate can be removed and replaced with the input `A`.
+
+#### OR Gates:
+* **Annihilation**: `A OR 1 = 1` (If *any* input is 1, the output is guaranteed to be 1). In this case, the entire OR gate can be removed and replaced with a constant `1`.
+* **Identity**: `A OR 0 = A` (A 0 input has no restrictive effect, so the output perfectly mirrors the other input `A`). In this case, the entire OR gate can be removed and replaced with the input `A`.
+
+#### XOR Gates:
+* **Identity**: `A XOR 0 = A` (If `A` differs from 0, the output must be 1. If `A` doesn't differ from 0, the output must be 0. Thus, we mirror `A`). In this case, the entire XOR gate can be removed and replaced with the input `A`.
+* **Inversion**: `A XOR 1 = NOT A` (If `A` differs from 1, the output must be 0. If `A` doesn't differ from 1, the output must be 1. This acts as an inverter). In this case, the entire XOR gate can be removed and replaced with the input `NOT A`.
+
+#### NOT Gates:
+* **Identity**: `NOT NOT A = A` (A double negation cancels out, so the output perfectly mirrors the other input `A`). In this case, the entire NOT gate can be removed and replaced with the input `A`.
+
+### MUX Optimization (Multiplexers)
+
+A `MUX` serves as a switch. Given a selection input `S`, it routes either the `True` path or the `False` path. Its boolean equation is: `Q = (S AND True) OR (NOT S AND False)`.
+
+We can apply these reductions to a MUX:
+* **Constant Selection**: 
+    If `S = 1`, the MUX simply routes the `True` path. The MUX is replaced by a simple wire (buffer) connected to the `True` source.
+    If `S = 0`, the MUX routes the `False` path.
+* **Boolean Coercion**:
+    If the `True` path is a constant `1` and the `False` path is a constant `0`, then `Q = (S AND 1) OR (NOT S AND 0) = S`. The MUX can be replaced completely by a buffer of its own selection signal.
+    Conversely, if `True=0` and `False=1`, the MUX acts as an Inverter (`NOT S`), so can be replaced by a `NOT` gate.
+
+---
