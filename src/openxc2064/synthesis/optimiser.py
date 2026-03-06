@@ -80,10 +80,29 @@ class Optimiser:
         netlist.nodes = [n for n in netlist.nodes if n.id not in dead_node_ids]
 
         # reconstruct the netlist by traversing remaining nodes and ports:
-        # TODO: implement this
+        # todo: using id() for this is a bit of a smell but it's good enough for now
+        # debugging may be more difficult if looking at object ids rather than human
+        # readable attributes, but changing would require a bigger refactor, and 
+        # this usage is confined to this method only
+        live_nets_dict: dict[int, Net] = {}
+        for out_net in netlist.outputs:
+            live_nets_dict[id(out_net)] = out_net
+        for in_net in netlist.inputs:
+            live_nets_dict[id(in_net)] = in_net
+            
+        for node in netlist.nodes:
+            for n in node.inputs:
+                live_nets_dict[id(n)] = n
+            for n in node.outputs:
+                live_nets_dict[id(n)] = n
 
-        # clean up sinks/sources on live ndes to remove dangling/dead references:
-        # TODO: implement this 
+        netlist.nets = list(live_nets_dict.values())
+
+        # clean up sinks/sources on live nodes to remove dangling/dead references:
+        for net in netlist.nets:
+            net.sinks = [s for s in net.sinks if s.id not in dead_node_ids]
+            if net.source is not None and net.source.id in dead_node_ids:
+                net.source = None 
 
         return True
 
