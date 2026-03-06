@@ -236,4 +236,82 @@ class Optimiser:
         return changed
 
     def _simplify_logic(self, netlist: Netlist) -> bool:
-        pass
+        """
+        Simplify pure combinational logic using Boolean identities.
+        """
+        # is quite simple for now, only acting on 1-2 gates at most
+        changed = False
+        nodes = list(netlist.nodes)
+        
+        for node in nodes:
+            if not isinstance(node, LogicGate):
+                continue
+
+            # helper functions:
+            def replace_with_const(val: int):
+                out_net = node.outputs[0]
+                new_const = netlist.add_const(val, out_net)
+                out_net.source = new_const
+            
+            def replace_with_buf(net_to_pass: Net):
+                node.op = "BUF"
+                node.inputs = [net_to_pass]
+            
+            def get_inverted_source(n: Net) -> Net | None:
+                # if the net is driven by a NOT gate, return the 
+                # NOT gate's input
+                if isinstance(n.source, LogicGate) and n.source.op == "NOT":
+                    return n.source.inputs[0]
+                return None
+            
+            if len(node.inputs) == 2:
+                in1 = node.inputs[0]
+                in2 = node.inputs[1]
+
+                # operations with identical inputs
+                if in1 == in2:
+                    # A&A = A, and A|A = A
+                    if node.op in ("AND", "OR"):
+                        replace_with_buf(in1)
+                        changed = True
+                    elif node.op == "XOR":
+                        replace_with_const(0)
+                        changed = True
+                
+                # operations with inverse inputs:
+                else:
+                    inv1 = get_inverted_source(in1)
+                    inv2 = get_inverted_source(in2)
+
+                    if (inv1 == in2) or (inv2 == in1):
+                        # A & ~A = 0
+                        if node.op == "AND":
+                            replace_with_const(0)
+                            changed = True
+
+                        # A | ~A = 1
+                        elif node.op == "OR":
+                            replace_with_const(1)
+                            changed = True
+
+                        # A ^ ~A = 1
+                        elif node.op == "XOR":
+                            replace_with_const(1)
+                            changed = True
+            
+            elif node.op == "NOT":
+                inv = get_inverted_source(node.inputs[0])
+                if inv is not None:
+                    replace_with_buf(inv)
+                    changed = True
+            
+            elif node.op == "MUX":
+                if len(node.inputs) == 3:
+                    # mux(sel, A, A) = A
+                    t = node.inputs[1]
+                    f = node.inputs[2]
+                    if t == f:
+                        replace_with_buf(t)
+                        changed = True
+
+        return changed
