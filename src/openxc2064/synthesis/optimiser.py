@@ -110,7 +110,112 @@ class Optimiser:
         """
         Evaluate constant expressions and replace them with constants.
         """
-        pass
+        changed = False
+
+        nodes = list(netlist.nodes) # shallow copy the list, as it may be modified during loop
+
+        for node in nodes:
+            if not isinstance(node, LogicGate):
+                continue
+            
+            const_inputs = [n for n in node.inputs if n.source is not None and isinstance(net.source, Constant)]
+            if len(const_inputs) == 0:
+                continue
+
+
+            # helper functions:
+            def replace_with_const(val: int):
+                out_net = node.outputs[0]
+                new_const = netlist.add_const(val, out_net)
+                out_net.source = new_const
+                # we can rely on trim_dead_code to eliminate the 'node' on next optimiser iteration
+            
+            def replace_with_buf(net_to_pass: Net):
+                node.op = "BUF"
+                node.inputs = [net_to_pass]
+            
+            def replace_with_not(net_to_invert: Net):
+                node.op = "NOT"
+                node.inputs = [net_to_invert]
+            
+            # apply boolean identities:
+            if node.op == "AND":
+                # A & 0 = 0
+                if any(net.source.value == 0 for net in const_inputs):
+                    replace_with_const(0)
+                    changed = True
+                
+                # A & 1 = A
+                elif len(const_inputs) == 1 and len(node.inputs == 2):
+                    # if the const_inputs value == 0, then the first if statement would be executed
+                    # so at this point, const_inputs[0] must be 1
+                    non_const = next(net for net in node.inputs if net not in const_inputs)
+                    replace_with_buf(non_const)
+                    changed = True
+
+                # 1 & 1 = 1
+                elif len(const_inputs) == 2:
+                    replace_with_const(1)
+                    changed = True
+            
+            elif node.op == "OR":
+                # A | 1 = 1
+                if any(net.source.value == 1 for net in const_inputs):
+                    replace_with_const(1)
+                    changed = True
+
+                # A | 0 = A
+                elif len(const_inputs) == 1 and len(node.inputs) == 2:
+                    non_const = next(net for net in node.inputs if net not in const_inputs)
+                    replace_with_buf(non_const)
+                    changed = True
+
+                # 0 | 0 = 0
+                elif len(const_inputs) == 2:
+                    replace_with_const(0)
+                    changed = True
+
+
+            elif node.op == "XOR":
+                if len(const_inputs) == 2:
+                    v1 = const_inputs[0].source.value
+                    v2 = const_inputs[1].source.value
+                    replace_with_const(v1 ^ v2)
+                    changed = True
+                
+                elif len(const_inputs) == 1 and len(node.inputs) == 2:
+                    v = const_inputs[0].source.value
+                    non_const = next(net for net in node.inputs if net not in const_inputs)
+
+                    # A ^ 0 = A
+                    if val == 0:
+                        replace_with_buf(non_const)
+                    
+                    # A ^ 1 = ~A
+                    else:
+                        replace_with_not(non_const)
+                    changed = True
+                
+            
+            elif node.op == "NOT":
+                if len(const_inputs) == 1:
+                    v = const_inputs[0].source.value
+                    replace_with_const(1 if val == 0 else 0)
+                    changed = True
+                
+            
+            elif node.op == "BUF":
+                if len(const_inputs) == 1:
+                    v = const_inputs[0].source.value
+                    replace_with_const(v)
+                    changed = True
+
+            elif node.op == "MUX":
+                # todo: implement this
+                pass
+        
+
+        return changed
 
     def _simplify_logic(self, netlist: Netlist) -> bool:
         pass
