@@ -204,7 +204,6 @@ def test_lowering_lshift():
     
     # Verify these output BUFs are driven by the generated dynamic MUX network
     assert all("_mux" in b.inputs[0].name for b in out_bufs)
-
     
 def test_lowering_constant_lshift():
     n = Netlist("test")
@@ -257,6 +256,22 @@ def test_lowering_constant_rshift():
     
     bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF" and node.outputs[0].name.startswith("q[")]
     assert len(bufs) == 3, "A 3-bit static RSHIFT must output exactly 3 mapping BUFs"
+
+def test_lowering_shift_overflow():
+    n = Netlist("test")
+    a = n.create_net("a", 2)
+    s = n.create_net("s", 3)
+    q = n.create_net("q", 2)
+    n.add_logic("LSHIFT", [a, s], [q])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+
+    # the lower'er expands it into a dynamic Barrel Shifter using
+    # nested cascades of MUX layers routing bit transfers over geometric powers of 2.
+    # For a 2-bit output and 3-bit shift amount, we expect 2 MUXes per shift bit.
+    muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    assert len(muxes) == 6
 
 def test_lowering_or_tree_minimal():
     lp = LoweringPass()
@@ -360,7 +375,6 @@ def _get_lowered_bus(sim, name, width):
     return val
 
 def test_simulator_lowered_addition():
-    # 1. Provide High-Level Netlist
     netlist = Netlist("add_test")
     a = netlist.create_net("a", 8)
     b = netlist.create_net("b", 8)
@@ -371,11 +385,9 @@ def test_simulator_lowered_addition():
     netlist.add_input("b", b)
     netlist.add_logic("ADD", [a, b], [sum_out])
 
-    # 2. Lower it to Bit-Blasted Primitives
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
 
-    # 3. Simulate it
     sim = RTLSimulator(lowered_n)
     
     _set_lowered_bus(sim, "a", 8, 67)
