@@ -84,4 +84,58 @@ def test_lowering_bitwise_or():
     assert ors[2].inputs[1].name == "b[2]"
     assert ors[2].outputs[0].name == "q[2]"
 
+def test_lowering_add():
+    # 2-bit + 2-bit = 2-bit adder
+    n = Netlist("test")
+    a_net = n.create_net("a", width=2)
+    b_net = n.create_net("b", width=2)
+    q_net = n.create_net("q", width=2)
+    n.add_logic("ADD", [a_net, b_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    # 2-bit ripple carry adder generates:
+    # 2 XORs per bit for sum: 4 XORs total
+    # 2 ANDs + 1 OR for carry per bit (except last bit has no carry out): 2 ANDs, 1 OR total
+    xors = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "XOR"]
+    ands = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "AND"]
+    ors = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "OR"]
+    
+    assert len(xors) == 4
+    assert len(ands) == 2
+    assert len(ors) == 1
+    
+    # verify sum outputs
+    sum_gates = [x for x in xors if x.outputs[0].name.startswith("q[")]
+    assert len(sum_gates) == 2
+
+def test_lowering_sub():
+    # 2-bit SUB
+    n = Netlist("test")
+    a_net = n.create_net("a", width=2)
+    b_net = n.create_net("b", width=2)
+    q_net = n.create_net("q", width=2)
+    n.add_logic("SUB", [a_net, b_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    # Subtraction generates NOT gates for B
+    nots = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "NOT"]
+    assert len(nots) == 2
+
+    # Subtraction in two's complement generates a RCA:
+    xors = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "XOR"]
+    ands = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "AND"]
+    ors = [node for node in new_n.nodes if isinstance(node, LogicGate) and node.op == "OR"]
+    
+    assert len(xors) == 4
+    assert len(ands) == 2
+    assert len(ors) == 1
+    
+    # verify sum outputs
+    sum_gates = [x for x in xors if x.outputs[0].name.startswith("q[")]
+    assert len(sum_gates) == 2
+
     assert slice_bufs[1].inputs[0].name == "bus[3]"
