@@ -1,0 +1,53 @@
+import pytest
+
+from openxc2064.hdl import parse_hdl
+from openxc2064.synthesis import HDLElaborator, Synthesiser, Optimiser
+
+from openxc2064.synthesis.rtl_nodes import Netlist, Constant
+
+
+def test_dce_basic():
+    nl = Netlist(module_name="test")
+    # create input/output
+    in_net = nl.create_net("in1")
+    nl.add_input("in1", in_net)
+    out_net = nl.create_net("out1")
+    nl.outputs.append(out_net)
+
+    # Route: Input -> AND -> Output
+    mid_net1 = nl.create_net("mid1")
+    mid_net2 = nl.create_net("mid2")
+
+    # Gate 1: Drives output (LIVE)
+    nl.add_logic("BUF", [mid_net1], [out_net])
+
+    # Gate 2: Drives mid_net1 (LIVE)
+    nl.add_logic("BUF", [in_net], [mid_net1])
+
+    # Gate 3: Drives mid_net2 (DEAD, should get optimised away)
+    nl.add_logic("BUF", [in_net], [mid_net2])
+
+    opt = Optimiser()
+    opt._trim_dead_code(nl)
+
+    # Should have 3 nodes: Input, BUF, BUF
+    assert len(nl.nodes) == 3
+    bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
+    assert len(bufs) == 2
+
+
+def test_dce_dff():
+    nl = Netlist(module_name="test_mod")
+    in_net = nl.create_net("clk")
+    nl.add_input("clk", in_net)
+    
+    dead_dff_out = nl.create_net("q")
+    # Dead DFF
+    nl.add_dff([in_net, in_net], [dead_dff_out])
+
+    opt = Optimiser()
+    opt._trim_dead_code(nl)
+
+    assert len(nl.nodes) == 1
+
+
