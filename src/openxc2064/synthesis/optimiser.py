@@ -106,6 +106,27 @@ class Optimiser:
 
         return True
 
+    def _replace_with_const(self, netlist: Netlist, node: LogicGate, val: int) -> None:
+        out_net = node.outputs[0]
+        new_const = netlist.add_const(val, out_net)
+        out_net.source = new_const
+        # we can rely on trim_dead_code to eliminate the 'node' on next optimiser iteration
+
+    def _replace_with_buf(self, node: LogicGate, net_to_pass: Net) -> None:
+        node.op = "BUF"
+        node.inputs = [net_to_pass]
+
+    def _replace_with_not(self, node: LogicGate, net_to_invert: Net) -> None:
+        node.op = "NOT"
+        node.inputs = [net_to_invert]
+
+    def _get_inverted_source(self, n: Net) -> Net | None:
+        # if the net is driven by a NOT gate, return the 
+        # NOT gate's input
+        if isinstance(n.source, LogicGate) and n.source.op == "NOT":
+            return n.source.inputs[0]
+        return None
+
     def _fold_constants(self, netlist: Netlist) -> bool:
         """
         Evaluate constant expressions and replace them with constants.
@@ -123,26 +144,11 @@ class Optimiser:
                 continue
 
 
-            # helper functions:
-            def replace_with_const(val: int):
-                out_net = node.outputs[0]
-                new_const = netlist.add_const(val, out_net)
-                out_net.source = new_const
-                # we can rely on trim_dead_code to eliminate the 'node' on next optimiser iteration
-            
-            def replace_with_buf(net_to_pass: Net):
-                node.op = "BUF"
-                node.inputs = [net_to_pass]
-            
-            def replace_with_not(net_to_invert: Net):
-                node.op = "NOT"
-                node.inputs = [net_to_invert]
-            
             # apply boolean identities:
             if node.op == "AND":
                 # A & 0 = 0
                 if any(net.source.value == 0 for net in const_inputs):
-                    replace_with_const(0)
+                    self._replace_with_const(netlist, node, 0)
                     changed = True
                 
                 # A & 1 = A
@@ -150,29 +156,29 @@ class Optimiser:
                     # if the const_inputs value == 0, then the first if statement would be executed
                     # so at this point, const_inputs[0] must be 1
                     non_const = next(net for net in node.inputs if net not in const_inputs)
-                    replace_with_buf(non_const)
+                    self._replace_with_buf(node, non_const)
                     changed = True
 
                 # 1 & 1 = 1
                 elif len(const_inputs) == 2:
-                    replace_with_const(1)
+                    self._replace_with_const(netlist, node, 1)
                     changed = True
             
             elif node.op == "OR":
                 # A | 1 = 1
                 if any(net.source.value == 1 for net in const_inputs):
-                    replace_with_const(1)
+                    self._replace_with_const(netlist, node, 1)
                     changed = True
 
                 # A | 0 = A
                 elif len(const_inputs) == 1 and len(node.inputs) == 2:
                     non_const = next(net for net in node.inputs if net not in const_inputs)
-                    replace_with_buf(non_const)
+                    self._replace_with_buf(node, non_const)
                     changed = True
 
                 # 0 | 0 = 0
                 elif len(const_inputs) == 2:
-                    replace_with_const(0)
+                    self._replace_with_const(netlist, node, 0)
                     changed = True
 
 
@@ -180,7 +186,7 @@ class Optimiser:
                 if len(const_inputs) == 2:
                     v1 = const_inputs[0].source.value
                     v2 = const_inputs[1].source.value
-                    replace_with_const(v1 ^ v2)
+                    self._replace_with_const(netlist, node, v1 ^ v2)
                     changed = True
                 
                 elif len(const_inputs) == 1 and len(node.inputs) == 2:
@@ -189,25 +195,25 @@ class Optimiser:
 
                     # A ^ 0 = A
                     if v == 0:
-                        replace_with_buf(non_const)
+                        self._replace_with_buf(node, non_const)
                     
                     # A ^ 1 = ~A
                     else:
-                        replace_with_not(non_const)
+                        self._replace_with_not(node, non_const)
                     changed = True
                 
             
             elif node.op == "NOT":
                 if len(const_inputs) == 1:
                     v = const_inputs[0].source.value
-                    replace_with_const(1 if v == 0 else 0)
+                    self._replace_with_const(netlist, node, 1 if v == 0 else 0)
                     changed = True
                 
             
             elif node.op == "BUF":
                 if len(const_inputs) == 1:
                     v = const_inputs[0].source.value
-                    replace_with_const(v)
+                    self._replace_with_const(netlist, node, v)
                     changed = True
 
             elif node.op == "MUX":
@@ -218,18 +224,18 @@ class Optimiser:
 
                     if sel_net in const_inputs:
                         if sel_net.source.value == 1:
-                            replace_with_buf(true_net)
+                            self._replace_with_buf(node, true_net)
                         else:
-                            replace_with_buf(false_net)
+                            self._replace_with_buf(node, false_net)
                         changed = True
                     elif true_net in const_inputs and false_net in const_inputs:
                         t_val = true_net.source.value
                         f_val = false_net.source.value
                         if t_val == 1 and f_val == 0:
-                            replace_with_buf(sel_net)
+                            self._replace_with_buf(node, sel_net)
                             changed = True
                         elif t_val == 0 and f_val == 1:
-                            replace_with_not(sel_net)
+                            self._replace_with_not(node, sel_net)
                             changed = True
         
 
@@ -247,23 +253,6 @@ class Optimiser:
             if not isinstance(node, LogicGate):
                 continue
 
-            # helper functions:
-            def replace_with_const(val: int):
-                out_net = node.outputs[0]
-                new_const = netlist.add_const(val, out_net)
-                out_net.source = new_const
-            
-            def replace_with_buf(net_to_pass: Net):
-                node.op = "BUF"
-                node.inputs = [net_to_pass]
-            
-            def get_inverted_source(n: Net) -> Net | None:
-                # if the net is driven by a NOT gate, return the 
-                # NOT gate's input
-                if isinstance(n.source, LogicGate) and n.source.op == "NOT":
-                    return n.source.inputs[0]
-                return None
-            
             if len(node.inputs) == 2:
                 in1 = node.inputs[0]
                 in2 = node.inputs[1]
@@ -272,37 +261,37 @@ class Optimiser:
                 if in1 == in2:
                     # A&A = A, and A|A = A
                     if node.op in ("AND", "OR"):
-                        replace_with_buf(in1)
+                        self._replace_with_buf(node, in1)
                         changed = True
                     elif node.op == "XOR":
-                        replace_with_const(0)
+                        self._replace_with_const(netlist, node, 0)
                         changed = True
                 
                 # operations with inverse inputs:
                 else:
-                    inv1 = get_inverted_source(in1)
-                    inv2 = get_inverted_source(in2)
+                    inv1 = self._get_inverted_source(in1)
+                    inv2 = self._get_inverted_source(in2)
 
                     if (inv1 == in2) or (inv2 == in1):
                         # A & ~A = 0
                         if node.op == "AND":
-                            replace_with_const(0)
+                            self._replace_with_const(netlist, node, 0)
                             changed = True
 
                         # A | ~A = 1
                         elif node.op == "OR":
-                            replace_with_const(1)
+                            self._replace_with_const(netlist, node, 1)
                             changed = True
 
                         # A ^ ~A = 1
                         elif node.op == "XOR":
-                            replace_with_const(1)
+                            self._replace_with_const(netlist, node, 1)
                             changed = True
             
             elif node.op == "NOT":
-                inv = get_inverted_source(node.inputs[0])
+                inv = self._get_inverted_source(node.inputs[0])
                 if inv is not None:
-                    replace_with_buf(inv)
+                    self._replace_with_buf(node, inv)
                     changed = True
             
             elif node.op == "MUX":
@@ -311,7 +300,7 @@ class Optimiser:
                     t = node.inputs[1]
                     f = node.inputs[2]
                     if t == f:
-                        replace_with_buf(t)
+                        self._replace_with_buf(node, t)
                         changed = True
 
         return changed
