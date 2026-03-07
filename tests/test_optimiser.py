@@ -257,6 +257,110 @@ def test_constant_folding_mux_advanced():
     assert out_m_bool2.source.op == "NOT" and out_m_bool2.source.inputs[0] == sel
 
 
+def test_simplify_identical_inputs():
+    nl = Netlist(module_name="test_mod")
+    in_a = nl.create_net("A")
+    nl.add_input("A", in_a)
+
+    out_and = nl.create_net("out_and")
+    out_or = nl.create_net("out_or")
+    out_xor = nl.create_net("out_xor")
+    nl.outputs.extend([out_and, out_or, out_xor])
+
+    nl.add_logic("AND", [in_a, in_a], [out_and])
+    nl.add_logic("OR", [in_a, in_a], [out_or])
+    nl.add_logic("XOR", [in_a, in_a], [out_xor])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # A & A = A
+    assert out_and.source.op == "BUF"
+    assert out_and.source.inputs[0] == in_a
+
+    # A | A = A
+    assert out_or.source.op == "BUF"
+    assert out_or.source.inputs[0] == in_a
+
+    # A ^ A = 0
+    assert isinstance(out_xor.source, Constant)
+    assert out_xor.source.value == 0
+
+
+def test_simplify_inverse_inputs():
+    nl = Netlist(module_name="test_mod")
+    in_a = nl.create_net("A")
+    nl.add_input("A", in_a)
+
+    not_a = nl.create_net("not_a")
+    nl.add_logic("NOT", [in_a], [not_a])
+
+    out_and = nl.create_net("out_and")
+    out_or = nl.create_net("out_or")
+    out_xor = nl.create_net("out_xor")
+    nl.outputs.extend([out_and, out_or, out_xor])
+
+    nl.add_logic("AND", [in_a, not_a], [out_and])
+    nl.add_logic("OR", [not_a, in_a], [out_or])
+    nl.add_logic("XOR", [in_a, not_a], [out_xor])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # A & ~A = 0
+    assert isinstance(out_and.source, Constant)
+    assert out_and.source.value == 0
+
+    # A | ~A = 1
+    assert isinstance(out_or.source, Constant)
+    assert out_or.source.value == 1
+
+    # A ^ ~A = 1
+    assert isinstance(out_xor.source, Constant)
+    assert out_xor.source.value == 1
+
+
+def test_simplify_double_inversion():
+    nl = Netlist(module_name="test_mod")
+    in_a = nl.create_net("A")
+    nl.add_input("A", in_a)
+
+    not_a = nl.create_net("not_a")
+    nl.add_logic("NOT", [in_a], [not_a])
+
+    out_a = nl.create_net("out_a")
+    nl.outputs.append(out_a)
+
+    nl.add_logic("NOT", [not_a], [out_a])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # ~ (~A) = A
+    assert out_a.source.op == "BUF"
+    assert out_a.source.inputs[0] == in_a
+
+
+def test_simplify_mux_identical_paths():
+    nl = Netlist(module_name="test_mod")
+    sel = nl.create_net("S")
+    in_a = nl.create_net("A")
+    nl.add_input("S", sel)
+    nl.add_input("A", in_a)
+
+    out_m = nl.create_net("out_m")
+    nl.outputs.append(out_m)
+
+    nl.add_logic("MUX", [sel, in_a, in_a], [out_m])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # MUX(S, A, A) = A
+    assert out_m.source.op == "BUF"
+    assert out_m.source.inputs[0] == in_a
+
+
 def test_integration_optimiser():
     hdl_code = """
     module top(input a, input b, output out1, output out2);
