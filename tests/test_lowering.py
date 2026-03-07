@@ -1,4 +1,5 @@
 import pytest
+import itertools
 from openxc2064.synthesis.rtl_nodes import Netlist, Constant, LogicGate, DFF
 from openxc2064.synthesis.lowering import LoweringPass
 from openxc2064.simulator.high_level_rtl_simulator import RTLSimulator
@@ -397,18 +398,14 @@ def test_simulator_lowered_addition():
 
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
-
     sim = RTLSimulator(lowered_n)
-    
-    _set_lowered_bus(sim, "a", 8, 67)
-    _set_lowered_bus(sim, "b", 8, 41)
-    sim.step()
-    assert _get_lowered_bus(sim, "sum", 8) == 108
 
-    _set_lowered_bus(sim, "a", 8, 21)
-    _set_lowered_bus(sim, "b", 8, 54)
-    sim.step()
-    assert _get_lowered_bus(sim, "sum", 8) == 75
+    # test a large stride subset:
+    for a_val, b_val in itertools.product(range(0, 256, 15), range(0, 256, 15)):
+        _set_lowered_bus(sim, "a", 8, a_val)
+        _set_lowered_bus(sim, "b", 8, b_val)
+        sim.step()
+        assert _get_lowered_bus(sim, "sum", 8) == ((a_val + b_val) & 0xFF)
 
 def test_simulator_lowered_subtraction():
     netlist = Netlist("sub_test")
@@ -427,14 +424,11 @@ def test_simulator_lowered_subtraction():
     sim = RTLSimulator(lowered_n)
 
     _set_lowered_bus(sim, "a", 8, 25)
-    _set_lowered_bus(sim, "b", 8, 10)
-    sim.step()
-    assert _get_lowered_bus(sim, "diff", 8) == 15
-
-    _set_lowered_bus(sim, "a", 8, 250)
-    _set_lowered_bus(sim, "b", 8, 190)
-    sim.step()
-    assert _get_lowered_bus(sim, "diff", 8) == 60
+    for a_val, b_val in itertools.product(range(0, 256, 15), range(0, 256, 15)):
+        _set_lowered_bus(sim, "a", 8, a_val)
+        _set_lowered_bus(sim, "b", 8, b_val)
+        sim.step()
+        assert _get_lowered_bus(sim, "diff", 8) == ((a_val - b_val) & 0xFF)
 
 def test_simulator_lowered_eq():
     netlist = Netlist("eq_test")
@@ -453,14 +447,19 @@ def test_simulator_lowered_eq():
     sim = RTLSimulator(lowered_n)
 
     _set_lowered_bus(sim, "a", 8, 5)
-    _set_lowered_bus(sim, "b", 8, 5)
-    sim.step()
-    assert sim.net_values.get("out[0]") == 1
-
-    _set_lowered_bus(sim, "a", 8, 5)
-    _set_lowered_bus(sim, "b", 8, 3)
-    sim.step()
-    assert sim.net_values.get("out[0]") == 0
+    for a_val, b_val in itertools.product(range(0, 256, 15), range(0, 256, 15)):
+        _set_lowered_bus(sim, "a", 8, a_val)
+        _set_lowered_bus(sim, "b", 8, b_val)
+        sim.step()
+        expected = 1 if a_val == b_val else 0
+        assert sim.net_values.get("out[0]") == expected
+        
+    # Explicity test exact equality triggers
+    for a_val in range(256):
+        _set_lowered_bus(sim, "a", 8, a_val)
+        _set_lowered_bus(sim, "b", 8, a_val)
+        sim.step()
+        assert sim.net_values.get("out[0]") == 1
 
 def test_simulator_lowered_lshift():
     netlist = Netlist("lshift_test")
@@ -479,15 +478,13 @@ def test_simulator_lowered_lshift():
     sim = RTLSimulator(lowered_n)
 
     _set_lowered_bus(sim, "a", 8, 0b00001111)
-    # 2 is 010.
-    _set_lowered_bus(sim, "shift", 3, 2)
-    sim.step()
-    assert _get_lowered_bus(sim, "out", 8) == (0b00001111 << 2)
-
-    _set_lowered_bus(sim, "a", 8, 0b00110011)
-    _set_lowered_bus(sim, "shift", 3, 1)
-    sim.step()
-    assert _get_lowered_bus(sim, "out", 8) == (0b00110011 << 1)
+    for a_val in range(256):
+        for s_val in range(8): # 3-bit shift
+            _set_lowered_bus(sim, "a", 8, a_val)
+            _set_lowered_bus(sim, "shift", 3, s_val)
+            sim.step()
+            expected = (a_val << s_val) & 0xFF
+            assert _get_lowered_bus(sim, "out", 8) == expected
 
 def test_simulator_lowered_rshift():
     netlist = Netlist("rshift_test")
@@ -504,13 +501,25 @@ def test_simulator_lowered_rshift():
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
     sim = RTLSimulator(lowered_n)
+            _set_lowered_bus(sim, "a", 8, a_val)
+            _set_lowered_bus(sim, "shift", 3, s_val)
+            sim.step()
+            expected = (a_val >> s_val) & 0xFF
+            assert _get_lowered_bus(sim, "out", 8) == expected
+
+
 
     _set_lowered_bus(sim, "a", 8, 0b11110000)
     _set_lowered_bus(sim, "shift", 3, 2)
+
+
     sim.step()
     assert _get_lowered_bus(sim, "out", 8) == (0b11110000 >> 2)
 
     _set_lowered_bus(sim, "a", 8, 0b01100110)
     _set_lowered_bus(sim, "shift", 3, 1)
+    _set_lowered_bus(sim, "a", 4, 5)
+    _set_lowered_bus(sim, "b", 4, 3)
     sim.step()
     assert _get_lowered_bus(sim, "out", 8) == (0b01100110 >> 1)
+
