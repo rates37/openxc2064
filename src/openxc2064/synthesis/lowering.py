@@ -101,7 +101,7 @@ class LoweringPass:
                     real_op = node.op.replace("LOGIC_", "")  # reduce LOGIC_AND to AND at bit level
                     new_netlist.add_logic(real_op, [a_bit, b_bit], [out_arr[i]])
 
-            elif node.op in ("NOT", "LOGIC_NOT", "NEG", "BUF"):
+            elif node.op in ("NOT", "LOGIC_NOT", "BUF"):
                 a_arr = self.net_map[node.inputs[0].name]
                 real_op = "NOT" if "NOT" in node.op else "BUF"
                 for i in range(len(out_arr)):

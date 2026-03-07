@@ -1,5 +1,5 @@
 import pytest
-from openxc2064.synthesis.rtl_nodes import Netlist, Constant, LogicGate
+from openxc2064.synthesis.rtl_nodes import Netlist, Constant, LogicGate, DFF
 from openxc2064.synthesis.lowering import LoweringPass
 from openxc2064.simulator.high_level_rtl_simulator import RTLSimulator
 
@@ -223,6 +223,93 @@ def test_lowering_rshift():
     # 2 output bits means 2 bufs connected to them
     out_bufs = [b for b in bufs if b.outputs[0].name.startswith("q[")]
     assert len(out_bufs) == 2
+
+def test_lowering_or_tree_minimal():
+    lp = LoweringPass()
+    n = Netlist("dummy")
+    net1 = n.create_net("n1", 1)
+    
+    res1 = lp._build_or_tree(n, [net1], "test1")
+    assert res1 == net1
+
+def test_lowering_unary_ops():
+    n = Netlist("test")
+    a = n.create_net("a", 2)
+    q_not = n.create_net("q_not", 2)
+    q_logic_not = n.create_net("q_logic_not", 2)
+    q_buf = n.create_net("q_buf", 2)
+    q_neg = n.create_net("q_neg", 2)
+    
+    n.add_logic("NOT", [a], [q_not])
+    n.add_logic("LOGIC_NOT", [a], [q_logic_not]) # becomes NOT
+    n.add_logic("BUF", [a], [q_buf])
+    n.add_logic("NEG", [a], [q_neg])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    nots = [node for node in new_n.nodes if getattr(node, "op", "") == "NOT"]
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF"]
+    
+    # A 2-bit NOT operation ("~A") and a 2-bit LOGIC_NOT operation ("!A") both lower 
+    # functionally to exactly two 1-bit NOT gates each, meaning 4 NOT gates total in the netlist.
+    # Here isolate specifically the 2 NOT gates driving the output net `q_not`.
+    q_not_drivers = [x for x in nots if x.outputs[0].name.startswith("q_not[")]
+    assert len(q_not_drivers) == 2, "Expected exactly two 1-bit NOT gates driving the 2-bit q_not net"
+    
+    # A 2-bit BUF operation lowers to exactly two 1-bit BUF gates.
+    q_buf_drivers = [x for x in bufs if x.outputs[0].name.startswith("q_buf[")]
+    assert len(q_buf_drivers) == 2, "Expected exactly two 1-bit BUF gates driving the 2-bit q_buf net"
+
+def test_lowering_neq():
+    n = Netlist("test")
+    a = n.create_net("a", 2)
+    b = n.create_net("b", 2)
+    q = n.create_net("q", 1)
+    n.add_logic("NEQ", [a, b], [q])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+
+    # A 2-bit NEQ comparator evaluates `(A[0] ^ B[0]) | (A[1] ^ B[1])`.
+    # So the top-level output `q` is 1-bit and is driven directly 
+    # by the evaluated result of the logical OR accumulation tree via a BUF gate.
+    q_drivers = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF" and node.outputs[0].name == "q[0]"]
+    assert len(q_drivers) == 1 # The root of a NEQ comparator should be a single 1-bit BUF driving the 1-bit output
+    # this test is not great and could be improved
+
+def test_lowering_update():
+    n = Netlist("test")
+    a = n.create_net("a", 4)
+    rhs = n.create_net("rhs", 2) # update bits 2:1
+    q = n.create_net("q", 4)
+    n.add_logic("UPDATE:2:1", [a, rhs], [q])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    # An UPDATE mapping dynamically overwrites specific structural wires without creating arithmetic cost.
+    # Since `a` is 4 bits, the output `q` is 4 bits. The Lowering mapping binds all 4 bits
+    # structurally using simple 1-bit BUF gates (2 from `rhs_arr`, 2 from `old_arr`).
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF" and node.outputs[0].name.startswith("q[")]
+    assert len(bufs) == 4  # A 4-bit assignment update must output via exactly 4 BUF wire bridges
+
+def test_lowering_mux():
+    n = Netlist("test")
+    sel = n.create_net("sel", 1)
+    f = n.create_net("f", 2) # else
+    t = n.create_net("t", 2) # then
+    q = n.create_net("q", 2)
+    n.add_logic("MUX", [sel, f, t], [q])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    # A 2-bit MUX divides strictly into exactly two parallel 1-bit MUX primitives:
+    # `q[0] = MUX(sel, f[0], t[0])` and `q[1] = MUX(sel, f[1], t[1])`.
+    muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    assert len(muxes) == 2  # A 2-bit MUX node should bit-blast into exactly 2 single-bit MUX gates
+
 
 
 def _set_lowered_bus(sim, name, width, value):
