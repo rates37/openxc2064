@@ -138,4 +138,45 @@ def test_lowering_sub():
     sum_gates = [x for x in xors if x.outputs[0].name.startswith("q[")]
     assert len(sum_gates) == 2
 
+    
+def test_lowering_eq():
+    # 3-bit == 3-bit
+    n = Netlist("test")
+    a_net = n.create_net("a", width=3)
+    b_net = n.create_net("b", width=3)
+    q_net = n.create_net("q", width=1)
+    n.add_logic("EQ", [a_net, b_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    xors = [node for node in new_n.nodes if getattr(node, "op", "") == "XOR"]
+    assert len(xors) == 3
+    
+    ors = [node for node in new_n.nodes if getattr(node, "op", "") == "OR"]
+    assert len(ors) == 2 # 3 inputs to OR tree requires 2 OR gates
+    
+    nots = [node for node in new_n.nodes if getattr(node, "op", "") == "NOT"]
+    assert len(nots) == 1 # Final NOR inversion
+    assert nots[0].outputs[0].name == "q[0]"
+
+def test_lowering_slice_index():
+    n = Netlist("test")
+    bus = n.create_net("bus", width=4)
+    idx_out = n.create_net("idx", width=1)
+    slice_out = n.create_net("slice", width=2)
+    n.add_logic("INDEX:2", [bus], [idx_out])
+    n.add_logic("SLICE:3:2", [bus], [slice_out])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF"]
+    assert len(bufs) == 3 # 1 for index, 2 for slice
+    
+    idx_buf = next(b for b in bufs if b.outputs[0].name == "idx[0]")
+    assert idx_buf.inputs[0].name == "bus[2]"
+    
+    slice_bufs = [b for b in bufs if b.outputs[0].name.startswith("slice[")]
+    assert slice_bufs[0].inputs[0].name == "bus[2]"
     assert slice_bufs[1].inputs[0].name == "bus[3]"
