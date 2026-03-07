@@ -255,3 +255,44 @@ def test_constant_folding_mux_advanced():
     assert out_m0.source.op == "BUF" and out_m0.source.inputs[0] == f
     assert out_m_bool1.source.op == "BUF" and out_m_bool1.source.inputs[0] == sel
     assert out_m_bool2.source.op == "NOT" and out_m_bool2.source.inputs[0] == sel
+
+
+def test_integration_optimiser():
+    hdl_code = """
+    module top(input a, input b, output out1, output out2);
+        wire unused;
+        assign unused = a & b;  // Dead code
+        
+        assign out1 = a | 1;    // Constant folded to 1
+        assign out2 = b ^ 0;    // Constant folded to b
+    endmodule
+    """
+    ast_tree = parse_hdl(hdl_code)
+    elaborator = HDLElaborator(ast_tree)
+    elaborator.validate()
+
+    syn = Synthesiser(elaborator.get_library())
+    netlist = syn.synthesise("top")
+
+    # Nodes before optimiser: Input(a), Input(b), Const(1), Const(0), AND, OR, XOR
+    # 7  total
+
+    opt = Optimiser()
+    opt_nl = opt.optimise(netlist)
+
+    ands = [n for n in opt_nl.nodes if getattr(n, "op", "") == "AND"]
+    assert len(ands) == 0
+    ors = [n for n in opt_nl.nodes if getattr(n, "op", "") == "OR"]
+    assert len(ors) == 0
+    xors = [n for n in opt_nl.nodes if getattr(n, "op", "") == "XOR"]
+    assert len(xors) == 0
+
+    consts = [n for n in opt_nl.nodes if isinstance(n, Constant)]
+    assert len(consts) >= 1
+    bufs = [n for n in opt_nl.nodes if getattr(n, "op", "") == "BUF"]
+    assert len(bufs) == 2  # for the XOR replace + the assign BUF
+
+    # verify out1 net source
+    out1_net = next(n for n in opt_nl.outputs if n.name == "out1")
+    assert isinstance(out1_net.source, Constant)
+    assert out1_net.source.value == 1
