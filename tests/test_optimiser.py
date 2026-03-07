@@ -40,7 +40,7 @@ def test_dce_dff():
     nl = Netlist(module_name="test_mod")
     in_net = nl.create_net("clk")
     nl.add_input("clk", in_net)
-    
+
     dead_dff_out = nl.create_net("q")
     # Dead DFF
     nl.add_dff([in_net, in_net], [dead_dff_out])
@@ -51,3 +51,55 @@ def test_dce_dff():
     assert len(nl.nodes) == 1
 
 
+def test_constant_folding_and_annihilation():
+    nl = Netlist(module_name="test_mod")
+    in_net = nl.create_net("in1")
+    nl.add_input("in1", in_net)
+
+    # out1 = in1 AND 0 -> should become 0
+    out_net = nl.create_net("out_and")
+    nl.outputs.append(out_net)
+
+    c0_net = nl.create_net("c0")
+    nl.add_const(0, c0_net)
+
+    nl.add_logic("AND", [in_net, c0_net], [out_net])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    ands = [n for n in nl.nodes if getattr(n, "op", "") == "AND"]
+    # The AND gate should be completely gone
+    assert len(ands) == 0
+    # Output should be driven by a Constant
+    assert out_net.source is not None
+    assert isinstance(out_net.source, Constant)
+    assert out_net.source.value == 0
+
+
+def test_constant_folding_or_identity():
+    nl = Netlist(module_name="test_mod")
+    in_net = nl.create_net("in1")
+    nl.add_input("in1", in_net)
+
+    # out1 = in1 OR 0 -> should become BUF(in1)
+    out_net = nl.create_net("out_or")
+    nl.outputs.append(out_net)
+
+    c0_net = nl.create_net("c0")
+    nl.add_const(0, c0_net)
+
+    # The gate
+    nl.add_logic("OR", [in_net, c0_net], [out_net])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # Original Constant(0) is now dead because it only drove this OR gate
+    # So DCE during convergence should eat the Constant(0).
+    ors = [n for n in nl.nodes if getattr(n, "op", "") == "OR"]
+    assert len(ors) == 0
+    bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
+    assert len(bufs) == 1
+    consts = [n for n in nl.nodes if isinstance(n, Constant)]
+    assert len(consts) == 0
