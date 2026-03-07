@@ -191,38 +191,72 @@ def test_lowering_lshift():
     
     lp = LoweringPass()
     new_n = lp.run(n)
-    
-    # 2-bit shift requires 2 layers of MUXes
-    # With 4-bit data, 4 MUXes per layer = 8 MUX gates total
+
+    # Dynamic shifts generate MUX trees
     muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    # 4 bits shifted by 2-bit control signal = 2 stages * 4 bits/stage = 8 MUXes
     assert len(muxes) == 8
     
-    # Check that output is driven by BUF layer which takes MUX output
+    # verify q[0..3] are driven by BUF gates which connect to the final stage of MUXes
     bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF"]
-    
-    # 4 output bits means 4 bufs connected to them
     out_bufs = [b for b in bufs if b.outputs[0].name.startswith("q[")]
     assert len(out_bufs) == 4
+    
+    # Verify these output BUFs are driven by the generated dynamic MUX network
+    assert all("_mux" in b.inputs[0].name for b in out_bufs)
+
+    
+def test_lowering_constant_lshift():
+    n = Netlist("test")
+    a_net = n.create_net("a", width=4)
+    s_net = n.create_net("s", width=2)
+    q_net = n.create_net("q", width=4)
+    
+    n.add_const(2, s_net)
+    n.add_logic("LSHIFT", [a_net, s_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    # Static shifts should not generate MUX trees, only direct structural routing (i.e. only BUFs)
+    muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    assert len(muxes) == 0# A static LSHIFT should strictly compile to direct wiring with 0 dynamic MUX overhead
+    
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF" and node.outputs[0].name.startswith("q[")]
+    assert len(bufs) == 4 # A 4-bit static LSHIFT must output exactly 4 mapping BUFs
 
 def test_lowering_rshift():
     n = Netlist("test")
-    a_net = n.create_net("a", width=2)
-    s_net = n.create_net("s", width=1)
-    q_net = n.create_net("q", width=2)
+    a_net = n.create_net("a", width=3)
+    s_net = n.create_net("s", width=2)
+    q_net = n.create_net("q", width=3)
+    
+    n.add_input("s", s_net) # Makes s dynamic
     n.add_logic("RSHIFT", [a_net, s_net], [q_net])
     
     lp = LoweringPass()
     new_n = lp.run(n)
     
     muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
-    assert len(muxes) == 2
+    assert len(muxes) == 6, f"Expected 6 MUXes for a 3-bit RSHIFT with 2-bit control (3 bits * 2 stages), but found {len(muxes)}"
 
-    # Check that output is driven by BUF layer which takes MUX output
-    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF"]
+def test_lowering_constant_rshift():
+    n = Netlist("test")
+    a_net = n.create_net("a", width=3)
+    s_net = n.create_net("s", width=2)
+    q_net = n.create_net("q", width=3)
     
-    # 2 output bits means 2 bufs connected to them
-    out_bufs = [b for b in bufs if b.outputs[0].name.startswith("q[")]
-    assert len(out_bufs) == 2
+    n.add_const(1, s_net)
+    n.add_logic("RSHIFT", [a_net, s_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    assert len(muxes) == 0, "A static RSHIFT should strictly expand to direct wiring with 0 dynamic MUX overhead"
+    
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF" and node.outputs[0].name.startswith("q[")]
+    assert len(bufs) == 3, "A 3-bit static RSHIFT must output exactly 3 mapping BUFs"
 
 def test_lowering_or_tree_minimal():
     lp = LoweringPass()

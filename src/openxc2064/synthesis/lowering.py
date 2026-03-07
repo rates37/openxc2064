@@ -222,47 +222,71 @@ class LoweringPass:
                 shift_arr = self.net_map[node.inputs[1].name]
                 w = len(out_arr)
 
-                # Barrel Shifter implementation:
-                # build log2(W) layers of MUXes. Output of layer 's' is the input to layer 's+1'.
-                current_data = data_arr
+                # If the shift amount is known at compile time, we don't need to 
+                # synthesise any logic, we can just re-wire the bits via BUFs,
+                # or tie them to 0
+                is_constant_shift = isinstance(node.inputs[1].source, Constant)
+                
+                if is_constant_shift:
+                    shift_val = node.inputs[1].source.value
+                    
+                    for i in range(w):
+                        if node.op == "LSHIFT":
+                            from_idx = i - shift_val
+                            if from_idx >= 0 and from_idx < w:
+                                src_bit = data_arr[from_idx]
+                            else:
+                                src_bit = self._add_0(new_netlist)
+                        else: # RSHIFT
+                            from_idx = i + shift_val
+                            if from_idx >= 0 and from_idx < w:
+                                src_bit = data_arr[from_idx]
+                            else:
+                                src_bit = self._add_0(new_netlist)
+                                
+                        new_netlist.add_logic("BUF", [src_bit], [out_arr[i]])
+                else:
+                    # Barrel Shifter implementation:
+                    # build log2(W) layers of MUXes. Output of layer 's' is the input to layer 's+1'.
+                    current_data = data_arr
 
-                for s_bit, s_ctrl_net in enumerate(shift_arr):
-                    shift_amount = 1 << s_bit
-                    if shift_amount >= w:
-                        # Shifting by more than the width just clears the bits, assuming w <= max shift
-                        # Note: In many architectures, shift >= width zeroes the output (or is undefined).
-                        # Add a MUX layer that zeroes everything if shift_arr[s_bit] is 1.
+                    for s_bit, s_ctrl_net in enumerate(shift_arr):
+                        shift_amount = 1 << s_bit
+                        if shift_amount >= w:
+                            # Shifting by more than the width just clears the bits, assuming w <= max shift
+                            # Note: In many architectures, shift >= width zeroes the output (or is undefined).
+                            # Add a MUX layer that zeroes everything if shift_arr[s_bit] is 1.
+                            next_data = []
+                            for i in range(w):
+                                mux_out = new_netlist.create_net(f"{node.id}_l{s_bit}_mux{i}", 1)
+                                # if s_ctrl_net == 1: 0, else: current_data[i]
+                                new_netlist.add_logic("MUX", [s_ctrl_net, current_data[i], self._add_0(new_netlist)], [mux_out])
+                                next_data.append(mux_out)
+                            current_data = next_data
+                            continue
+
                         next_data = []
                         for i in range(w):
                             mux_out = new_netlist.create_net(f"{node.id}_l{s_bit}_mux{i}", 1)
-                            # if s_ctrl_net == 1: 0, else: current_data[i]
-                            new_netlist.add_logic("MUX", [s_ctrl_net, current_data[i], self._add_0(new_netlist)], [mux_out])
+                            
+                            if node.op == "LSHIFT":
+                                # if shift, get from i - shift_amount, else get from i
+                                from_idx = i - shift_amount
+                                t_bit = current_data[from_idx] if from_idx >= 0 else self._add_0(new_netlist)
+                            else:  # RSHIFT
+                                from_idx = i + shift_amount
+                                t_bit = current_data[from_idx] if from_idx < w else self._add_0(new_netlist)
+
+                            e_bit = current_data[i]
+                            # MUX(sel, else, then) -> MUX(s_ctrl_net, unshifted, shifted)
+                            new_netlist.add_logic("MUX", [s_ctrl_net, e_bit, t_bit], [mux_out])
                             next_data.append(mux_out)
-                        current_data = next_data
-                        continue
-
-                    next_data = []
-                    for i in range(w):
-                        mux_out = new_netlist.create_net(f"{node.id}_l{s_bit}_mux{i}", 1)
                         
-                        if node.op == "LSHIFT":
-                            # if shift, get from i - shift_amount, else get from i
-                            from_idx = i - shift_amount
-                            t_bit = current_data[from_idx] if from_idx >= 0 else self._add_0(new_netlist)
-                        else:  # RSHIFT
-                            from_idx = i + shift_amount
-                            t_bit = current_data[from_idx] if from_idx < w else self._add_0(new_netlist)
+                        current_data = next_data
 
-                        e_bit = current_data[i]
-                        # MUX(sel, else, then) -> MUX(s_ctrl_net, unshifted, shifted)
-                        new_netlist.add_logic("MUX", [s_ctrl_net, e_bit, t_bit], [mux_out])
-                        next_data.append(mux_out)
-                    
-                    current_data = next_data
-
-                # Final layer output goes to out_arr
-                for i in range(w):
-                    new_netlist.add_logic("BUF", [current_data[i]], [out_arr[i]])
+                    # Final layer output goes to out_arr
+                    for i in range(w):
+                        new_netlist.add_logic("BUF", [current_data[i]], [out_arr[i]])
 
             else:
                 raise ValueError(f"Lowering missing implementation for op: {node.op}")
