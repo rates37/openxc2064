@@ -138,7 +138,6 @@ def test_lowering_sub():
     sum_gates = [x for x in xors if x.outputs[0].name.startswith("q[")]
     assert len(sum_gates) == 2
 
-    
 def test_lowering_eq():
     # 3-bit == 3-bit
     n = Netlist("test")
@@ -180,3 +179,46 @@ def test_lowering_slice_index():
     slice_bufs = [b for b in bufs if b.outputs[0].name.startswith("slice[")]
     assert slice_bufs[0].inputs[0].name == "bus[2]"
     assert slice_bufs[1].inputs[0].name == "bus[3]"
+
+def test_lowering_lshift():
+    n = Netlist("test")
+    # A is 4 bits, S (shift amount) is 2 bits
+    a_net = n.create_net("a", width=4)
+    s_net = n.create_net("s", width=2)
+    q_net = n.create_net("q", width=4)
+    n.add_logic("LSHIFT", [a_net, s_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    # 2-bit shift requires 2 layers of MUXes
+    # With 4-bit data, 4 MUXes per layer = 8 MUX gates total
+    muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    assert len(muxes) == 8
+    
+    # Check that output is driven by BUF layer which takes MUX output
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF"]
+    
+    # 4 output bits means 4 bufs connected to them
+    out_bufs = [b for b in bufs if b.outputs[0].name.startswith("q[")]
+    assert len(out_bufs) == 4
+
+def test_lowering_rshift():
+    n = Netlist("test")
+    a_net = n.create_net("a", width=2)
+    s_net = n.create_net("s", width=1)
+    q_net = n.create_net("q", width=2)
+    n.add_logic("RSHIFT", [a_net, s_net], [q_net])
+    
+    lp = LoweringPass()
+    new_n = lp.run(n)
+    
+    muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
+    assert len(muxes) == 2
+
+    # Check that output is driven by BUF layer which takes MUX output
+    bufs = [node for node in new_n.nodes if getattr(node, "op", "") == "BUF"]
+    
+    # 2 output bits means 2 bufs connected to them
+    out_bufs = [b for b in bufs if b.outputs[0].name.startswith("q[")]
+    assert len(out_bufs) == 2
