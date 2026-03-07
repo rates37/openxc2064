@@ -1,6 +1,7 @@
 import pytest
 from openxc2064.synthesis.rtl_nodes import Netlist, Constant, LogicGate
 from openxc2064.synthesis.lowering import LoweringPass
+from openxc2064.simulator.high_level_rtl_simulator import RTLSimulator
 
 def test_lowering_constant():
     # test that a 4-bit constant maps to four 1-bit constants
@@ -222,3 +223,151 @@ def test_lowering_rshift():
     # 2 output bits means 2 bufs connected to them
     out_bufs = [b for b in bufs if b.outputs[0].name.startswith("q[")]
     assert len(out_bufs) == 2
+
+
+def _set_lowered_bus(sim, name, width, value):
+    for i in range(width):
+        bit_val = 1 if (value & (1 << i)) else 0
+        sim.net_values[f"{name}[{i}]"] = bit_val
+
+def _get_lowered_bus(sim, name, width):
+    val = 0
+    for i in range(width):
+        bit = sim.net_values.get(f"{name}[{i}]", 0)
+        if bit:
+            val |= (1 << i)
+    return val
+
+def test_simulator_lowered_addition():
+    # 1. Provide High-Level Netlist
+    netlist = Netlist("add_test")
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    sum_out = netlist.create_net("sum", 8)
+    netlist.inputs = [a, b]
+    netlist.outputs = [sum_out]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("ADD", [a, b], [sum_out])
+
+    # 2. Lower it to Bit-Blasted Primitives
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+
+    # 3. Simulate it
+    sim = RTLSimulator(lowered_n)
+    
+    _set_lowered_bus(sim, "a", 8, 67)
+    _set_lowered_bus(sim, "b", 8, 41)
+    sim.step()
+    assert _get_lowered_bus(sim, "sum", 8) == 108
+
+    _set_lowered_bus(sim, "a", 8, 21)
+    _set_lowered_bus(sim, "b", 8, 54)
+    sim.step()
+    assert _get_lowered_bus(sim, "sum", 8) == 75
+
+def test_simulator_lowered_subtraction():
+    netlist = Netlist("sub_test")
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    diff_out = netlist.create_net("diff", 8)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [diff_out]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("SUB", [a, b], [diff_out])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    _set_lowered_bus(sim, "a", 8, 25)
+    _set_lowered_bus(sim, "b", 8, 10)
+    sim.step()
+    assert _get_lowered_bus(sim, "diff", 8) == 15
+
+    _set_lowered_bus(sim, "a", 8, 250)
+    _set_lowered_bus(sim, "b", 8, 190)
+    sim.step()
+    assert _get_lowered_bus(sim, "diff", 8) == 60
+
+def test_simulator_lowered_eq():
+    netlist = Netlist("eq_test")
+    a = netlist.create_net("a", 8)
+    b = netlist.create_net("b", 8)
+    out = netlist.create_net("out", 1)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("EQ", [a, b], [out])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    _set_lowered_bus(sim, "a", 8, 5)
+    _set_lowered_bus(sim, "b", 8, 5)
+    sim.step()
+    assert sim.net_values.get("out[0]") == 1
+
+    _set_lowered_bus(sim, "a", 8, 5)
+    _set_lowered_bus(sim, "b", 8, 3)
+    sim.step()
+    assert sim.net_values.get("out[0]") == 0
+
+def test_simulator_lowered_lshift():
+    netlist = Netlist("lshift_test")
+    a = netlist.create_net("a", 8)
+    shift = netlist.create_net("shift", 3)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [a, shift]
+    netlist.outputs = [out]
+    netlist.add_input("a", a)
+    netlist.add_input("shift", shift)
+    netlist.add_logic("LSHIFT", [a, shift], [out])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    _set_lowered_bus(sim, "a", 8, 0b00001111)
+    # 2 is 010.
+    _set_lowered_bus(sim, "shift", 3, 2)
+    sim.step()
+    assert _get_lowered_bus(sim, "out", 8) == (0b00001111 << 2)
+
+    _set_lowered_bus(sim, "a", 8, 0b00110011)
+    _set_lowered_bus(sim, "shift", 3, 1)
+    sim.step()
+    assert _get_lowered_bus(sim, "out", 8) == (0b00110011 << 1)
+
+def test_simulator_lowered_rshift():
+    netlist = Netlist("rshift_test")
+    a = netlist.create_net("a", 8)
+    shift = netlist.create_net("shift", 3)
+    out = netlist.create_net("out", 8)
+
+    netlist.inputs = [a, shift]
+    netlist.outputs = [out]
+    netlist.add_input("a", a)
+    netlist.add_input("shift", shift)
+    netlist.add_logic("RSHIFT", [a, shift], [out])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    _set_lowered_bus(sim, "a", 8, 0b11110000)
+    _set_lowered_bus(sim, "shift", 3, 2)
+    sim.step()
+    assert _get_lowered_bus(sim, "out", 8) == (0b11110000 >> 2)
+
+    _set_lowered_bus(sim, "a", 8, 0b01100110)
+    _set_lowered_bus(sim, "shift", 3, 1)
+    sim.step()
+    assert _get_lowered_bus(sim, "out", 8) == (0b01100110 >> 1)
