@@ -359,6 +359,16 @@ def test_lowering_mux():
     muxes = [node for node in new_n.nodes if getattr(node, "op", "") == "MUX"]
     assert len(muxes) == 2  # A 2-bit MUX node should bit-blast into exactly 2 single-bit MUX gates
 
+def test_lowering_unsupported():
+    n = Netlist("test")
+    a = n.create_net("a", 2)
+    q = n.create_net("q", 2)
+    n.add_logic("MAGIC_OP", [a], [q])
+    
+    lp = LoweringPass()
+    with pytest.raises(ValueError):
+        lp.run(n)
+
 
 
 def _set_lowered_bus(sim, name, width, value):
