@@ -136,7 +136,7 @@ def test_constant_folding_mux():
     assert buf_node is not None and buf_node.inputs[0] == true_net
 
 
-def test_constant_folding_exhaustive():
+def test_constant_folding_gates_exhaustive():
     nl = Netlist(module_name="test_mod")
     in_a = nl.create_net("a")
     nl.add_input("a", in_a)
@@ -218,3 +218,40 @@ def test_constant_folding_exhaustive():
     assert isinstance(out_not_c.source, Constant) and out_not_c.source.value == 0
     # out_buf_c -> 0
     assert isinstance(out_buf_c.source, Constant) and out_buf_c.source.value == 0
+
+
+def test_constant_folding_mux_advanced():
+    nl = Netlist(module_name="test_mod")
+    sel = nl.create_net("sel")
+    t = nl.create_net("t")
+    f = nl.create_net("f")
+    nl.add_input("sel", sel)
+    nl.add_input("t", t)
+    nl.add_input("f", f)
+
+    c0 = nl.create_net("c0")
+    c1 = nl.create_net("c1")
+    nl.add_const(0, c0)
+    nl.add_const(1, c1)
+
+    # MUX with sel=0 -> f
+    out_m0 = nl.create_net("out_m0")
+    nl.add_logic("MUX", [c0, t, f], [out_m0])
+
+    # MUX with t=1, f=0 -> sel
+    out_m_bool1 = nl.create_net("out_m_bool1")
+    nl.add_logic("MUX", [sel, c1, c0], [out_m_bool1])
+
+    # MUX with t=0, f=1 -> ~sel
+    out_m_bool2 = nl.create_net("out_m_bool2")
+    nl.add_logic("MUX", [sel, c0, c1], [out_m_bool2])
+
+    nl.outputs.extend([out_m0, out_m_bool1, out_m_bool2])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # Checks:
+    assert out_m0.source.op == "BUF" and out_m0.source.inputs[0] == f
+    assert out_m_bool1.source.op == "BUF" and out_m_bool1.source.inputs[0] == sel
+    assert out_m_bool2.source.op == "NOT" and out_m_bool2.source.inputs[0] == sel
