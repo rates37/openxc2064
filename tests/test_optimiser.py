@@ -95,11 +95,42 @@ def test_constant_folding_or_identity():
     opt = Optimiser()
     opt.optimise(nl)
 
-    # Original Constant(0) is now dead because it only drove this OR gate
-    # So DCE during convergence should eat the Constant(0).
+    # Original 0 is now dead because it only drove this OR gate
+    # So DCE during convergence should eat the 0.
     ors = [n for n in nl.nodes if getattr(n, "op", "") == "OR"]
     assert len(ors) == 0
     bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
     assert len(bufs) == 1
     consts = [n for n in nl.nodes if isinstance(n, Constant)]
     assert len(consts) == 0
+
+
+def test_constant_folding_mux():
+    nl = Netlist(module_name="test_mod")
+
+    sel_net = nl.create_net("sel")
+    true_net = nl.create_net("t")
+    false_net = nl.create_net("f")
+    nl.add_input("sel", sel_net)
+    nl.add_input("t", true_net)
+    nl.add_input("f", false_net)
+
+    out_net = nl.create_net("out")
+    nl.outputs.append(out_net)
+
+    # MUX where sel is 1
+    sel_const_net = nl.create_net("sel_c")
+    nl.add_const(1, sel_const_net)
+
+    nl.add_logic("MUX", [sel_const_net, true_net, false_net], [out_net])
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    muxes = [n for n in nl.nodes if getattr(n, "op", "") == "MUX"]
+    assert len(muxes) == 0
+    bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
+    assert len(bufs) == 1
+    # Check that output is driven by BUF which is driven by true_net
+    buf_node = out_net.source
+    assert buf_node is not None and buf_node.inputs[0] == true_net
