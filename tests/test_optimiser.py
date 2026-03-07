@@ -134,3 +134,87 @@ def test_constant_folding_mux():
     # Check that output is driven by BUF which is driven by true_net
     buf_node = out_net.source
     assert buf_node is not None and buf_node.inputs[0] == true_net
+
+
+def test_constant_folding_exhaustive():
+    nl = Netlist(module_name="test_mod")
+    in_a = nl.create_net("a")
+    nl.add_input("a", in_a)
+
+    c0 = nl.create_net("c0")
+    c1 = nl.create_net("c1")
+    nl.add_const(0, c0)
+    nl.add_const(1, c1)
+
+    # 1 AND 1 = 1
+    out_and11 = nl.create_net("out_and11")
+    nl.add_logic("AND", [c1, c1], [out_and11])
+
+    # A AND 1 = A
+    out_and_a1 = nl.create_net("out_and_a1")
+    nl.add_logic("AND", [in_a, c1], [out_and_a1])
+
+    # 0 OR 0 = 0
+    out_or00 = nl.create_net("out_or00")
+    nl.add_logic("OR", [c0, c0], [out_or00])
+
+    # A OR 1 = 1
+    out_or_a1 = nl.create_net("out_or_a1")
+    nl.add_logic("OR", [in_a, c1], [out_or_a1])
+
+    # Const XOR Const = 1 ^ 0 = 1
+    out_xor_c = nl.create_net("out_xor_c")
+    nl.add_logic("XOR", [c1, c0], [out_xor_c])
+
+    # A XOR 0 = A
+    out_xor_a0 = nl.create_net("out_xor_a0")
+    nl.add_logic("XOR", [in_a, c0], [out_xor_a0])
+
+    # A XOR 1 = NOT A
+    out_xor_a1 = nl.create_net("out_xor_a1")
+    nl.add_logic("XOR", [in_a, c1], [out_xor_a1])
+
+    # NOT Const
+    out_not_c = nl.create_net("out_not_c")
+    nl.add_logic("NOT", [c1], [out_not_c])
+
+    # BUF Const
+    out_buf_c = nl.create_net("out_buf_c")
+    nl.add_logic("BUF", [c0], [out_buf_c])
+
+    nl.outputs.extend(
+        [
+            out_and11,
+            out_and_a1,
+            out_or00,
+            out_or_a1,
+            out_xor_c,
+            out_xor_a0,
+            out_xor_a1,
+            out_not_c,
+            out_buf_c,
+        ]
+    )
+
+    opt = Optimiser()
+    opt.optimise(nl)
+
+    # Checks:
+    # out_and11 -> 1
+    assert isinstance(out_and11.source, Constant) and out_and11.source.value == 1
+    # out_and_a1 -> A
+    assert out_and_a1.source.op == "BUF" and out_and_a1.source.inputs[0] == in_a
+    # out_or00 -> 0
+    assert isinstance(out_or00.source, Constant) and out_or00.source.value == 0
+    # out_or_a1 -> 1
+    assert isinstance(out_or_a1.source, Constant) and out_or_a1.source.value == 1
+    # out_xor_c -> 1
+    assert isinstance(out_xor_c.source, Constant) and out_xor_c.source.value == 1
+    # out_xor_a0 -> A
+    assert out_xor_a0.source.op == "BUF" and out_xor_a0.source.inputs[0] == in_a
+    # out_xor_a1 -> ~A
+    assert out_xor_a1.source.op == "NOT" and out_xor_a1.source.inputs[0] == in_a
+    # out_not_c -> 0
+    assert isinstance(out_not_c.source, Constant) and out_not_c.source.value == 0
+    # out_buf_c -> 0
+    assert isinstance(out_buf_c.source, Constant) and out_buf_c.source.value == 0
