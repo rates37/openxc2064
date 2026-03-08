@@ -145,7 +145,7 @@ class Optimiser:
 
 
             # apply boolean identities:
-            if node.op == "AND":
+            if node.op in ("AND", "LOGIC_AND"):
                 # A & 0 = 0
                 if any(net.source.value == 0 for net in const_inputs):
                     self._replace_with_const(netlist, node, 0)
@@ -164,7 +164,7 @@ class Optimiser:
                     self._replace_with_const(netlist, node, 1)
                     changed = True
             
-            elif node.op == "OR":
+            elif node.op in ("OR", "LOGIC_OR"):
                 # A | 1 = 1
                 if any(net.source.value == 1 for net in const_inputs):
                     self._replace_with_const(netlist, node, 1)
@@ -250,6 +250,18 @@ class Optimiser:
         nodes = list(netlist.nodes)
         
         for node in nodes:
+            # Flatten BUF chains: bypass any input driven by a BUF
+            for i in range(len(node.inputs)):
+                in_net = node.inputs[i]
+                if in_net.source is not None and getattr(in_net.source, "op", "") == "BUF":
+                    buf_src_net = in_net.source.inputs[0]
+                    node.inputs[i] = buf_src_net
+                    if node in in_net.sinks:
+                        in_net.sinks.remove(node)
+                    if node not in buf_src_net.sinks:
+                        buf_src_net.sinks.append(node)
+                    changed = True
+
             if not isinstance(node, LogicGate):
                 continue
 
@@ -260,7 +272,7 @@ class Optimiser:
                 # operations with identical inputs
                 if in1 == in2:
                     # A&A = A, and A|A = A
-                    if node.op in ("AND", "OR"):
+                    if node.op in ("AND", "LOGIC_AND", "OR", "LOGIC_OR"):
                         self._replace_with_buf(node, in1)
                         changed = True
                     elif node.op == "XOR":
@@ -274,12 +286,12 @@ class Optimiser:
 
                     if (inv1 == in2) or (inv2 == in1):
                         # A & ~A = 0
-                        if node.op == "AND":
+                        if node.op in ("AND", "LOGIC_AND"):
                             self._replace_with_const(netlist, node, 0)
                             changed = True
 
                         # A | ~A = 1
-                        elif node.op == "OR":
+                        elif node.op in ("OR", "LOGIC_OR"):
                             self._replace_with_const(netlist, node, 1)
                             changed = True
 

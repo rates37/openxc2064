@@ -394,7 +394,7 @@ def test_integration_optimiser():
     consts = [n for n in opt_nl.nodes if isinstance(n, Constant)]
     assert len(consts) >= 1
     bufs = [n for n in opt_nl.nodes if getattr(n, "op", "") == "BUF"]
-    assert len(bufs) == 2  # for the XOR replace + the assign BUF
+    assert len(bufs) == 1  # flattened BUF node
 
     # verify out1 net source
     out1_net = next(n for n in opt_nl.outputs if n.name == "out1")
