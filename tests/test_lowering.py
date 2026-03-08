@@ -422,8 +422,6 @@ def test_simulator_lowered_subtraction():
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
     sim = RTLSimulator(lowered_n)
-
-    _set_lowered_bus(sim, "a", 8, 25)
     for a_val, b_val in itertools.product(range(0, 256, 15), range(0, 256, 15)):
         _set_lowered_bus(sim, "a", 8, a_val)
         _set_lowered_bus(sim, "b", 8, b_val)
@@ -445,8 +443,6 @@ def test_simulator_lowered_eq():
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
     sim = RTLSimulator(lowered_n)
-
-    _set_lowered_bus(sim, "a", 8, 5)
     for a_val, b_val in itertools.product(range(0, 256, 15), range(0, 256, 15)):
         _set_lowered_bus(sim, "a", 8, a_val)
         _set_lowered_bus(sim, "b", 8, b_val)
@@ -476,8 +472,6 @@ def test_simulator_lowered_lshift():
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
     sim = RTLSimulator(lowered_n)
-
-    _set_lowered_bus(sim, "a", 8, 0b00001111)
     for a_val in range(256):
         for s_val in range(8): # 3-bit shift
             _set_lowered_bus(sim, "a", 8, a_val)
@@ -501,6 +495,8 @@ def test_simulator_lowered_rshift():
     lp = LoweringPass()
     lowered_n = lp.run(netlist)
     sim = RTLSimulator(lowered_n)
+    for a_val in range(256):
+        for s_val in range(8): # 3-bit shift
             _set_lowered_bus(sim, "a", 8, a_val)
             _set_lowered_bus(sim, "shift", 3, s_val)
             sim.step()
@@ -509,17 +505,210 @@ def test_simulator_lowered_rshift():
 
 
 
-    _set_lowered_bus(sim, "a", 8, 0b11110000)
-    _set_lowered_bus(sim, "shift", 3, 2)
+def test_simulator_lowered_bitwise_and():
+    netlist = Netlist("and_test")
+    a = netlist.create_net("a", 4)
+    b = netlist.create_net("b", 4)
+    q = netlist.create_net("q", 4)
+    netlist.inputs = [a, b]
+    netlist.outputs = [q]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("AND", [a, b], [q])
 
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+    # 4-bit means exhaustive 16x16 = 256 is instant
+    for a_val, b_val in itertools.product(range(16), range(16)):
+        _set_lowered_bus(sim, "a", 4, a_val)
+        _set_lowered_bus(sim, "b", 4, b_val)
+        sim.step()
+        assert _get_lowered_bus(sim, "q", 4) == (a_val & b_val)
 
+def test_simulator_lowered_bitwise_or():
+    netlist = Netlist("or_test")
+    a = netlist.create_net("a", 4)
+    b = netlist.create_net("b", 4)
+    q = netlist.create_net("q", 4)
+    netlist.inputs = [a, b]
+    netlist.outputs = [q]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("OR", [a, b], [q])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+    for a_val, b_val in itertools.product(range(16), range(16)):
+        _set_lowered_bus(sim, "a", 4, a_val)
+        _set_lowered_bus(sim, "b", 4, b_val)
+        sim.step()
+        assert _get_lowered_bus(sim, "q", 4) == (a_val | b_val)
+
+def test_simulator_lowered_bitwise_xor():
+    netlist = Netlist("xor_test")
+    a = netlist.create_net("a", 4)
+    b = netlist.create_net("b", 4)
+    q = netlist.create_net("q", 4)
+    netlist.inputs = [a, b]
+    netlist.outputs = [q]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("XOR", [a, b], [q])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+    for a_val, b_val in itertools.product(range(16), range(16)):
+        _set_lowered_bus(sim, "a", 4, a_val)
+        _set_lowered_bus(sim, "b", 4, b_val)
+        sim.step()
+        assert _get_lowered_bus(sim, "q", 4) == (a_val ^ b_val)
+
+def test_simulator_lowered_neq():
+    netlist = Netlist("neq_test")
+    a = netlist.create_net("a", 4)
+    b = netlist.create_net("b", 4)
+    out = netlist.create_net("out", 1)
+
+    netlist.inputs = [a, b]
+    netlist.outputs = [out]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("NEQ", [a, b], [out])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    _set_lowered_bus(sim, "a", 4, 5)
+    _set_lowered_bus(sim, "b", 4, 5)
     sim.step()
-    assert _get_lowered_bus(sim, "out", 8) == (0b11110000 >> 2)
+    assert sim.net_values.get("out[0]", 0) == 0
 
-    _set_lowered_bus(sim, "a", 8, 0b01100110)
-    _set_lowered_bus(sim, "shift", 3, 1)
     _set_lowered_bus(sim, "a", 4, 5)
     _set_lowered_bus(sim, "b", 4, 3)
     sim.step()
-    assert _get_lowered_bus(sim, "out", 8) == (0b01100110 >> 1)
+    assert sim.net_values.get("out[0]", 0) == 1
 
+def test_simulator_lowered_unary_ops():
+    netlist = Netlist("unary_test")
+    a = netlist.create_net("a", 4)
+    q_not = netlist.create_net("q_not", 4)
+    q_neg = netlist.create_net("q_neg", 4)
+    
+    netlist.inputs = [a]
+    netlist.outputs = [q_not, q_neg]
+    netlist.add_input("a", a)
+    netlist.add_logic("NOT", [a], [q_not])
+    netlist.add_logic("NEG", [a], [q_neg])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    for a_val in range(16):
+        _set_lowered_bus(sim, "a", 4, a_val)
+        sim.step()
+        
+        # bitwise NOT
+        assert _get_lowered_bus(sim, "q_not", 4) == (~a_val & 0xF)
+        
+        # NEG is 2's complement
+        assert _get_lowered_bus(sim, "q_neg", 4) == (-a_val & 0xF)
+
+def test_simulator_lowered_mux():
+    netlist = Netlist("mux_test")
+    sel = netlist.create_net("sel", 1)
+    f = netlist.create_net("f", 4)
+    t = netlist.create_net("t", 4)
+    q = netlist.create_net("q", 4)
+    
+    netlist.inputs = [sel, f, t]
+    netlist.outputs = [q]
+    netlist.add_input("sel", sel)
+    netlist.add_input("f", f)
+    netlist.add_input("t", t)
+    netlist.add_logic("MUX", [sel, f, t], [q])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    for sel_val, f_val, t_val in itertools.product([0, 1], range(16), range(16)):
+        _set_lowered_bus(sim, "sel", 1, sel_val)
+        _set_lowered_bus(sim, "f", 4, f_val)
+        _set_lowered_bus(sim, "t", 4, t_val)
+        sim.step()
+        
+        expected = t_val if sel_val else f_val
+        assert _get_lowered_bus(sim, "q", 4) == expected
+
+def test_simulator_lowered_slice_index_update():
+    netlist = Netlist("slice_index_test")
+    a = netlist.create_net("a", 8)
+    upd = netlist.create_net("upd", 4)
+    
+    idx_q = netlist.create_net("idx_q", 1)
+    slc_q = netlist.create_net("slc_q", 4)
+    upd_q = netlist.create_net("upd_q", 8)
+
+    netlist.inputs = [a, upd]
+    netlist.outputs = [idx_q, slc_q, upd_q]
+    netlist.add_input("a", a)
+    netlist.add_input("upd", upd)
+    
+    netlist.add_logic("INDEX:3", [a], [idx_q])
+    netlist.add_logic("SLICE:5:2", [a], [slc_q])
+    netlist.add_logic("UPDATE:5:2", [a, upd], [upd_q])
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    for a_val, upd_val in itertools.product(range(0, 256, 17), range(16)):
+        _set_lowered_bus(sim, "a", 8, a_val)
+        _set_lowered_bus(sim, "upd", 4, upd_val)
+        sim.step()
+        
+        # INDEX:3
+        expected_idx = 1 if (a_val & (1 << 3)) else 0
+        assert sim.net_values.get("idx_q[0]", 0) == expected_idx
+        
+        # SLICE:5:2
+        expected_slc = (a_val >> 2) & 0xF
+        assert _get_lowered_bus(sim, "slc_q", 4) == expected_slc
+        
+        # UPDATE:5:2
+        expected_upd = (a_val & ~(0xF << 2)) | (upd_val << 2)
+        assert _get_lowered_bus(sim, "upd_q", 8) == expected_upd
+
+def test_simulator_lowered_dff():
+    from openxc2064.synthesis.rtl_nodes import DFF
+    netlist = Netlist("dff_test")
+    d = netlist.create_net("d", 4)
+    clk = netlist.create_net("clk", 1)
+    q = netlist.create_net("q", 4)
+    
+    netlist.inputs = [d, clk]
+    netlist.outputs = [q]
+    netlist.add_input("d", d)
+    netlist.add_input("clk", clk)
+    netlist.add_dff([d, clk], [q], edge="posedge")
+
+    lp = LoweringPass()
+    lowered_n = lp.run(netlist)
+    sim = RTLSimulator(lowered_n)
+
+    current_q = 0
+    for clk, d in [(0, 10), (1, 10), (1, 5), (0, 5), (1, 2), (0, 2)]:
+        _set_lowered_bus(sim, "d", 4, d)
+        prev_clk = _get_lowered_bus(sim, "clk", 1)
+        _set_lowered_bus(sim, "clk", 1, clk)
+        sim.step()
+        
+        if clk == 1 and prev_clk == 0:
+            current_q = d
+            
+        assert _get_lowered_bus(sim, "q", 4) == current_q
