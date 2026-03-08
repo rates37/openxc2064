@@ -269,20 +269,18 @@ class NetlistVisualiser:
             })
 
         # 2. Export Edges (Nets)
-        # We model a Net as directed edges from Net.source to each of Net.sinks
+        # We model a Net as directed edges from each of Net.drivers to each of Net.sinks
         for net in netlist.nets:
-            if not net.source:
-                continue # Unknown driver (maybe implicitly driven external port, but shouldn't happen)
+            for source in net.drivers:
+                src_id = source.id
+                width = net.width
                 
-            src_id = net.source.id
-            width = net.width
-            
-            # visual edge width scaling
-            scaled_width = 1.5 if width == 1 else min(6, 1.5 + (width * 0.3))
+                # visual edge width scaling
+                scaled_width = 1.5 if width == 1 else min(6, 1.5 + (width * 0.3))
 
-            for i, sink in enumerate(net.sinks):
-                elements.append({
-                    "group": "edges",
+                for i, sink in enumerate(net.sinks):
+                    elements.append({
+                        "group": "edges",
                     "data": {
                         "id": f"{net.name}_{src_id}_{sink.id}_{i}",
                         "source": src_id,
