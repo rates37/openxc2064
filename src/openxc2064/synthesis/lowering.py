@@ -192,6 +192,12 @@ class LoweringPass:
                 base_arr = self.net_map[node.inputs[0].name]
                 new_netlist.add_logic("BUF", [base_arr[idx]], [out_arr[0]])
 
+            elif str(node.op).startswith("SET_INDEX:"):
+                # Write to the requested bit of the output array
+                idx = int(node.op.split(":")[1])
+                rhs_arr = self.net_map[node.inputs[0].name]
+                new_netlist.add_logic("BUF", [rhs_arr[0]], [out_arr[idx]])
+
             elif str(node.op).startswith("SLICE:"):
                 msb = int(node.op.split(":")[1])
                 lsb = int(node.op.split(":")[2])
@@ -202,6 +208,17 @@ class LoweringPass:
                 for i in range(lsb, msb + step, step):
                     new_netlist.add_logic("BUF", [base_arr[i]], [out_arr[idx]])
                     idx += 1
+
+            elif str(node.op).startswith("SET_SLICE:"):
+                msb = int(node.op.split(":")[1])
+                lsb = int(node.op.split(":")[2])
+                rhs_arr = self.net_map[node.inputs[0].name]
+
+                step = 1 if msb >= lsb else -1
+                rhs_idx = 0
+                for i in range(lsb, msb + step, step):
+                    new_netlist.add_logic("BUF", [rhs_arr[rhs_idx]], [out_arr[i]])
+                    rhs_idx += 1
 
             elif str(node.op).startswith("UPDATE:"):
                 msb = int(node.op.split(":")[1])
@@ -234,13 +251,11 @@ class LoweringPass:
                 shift_arr = self.net_map[node.inputs[1].name]
                 w = len(out_arr)
 
-                # If the shift amount is known at compile time, we don't need to 
-                # synthesise any logic, we can just re-wire the bits via BUFs,
-                # or tie them to 0
-                is_constant_shift = isinstance(node.inputs[1].source, Constant)
+                # For a constant shift amount, just wire it directly
+                is_constant_shift = len(node.inputs[1].drivers) == 1 and isinstance(node.inputs[1].drivers[0], Constant)
                 
                 if is_constant_shift:
-                    shift_val = node.inputs[1].source.value
+                    shift_val = node.inputs[1].drivers[0].value
                     
                     for i in range(w):
                         if node.op == "LSHIFT":

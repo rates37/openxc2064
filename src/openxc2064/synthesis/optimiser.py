@@ -50,9 +50,9 @@ class Optimiser:
         # any node driving an output port must be
         # "live"
         for out_net in netlist.outputs:
-            if out_net.source is not None:
-                live_node_ids.add(out_net.source.id)
-                queue.append(out_net.source)
+            for driver in out_net.drivers:
+                live_node_ids.add(driver.id)
+                queue.append(driver)
         
         # trace the computational graph backwards, starting from the 
         # nodes that drive outputs
@@ -61,10 +61,10 @@ class Optimiser:
             
             # for each node that drives this node
             for in_net in node.inputs:
-                if in_net.source is not None and in_net.source.id not in live_node_ids:
-                    # the source of this driver must also be considered "live"
-                    live_node_ids.add(in_net.source.id)
-                    queue.append(in_net.source)
+                for driver in in_net.drivers:
+                    if driver.id not in live_node_ids:
+                        live_node_ids.add(driver.id)
+                        queue.append(driver)
 
         # now that we have a set of all "active" or "live" nodes, we can
         # remove all other nodes from the netlist
@@ -101,15 +101,16 @@ class Optimiser:
         # clean up sinks/sources on live nodes to remove dangling/dead references:
         for net in netlist.nets:
             net.sinks = [s for s in net.sinks if s.id not in dead_node_ids]
-            if net.source is not None and net.source.id in dead_node_ids:
-                net.source = None 
+            net.drivers = [d for d in net.drivers if d.id not in dead_node_ids]
 
         return True
 
     def _replace_with_const(self, netlist: Netlist, node: LogicGate, val: int) -> None:
         out_net = node.outputs[0]
+        # Netlist.add_const internally pushes to out_net.drivers.
         new_const = netlist.add_const(val, out_net)
-        out_net.source = new_const
+        if node in out_net.drivers:
+            out_net.drivers.remove(node)
         # we can rely on trim_dead_code to eliminate the 'node' on next optimiser iteration
 
     def _replace_with_buf(self, node: LogicGate, net_to_pass: Net) -> None:
@@ -123,8 +124,8 @@ class Optimiser:
     def _get_inverted_source(self, n: Net) -> Net | None:
         # if the net is driven by a NOT gate, return the 
         # NOT gate's input
-        if isinstance(n.source, LogicGate) and n.source.op == "NOT":
-            return n.source.inputs[0]
+        if len(n.drivers) == 1 and isinstance(n.drivers[0], LogicGate) and n.drivers[0].op == "NOT":
+            return n.drivers[0].inputs[0]
         return None
 
     def _fold_constants(self, netlist: Netlist) -> bool:
@@ -139,7 +140,7 @@ class Optimiser:
             if not isinstance(node, LogicGate):
                 continue
             
-            const_inputs = [n for n in node.inputs if n.source is not None and isinstance(n.source, Constant)]
+            const_inputs = [n for n in node.inputs if len(n.drivers) == 1 and isinstance(n.drivers[0], Constant)]
             if len(const_inputs) == 0:
                 continue
 
@@ -147,7 +148,7 @@ class Optimiser:
             # apply boolean identities:
             if node.op in ("AND", "LOGIC_AND"):
                 # A & 0 = 0
-                if any(net.source.value == 0 for net in const_inputs):
+                if any(net.drivers[0].value == 0 for net in const_inputs):
                     self._replace_with_const(netlist, node, 0)
                     changed = True
                 
@@ -166,7 +167,7 @@ class Optimiser:
             
             elif node.op in ("OR", "LOGIC_OR"):
                 # A | 1 = 1
-                if any(net.source.value == 1 for net in const_inputs):
+                if any(net.drivers[0].value == 1 for net in const_inputs):
                     self._replace_with_const(netlist, node, 1)
                     changed = True
 
@@ -184,13 +185,13 @@ class Optimiser:
 
             elif node.op == "XOR":
                 if len(const_inputs) == 2:
-                    v1 = const_inputs[0].source.value
-                    v2 = const_inputs[1].source.value
+                    v1 = const_inputs[0].drivers[0].value
+                    v2 = const_inputs[1].drivers[0].value
                     self._replace_with_const(netlist, node, v1 ^ v2)
                     changed = True
                 
                 elif len(const_inputs) == 1 and len(node.inputs) == 2:
-                    v = const_inputs[0].source.value
+                    v = const_inputs[0].drivers[0].value
                     non_const = next(net for net in node.inputs if net not in const_inputs)
 
                     # A ^ 0 = A
@@ -205,14 +206,14 @@ class Optimiser:
             
             elif node.op == "NOT":
                 if len(const_inputs) == 1:
-                    v = const_inputs[0].source.value
+                    v = const_inputs[0].drivers[0].value
                     self._replace_with_const(netlist, node, 1 if v == 0 else 0)
                     changed = True
                 
             
             elif node.op == "BUF":
                 if len(const_inputs) == 1:
-                    v = const_inputs[0].source.value
+                    v = const_inputs[0].drivers[0].value
                     self._replace_with_const(netlist, node, v)
                     changed = True
 
@@ -223,14 +224,14 @@ class Optimiser:
                     false_net = node.inputs[2]
 
                     if sel_net in const_inputs:
-                        if sel_net.source.value == 1:
+                        if sel_net.drivers[0].value == 1:
                             self._replace_with_buf(node, true_net)
                         else:
                             self._replace_with_buf(node, false_net)
                         changed = True
                     elif true_net in const_inputs and false_net in const_inputs:
-                        t_val = true_net.source.value
-                        f_val = false_net.source.value
+                        t_val = true_net.drivers[0].value
+                        f_val = false_net.drivers[0].value
                         if t_val == 1 and f_val == 0:
                             self._replace_with_buf(node, sel_net)
                             changed = True
@@ -253,8 +254,15 @@ class Optimiser:
             # Flatten BUF chains: bypass any input driven by a BUF
             for i in range(len(node.inputs)):
                 in_net = node.inputs[i]
-                if in_net.source is not None and getattr(in_net.source, "op", "") == "BUF":
-                    buf_src_net = in_net.source.inputs[0]
+                
+                # Don't bypass BUFs if the intermediate net is explicitly marked
+                # as a physical output port of the parent Netlist, otherwise the hierarchy output
+                # boundary gets silently erased
+                if in_net in netlist.outputs:
+                    continue
+                
+                if len(in_net.drivers) == 1 and getattr(in_net.drivers[0], "op", "") == "BUF":
+                    buf_src_net = in_net.drivers[0].inputs[0]
                     node.inputs[i] = buf_src_net
                     if node in in_net.sinks:
                         in_net.sinks.remove(node)

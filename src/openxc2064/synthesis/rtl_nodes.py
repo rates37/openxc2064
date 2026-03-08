@@ -7,7 +7,7 @@ class Net:
     # represents a single wire in the design
     name: str
     width: int = 1
-    source: Node | None = None  # the component/input driving this net
+    drivers: list[Node] = field(default_factory=list)  # the component(s)/input(s) driving this net
     sinks: list[Node] = field(default_factory=list)  # the component inputs that this net drives
 
     def __repr__(self) -> str:
@@ -26,8 +26,7 @@ class Node:
         for n in self.inputs:
             n.sinks.append(self)
         for n in self.outputs:
-            # todo: maybe check for multiple drivers here?
-            n.source = self
+            n.drivers.append(self)
 
 
 @dataclass

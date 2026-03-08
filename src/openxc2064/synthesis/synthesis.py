@@ -109,7 +109,8 @@ class Synthesiser:
         for c in inst.connections:
             port_name = c.port_name
             parent_expr = c.expr
-            parent_net = self._get_net_expr(parent_expr, current_scope, netlist)
+            
+            # The child's port was flattened to `child_prefix_port_name`
             child_net_name = f"{child_prefix}_{port_name}"
             child_net = next((n for n in netlist.nets if n.name == child_net_name), None)
 
@@ -121,10 +122,33 @@ class Synthesiser:
             port_symbol = child_symbols.get(port_name)
             if not port_symbol:
                 continue
+            
+            # Submodule inputs read from the Parent expr.
             if port_symbol.direction == ast.Direction.INPUT:
+                parent_net = self._get_net_expr(parent_expr, current_scope, netlist)
                 netlist.add_logic("BUF", [parent_net], [child_net])
+                
+            # Submodule outputs drive into the Parent expr.
             elif port_symbol.direction == ast.Direction.OUTPUT:
-                netlist.add_logic("BUF", [child_net], [parent_net])
+                if isinstance(parent_expr, ast.Indexed):
+                    # We are driving into a subset of a parent net (e.g. `sum(z[0])`)
+                    # This requires an injection gate, not a reading _get_net_expr extraction!
+                    base_name = parent_expr.base.name
+                    if base_name not in current_scope:
+                        raise SynthesisException(f"Unknown signal '{base_name}'.")
+                    base_net = current_scope[base_name]
+
+                    if parent_expr.index:
+                        idx_val = parent_expr.index.index
+                        netlist.add_logic(f"SET_INDEX:{idx_val}", [child_net], [base_net])
+                    elif parent_expr.range:
+                        msb, lsb = parent_expr.range.msb, parent_expr.range.lsb
+                        netlist.add_logic(f"SET_SLICE:{msb}:{lsb}", [child_net], [base_net])
+                    else:
+                        raise SynthesisException("Indexed output missing index or range.")
+                else:
+                    parent_net = self._get_net_expr(parent_expr, current_scope, netlist)
+                    netlist.add_logic("BUF", [child_net], [parent_net])
 
     def _get_net_expr(self, expr: ast.Expression, net_map: dict[str, Net], netlist: Netlist) -> Net:
         if isinstance(expr, ast.Identifier):
@@ -219,10 +243,26 @@ class Synthesiser:
         self, stmt: ast.AssignStmt, net_map: dict[str, Net], netlist: Netlist
     ) -> None:
         rhs = self._get_net_expr(stmt.rhs, net_map, netlist)
-        # todo: fix since might not be driving entire name if indexed
-        lhs_name = stmt.lhs.name if isinstance(stmt.lhs, ast.Identifier) else stmt.lhs.base.name
-        lhs = net_map[lhs_name]
-        netlist.add_logic("BUF", [rhs], [lhs])
+        
+        # Drive the assignment into the LHS
+        if isinstance(stmt.lhs, ast.Indexed):
+            base_name = stmt.lhs.base.name
+            if base_name not in net_map:
+                raise SynthesisException(f"Unknown signal '{base_name}'.")
+            base_net = net_map[base_name]
+
+            if stmt.lhs.index:
+                idx_val = stmt.lhs.index.index
+                netlist.add_logic(f"SET_INDEX:{idx_val}", [rhs], [base_net])
+            elif stmt.lhs.range:
+                msb, lsb = stmt.lhs.range.msb, stmt.lhs.range.lsb
+                netlist.add_logic(f"SET_SLICE:{msb}:{lsb}", [rhs], [base_net])
+            else:
+                raise SynthesisException("Indexed LHS missing index or range.")
+        else:
+            lhs_name = stmt.lhs.name 
+            lhs = net_map[lhs_name]
+            netlist.add_logic("BUF", [rhs], [lhs])
 
     def _synth_comb(self, block: ast.AlwaysComb, net_map: dict[str, Net], netlist: Netlist) -> None:
         initial_scope = {}

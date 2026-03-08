@@ -72,9 +72,9 @@ def test_constant_folding_and_annihilation():
     # The AND gate should be completely gone
     assert len(ands) == 0
     # Output should be driven by a Constant
-    assert out_net.source is not None
-    assert isinstance(out_net.source, Constant)
-    assert out_net.source.value == 0
+    assert len(out_net.drivers) > 0
+    assert isinstance(out_net.drivers[0], Constant)
+    assert out_net.drivers[0].value == 0
 
 
 def test_constant_folding_or_identity():
@@ -132,7 +132,7 @@ def test_constant_folding_mux():
     bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
     assert len(bufs) == 1
     # Check that output is driven by BUF which is driven by true_net
-    buf_node = out_net.source
+    buf_node = out_net.drivers[0]
     assert buf_node is not None and buf_node.inputs[0] == true_net
 
 
@@ -201,23 +201,23 @@ def test_constant_folding_gates_exhaustive():
 
     # Checks:
     # out_and11 -> 1
-    assert isinstance(out_and11.source, Constant) and out_and11.source.value == 1
+    assert isinstance(out_and11.drivers[0], Constant) and out_and11.drivers[0].value == 1
     # out_and_a1 -> A
-    assert out_and_a1.source.op == "BUF" and out_and_a1.source.inputs[0] == in_a
+    assert out_and_a1.drivers[0].op == "BUF" and out_and_a1.drivers[0].inputs[0] == in_a
     # out_or00 -> 0
-    assert isinstance(out_or00.source, Constant) and out_or00.source.value == 0
+    assert isinstance(out_or00.drivers[0], Constant) and out_or00.drivers[0].value == 0
     # out_or_a1 -> 1
-    assert isinstance(out_or_a1.source, Constant) and out_or_a1.source.value == 1
+    assert isinstance(out_or_a1.drivers[0], Constant) and out_or_a1.drivers[0].value == 1
     # out_xor_c -> 1
-    assert isinstance(out_xor_c.source, Constant) and out_xor_c.source.value == 1
+    assert isinstance(out_xor_c.drivers[0], Constant) and out_xor_c.drivers[0].value == 1
     # out_xor_a0 -> A
-    assert out_xor_a0.source.op == "BUF" and out_xor_a0.source.inputs[0] == in_a
+    assert out_xor_a0.drivers[0].op == "BUF" and out_xor_a0.drivers[0].inputs[0] == in_a
     # out_xor_a1 -> ~A
-    assert out_xor_a1.source.op == "NOT" and out_xor_a1.source.inputs[0] == in_a
+    assert out_xor_a1.drivers[0].op == "NOT" and out_xor_a1.drivers[0].inputs[0] == in_a
     # out_not_c -> 0
-    assert isinstance(out_not_c.source, Constant) and out_not_c.source.value == 0
+    assert isinstance(out_not_c.drivers[0], Constant) and out_not_c.drivers[0].value == 0
     # out_buf_c -> 0
-    assert isinstance(out_buf_c.source, Constant) and out_buf_c.source.value == 0
+    assert isinstance(out_buf_c.drivers[0], Constant) and out_buf_c.drivers[0].value == 0
 
 
 def test_constant_folding_mux_advanced():
@@ -252,9 +252,9 @@ def test_constant_folding_mux_advanced():
     opt.optimise(nl)
 
     # Checks:
-    assert out_m0.source.op == "BUF" and out_m0.source.inputs[0] == f
-    assert out_m_bool1.source.op == "BUF" and out_m_bool1.source.inputs[0] == sel
-    assert out_m_bool2.source.op == "NOT" and out_m_bool2.source.inputs[0] == sel
+    assert out_m0.drivers[0].op == "BUF" and out_m0.drivers[0].inputs[0] == f
+    assert out_m_bool1.drivers[0].op == "BUF" and out_m_bool1.drivers[0].inputs[0] == sel
+    assert out_m_bool2.drivers[0].op == "NOT" and out_m_bool2.drivers[0].inputs[0] == sel
 
 
 def test_simplify_identical_inputs():
@@ -275,16 +275,16 @@ def test_simplify_identical_inputs():
     opt.optimise(nl)
 
     # A & A = A
-    assert out_and.source.op == "BUF"
-    assert out_and.source.inputs[0] == in_a
+    assert out_and.drivers[0].op == "BUF"
+    assert out_and.drivers[0].inputs[0] == in_a
 
     # A | A = A
-    assert out_or.source.op == "BUF"
-    assert out_or.source.inputs[0] == in_a
+    assert out_or.drivers[0].op == "BUF"
+    assert out_or.drivers[0].inputs[0] == in_a
 
     # A ^ A = 0
-    assert isinstance(out_xor.source, Constant)
-    assert out_xor.source.value == 0
+    assert isinstance(out_xor.drivers[0], Constant)
+    assert out_xor.drivers[0].value == 0
 
 
 def test_simplify_inverse_inputs():
@@ -308,16 +308,16 @@ def test_simplify_inverse_inputs():
     opt.optimise(nl)
 
     # A & ~A = 0
-    assert isinstance(out_and.source, Constant)
-    assert out_and.source.value == 0
+    assert isinstance(out_and.drivers[0], Constant)
+    assert out_and.drivers[0].value == 0
 
     # A | ~A = 1
-    assert isinstance(out_or.source, Constant)
-    assert out_or.source.value == 1
+    assert isinstance(out_or.drivers[0], Constant)
+    assert out_or.drivers[0].value == 1
 
     # A ^ ~A = 1
-    assert isinstance(out_xor.source, Constant)
-    assert out_xor.source.value == 1
+    assert isinstance(out_xor.drivers[0], Constant)
+    assert out_xor.drivers[0].value == 1
 
 
 def test_simplify_double_inversion():
@@ -337,8 +337,8 @@ def test_simplify_double_inversion():
     opt.optimise(nl)
 
     # ~ (~A) = A
-    assert out_a.source.op == "BUF"
-    assert out_a.source.inputs[0] == in_a
+    assert out_a.drivers[0].op == "BUF"
+    assert out_a.drivers[0].inputs[0] == in_a
 
 
 def test_simplify_mux_identical_paths():
@@ -357,8 +357,8 @@ def test_simplify_mux_identical_paths():
     opt.optimise(nl)
 
     # MUX(S, A, A) = A
-    assert out_m.source.op == "BUF"
-    assert out_m.source.inputs[0] == in_a
+    assert out_m.drivers[0].op == "BUF"
+    assert out_m.drivers[0].inputs[0] == in_a
 
 
 def test_integration_optimiser():
@@ -398,5 +398,5 @@ def test_integration_optimiser():
 
     # verify out1 net source
     out1_net = next(n for n in opt_nl.outputs if n.name == "out1")
-    assert isinstance(out1_net.source, Constant)
-    assert out1_net.source.value == 1
+    assert isinstance(out1_net.drivers[0], Constant)
+    assert out1_net.drivers[0].value == 1

@@ -19,16 +19,16 @@ def test_lowering_constant():
     
     # specifically check the mapped nets:
     c0 = lp.net_map["c"][0]
-    assert c0.source.value == 0
+    assert c0.drivers[0].value == 0
 
     c1 = lp.net_map["c"][1]
-    assert c1.source.value == 1
+    assert c1.drivers[0].value == 1
 
     c2 = lp.net_map["c"][2]
-    assert c2.source.value == 0
+    assert c2.drivers[0].value == 0
 
     c3 = lp.net_map["c"][3]
-    assert c3.source.value == 1
+    assert c3.drivers[0].value == 1
 
 def test_lowering_bitwise_and():
     n = Netlist("test")
