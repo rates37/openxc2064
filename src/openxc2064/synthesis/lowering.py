@@ -59,14 +59,26 @@ class LoweringPass:
             return self._add_0(netlist)
         if len(nets) == 1:
             return nets[0]
+
+        # Build a balanced binary OR tree rather than a linear cascade to minimize critical path depth
+        current_layer = nets
+        layer_idx = 0
         
-        # todo: tweak to balanced binary tree later
-        acc = nets[0]
-        for i in range(1, len(nets)):
-            n_out = netlist.create_net(f"{prefix}_{i}", 1)
-            netlist.add_logic("OR", [acc, nets[i]], [n_out])
-            acc = n_out
-        return acc
+        while len(current_layer) > 1:
+            next_layer = []
+            for i in range(0, len(current_layer), 2):
+                if i + 1 < len(current_layer):
+                    # Combine pair of nets
+                    n_out = netlist.create_net(f"{prefix}_l{layer_idx}_{i//2}", 1)
+                    netlist.add_logic("OR", [current_layer[i], current_layer[i+1]], [n_out])
+                    next_layer.append(n_out)
+                else:
+                    # Odd net simply passes to next layer
+                    next_layer.append(current_layer[i])
+            current_layer = next_layer
+            layer_idx += 1
+            
+        return current_layer[0]
     
     def _simplify_node(self, node: Node, new_netlist: Netlist) -> None:
         if isinstance(node, Input):
