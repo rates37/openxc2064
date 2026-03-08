@@ -400,3 +400,79 @@ def test_integration_optimiser():
     out1_net = next(n for n in opt_nl.outputs if n.name == "out1")
     assert isinstance(out1_net.drivers[0], Constant)
     assert out1_net.drivers[0].value == 1
+
+def test_nested_full_adder_optimised() -> None:
+    hdl = """
+    // A simple reusable Half-Adder module
+    module half_adder(input a, input b, output sum, output carry);
+        assign sum = a ^ b;
+        assign carry = a & b;
+    endmodule
+
+    // A Full-Adder module that instantiates two Half-Adders
+    module full_adder(input a, input b, input cin, output sum, output cout);
+        wire w_sum1;
+        wire w_carry1;
+        wire w_carry2;
+        
+        // Instance 1
+        half_adder ha1 (
+            .a(a),
+            .b(b),
+            .sum(w_sum1),
+            .carry(w_carry1)
+        );
+        
+        // Instance 2
+        half_adder ha2 (
+            .a(w_sum1),
+            .b(cin),
+            .sum(sum),
+            .carry(w_carry2)
+        );
+        
+        assign cout = w_carry1 | w_carry2;
+    endmodule
+
+    // The Top module instantiating a pair of Full Adders to make a 2-bit Ripple Carry
+    module top(input [1:0] x, input [1:0] y, output [2:0] z);
+        wire c1;
+        
+        full_adder fa0 (
+            .a(x[0]),
+            .b(y[0]),
+            .cin(1'b0),
+            .sum(z[0]),
+            .cout(c1)
+        );
+        
+        full_adder fa1 (
+            .a(x[1]),
+            .b(y[1]),
+            .cin(c1),
+            .sum(z[1]),
+            .cout(z[2])
+        );
+    endmodule
+    """
+
+    from openxc2064.hdl import parse_hdl
+    from openxc2064.synthesis import HDLElaborator, Synthesiser
+    from openxc2064.simulator import RTLSimulator
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("top")
+    
+    opt = Optimiser()
+    opt_nl = opt.optimise(netlist)
+    sim = RTLSimulator(opt_nl)
+
+    for x in range(4):
+        for y in range(4):
+            sim.set("x", x)
+            sim.set("y", y)
+            sim.step()
+            assert sim.get("z") == x + y

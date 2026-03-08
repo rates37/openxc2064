@@ -712,3 +712,81 @@ def test_simulator_lowered_dff():
             current_q = d
             
         assert _get_lowered_bus(sim, "q", 4) == current_q
+
+def test_nested_full_adder_lowered() -> None:
+    hdl = """
+    // A simple reusable Half-Adder module
+    module half_adder(input a, input b, output sum, output carry);
+        assign sum = a ^ b;
+        assign carry = a & b;
+    endmodule
+
+    // A Full-Adder module that instantiates two Half-Adders
+    module full_adder(input a, input b, input cin, output sum, output cout);
+        wire w_sum1;
+        wire w_carry1;
+        wire w_carry2;
+        
+        // Instance 1
+        half_adder ha1 (
+            .a(a),
+            .b(b),
+            .sum(w_sum1),
+            .carry(w_carry1)
+        );
+        
+        // Instance 2
+        half_adder ha2 (
+            .a(w_sum1),
+            .b(cin),
+            .sum(sum),
+            .carry(w_carry2)
+        );
+        
+        assign cout = w_carry1 | w_carry2;
+    endmodule
+
+    // The Top module instantiating a pair of Full Adders to make a 2-bit Ripple Carry
+    module top(input [1:0] x, input [1:0] y, output [2:0] z);
+        wire c1;
+        
+        full_adder fa0 (
+            .a(x[0]),
+            .b(y[0]),
+            .cin(1'b0),
+            .sum(z[0]),
+            .cout(c1)
+        );
+        
+        full_adder fa1 (
+            .a(x[1]),
+            .b(y[1]),
+            .cin(c1),
+            .sum(z[1]),
+            .cout(z[2])
+        );
+    endmodule
+    """
+
+    from openxc2064.hdl import parse_hdl
+    from openxc2064.synthesis import HDLElaborator, Synthesiser, Optimiser
+    from openxc2064.simulator import RTLSimulator
+
+    ast = parse_hdl(hdl)
+    elaborator = HDLElaborator(ast)
+    symbols = elaborator.get_library()
+    synth = Synthesiser(symbols)
+    netlist = synth.synthesise("top")
+    
+    opt_nl = Optimiser().optimise(netlist)
+    low_nl = LoweringPass().run(opt_nl)
+    sim = RTLSimulator(low_nl)
+
+    for x in range(4):
+        for y in range(4):
+            _set_lowered_bus(sim, "x", 2, x)
+            _set_lowered_bus(sim, "y", 2, y)
+            
+            sim.step()
+            
+            assert _get_lowered_bus(sim, "z", 3) == x + y
