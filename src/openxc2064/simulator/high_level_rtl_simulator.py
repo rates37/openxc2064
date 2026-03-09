@@ -274,6 +274,30 @@ class RTLSimulator:
 
                     return cleared | shifted_new
 
+                elif base_op == "SET_INDEX":
+                    idx = int(parts[1])
+                    curr_val = self.net_values.get(gate.outputs[0].name, 0)
+                    new_bit = input_values[0] & 1
+                    
+                    # Clear the bit at idx
+                    cleared = curr_val & ~(1 << idx)
+                    # Set the new bit
+                    return cleared | (new_bit << idx)
+
+                elif base_op == "SET_SLICE":
+                    msb = int(parts[1])
+                    lsb = int(parts[2])
+                    width = abs(msb - lsb) + 1
+                    curr_val = self.net_values.get(gate.outputs[0].name, 0)
+                    new_bits = input_values[0] & ((1 << width) - 1)
+                    
+                    # Create mask for target bits
+                    mask = ((1 << width) - 1) << lsb
+                    # Clear bits in curr_val
+                    cleared = curr_val & ~mask
+                    # Set new bits
+                    return cleared | (new_bits << lsb)
+
             raise ValueError(f"Unknown operation: '{gate.op}'")
 
     def _detect_edge(self, net_name: str, edge_type: str) -> bool:

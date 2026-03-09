@@ -1,0 +1,326 @@
+from .rtl_nodes import Netlist, LogicGate, Constant, Input, Node, Net
+from collections import deque
+
+class Optimiser:
+    """
+    Logic optimiser for a Netlist
+    """
+    def __init__(self) -> None:
+        pass
+
+
+    def optimise(self, netlist: Netlist, max_iterations: int | None = None) -> Netlist:
+        """
+        Run repeated optimisation passes over a netlist to produce a minimised
+        design. Runs repeatedly until the netlist converges, or until max_iterations
+        has been exceeded.
+
+        Operates on (and modifies) the input Netlist.
+        """
+        converged = False
+        iteration = 0
+        while not converged:
+
+            changed_tdc = self._trim_dead_code(netlist)
+            changed_fc = self._fold_constants(netlist)
+            changed_sl = self._simplify_logic(netlist)
+
+            converged = not (changed_tdc or changed_fc or changed_sl)
+            iteration += 1
+
+            if max_iterations is not None and iteration >= max_iterations:
+                break
+
+        return netlist
+    
+    def _trim_dead_code(self, netlist: Netlist) -> bool:
+        """
+        Remove nodes that do not contribute to any output.
+        """
+        live_node_ids: set[str] = set()
+        queue: list[Node] = deque()
+
+        # inputs are always considered "live" since 
+        # they will be driven by external sources
+        for node in netlist.nodes:
+            if isinstance(node, Input):
+                live_node_ids.add(node.id)
+                queue.append(node)
+
+        # any node driving an output port must be
+        # "live"
+        for out_net in netlist.outputs:
+            for driver in out_net.drivers:
+                live_node_ids.add(driver.id)
+                queue.append(driver)
+        
+        # trace the computational graph backwards, starting from the 
+        # nodes that drive outputs
+        while len(queue) > 0:
+            node = queue.popleft()
+            
+            # for each node that drives this node
+            for in_net in node.inputs:
+                for driver in in_net.drivers:
+                    if driver.id not in live_node_ids:
+                        live_node_ids.add(driver.id)
+                        queue.append(driver)
+
+        # now that we have a set of all "active" or "live" nodes, we can
+        # remove all other nodes from the netlist
+        dead_node_ids: set[str] = set()
+        for node in netlist.nodes:
+            if node.id not in live_node_ids:
+                dead_node_ids.add(node.id)
+        
+        # if all nodes are used, can return False
+        if len(dead_node_ids) == 0:
+            return False
+
+        netlist.nodes = [n for n in netlist.nodes if n.id not in dead_node_ids]
+
+        # reconstruct the netlist by traversing remaining nodes and ports:
+        # todo: using id() for this is a bit of a smell but it's good enough for now
+        # debugging may be more difficult if looking at object ids rather than human
+        # readable attributes, but changing would require a bigger refactor, and 
+        # this usage is confined to this method only
+        live_nets_dict: dict[int, Net] = {}
+        for out_net in netlist.outputs:
+            live_nets_dict[id(out_net)] = out_net
+        for in_net in netlist.inputs:
+            live_nets_dict[id(in_net)] = in_net
+            
+        for node in netlist.nodes:
+            for n in node.inputs:
+                live_nets_dict[id(n)] = n
+            for n in node.outputs:
+                live_nets_dict[id(n)] = n
+
+        netlist.nets = list(live_nets_dict.values())
+
+        # clean up sinks/sources on live nodes to remove dangling/dead references:
+        for net in netlist.nets:
+            net.sinks = [s for s in net.sinks if s.id not in dead_node_ids]
+            net.drivers = [d for d in net.drivers if d.id not in dead_node_ids]
+
+        return True
+
+    def _replace_with_const(self, netlist: Netlist, node: LogicGate, val: int) -> None:
+        out_net = node.outputs[0]
+        # Netlist.add_const internally pushes to out_net.drivers.
+        new_const = netlist.add_const(val, out_net)
+        if node in out_net.drivers:
+            out_net.drivers.remove(node)
+        # we can rely on trim_dead_code to eliminate the 'node' on next optimiser iteration
+
+    def _replace_with_buf(self, node: LogicGate, net_to_pass: Net) -> None:
+        node.op = "BUF"
+        node.inputs = [net_to_pass]
+
+    def _replace_with_not(self, node: LogicGate, net_to_invert: Net) -> None:
+        node.op = "NOT"
+        node.inputs = [net_to_invert]
+
+    def _get_inverted_source(self, n: Net) -> Net | None:
+        # if the net is driven by a NOT gate, return the 
+        # NOT gate's input
+        if len(n.drivers) == 1 and isinstance(n.drivers[0], LogicGate) and n.drivers[0].op == "NOT":
+            return n.drivers[0].inputs[0]
+        return None
+
+    def _fold_constants(self, netlist: Netlist) -> bool:
+        """
+        Evaluate constant expressions and replace them with constants.
+        """
+        changed = False
+
+        nodes = list(netlist.nodes) # shallow copy the list, as it may be modified during loop
+
+        for node in nodes:
+            if not isinstance(node, LogicGate):
+                continue
+            
+            const_inputs = [n for n in node.inputs if len(n.drivers) == 1 and isinstance(n.drivers[0], Constant)]
+            if len(const_inputs) == 0:
+                continue
+
+
+            # apply boolean identities:
+            if node.op in ("AND", "LOGIC_AND"):
+                # A & 0 = 0
+                if any(net.drivers[0].value == 0 for net in const_inputs):
+                    self._replace_with_const(netlist, node, 0)
+                    changed = True
+                
+                # A & 1 = A
+                elif len(const_inputs) == 1 and len(node.inputs) == 2:
+                    # if the const_inputs value == 0, then the first if statement would be executed
+                    # so at this point, const_inputs[0] must be 1
+                    non_const = next(net for net in node.inputs if net not in const_inputs)
+                    self._replace_with_buf(node, non_const)
+                    changed = True
+
+                # 1 & 1 = 1
+                elif len(const_inputs) == 2:
+                    self._replace_with_const(netlist, node, 1)
+                    changed = True
+            
+            elif node.op in ("OR", "LOGIC_OR"):
+                # A | 1 = 1
+                if any(net.drivers[0].value == 1 for net in const_inputs):
+                    self._replace_with_const(netlist, node, 1)
+                    changed = True
+
+                # A | 0 = A
+                elif len(const_inputs) == 1 and len(node.inputs) == 2:
+                    non_const = next(net for net in node.inputs if net not in const_inputs)
+                    self._replace_with_buf(node, non_const)
+                    changed = True
+
+                # 0 | 0 = 0
+                elif len(const_inputs) == 2:
+                    self._replace_with_const(netlist, node, 0)
+                    changed = True
+
+
+            elif node.op == "XOR":
+                if len(const_inputs) == 2:
+                    v1 = const_inputs[0].drivers[0].value
+                    v2 = const_inputs[1].drivers[0].value
+                    self._replace_with_const(netlist, node, v1 ^ v2)
+                    changed = True
+                
+                elif len(const_inputs) == 1 and len(node.inputs) == 2:
+                    v = const_inputs[0].drivers[0].value
+                    non_const = next(net for net in node.inputs if net not in const_inputs)
+
+                    # A ^ 0 = A
+                    if v == 0:
+                        self._replace_with_buf(node, non_const)
+                    
+                    # A ^ 1 = ~A
+                    else:
+                        self._replace_with_not(node, non_const)
+                    changed = True
+                
+            
+            elif node.op == "NOT":
+                if len(const_inputs) == 1:
+                    v = const_inputs[0].drivers[0].value
+                    self._replace_with_const(netlist, node, 1 if v == 0 else 0)
+                    changed = True
+                
+            
+            elif node.op == "BUF":
+                if len(const_inputs) == 1:
+                    v = const_inputs[0].drivers[0].value
+                    self._replace_with_const(netlist, node, v)
+                    changed = True
+
+            elif node.op == "MUX":
+                if len(node.inputs) == 3:
+                    sel_net = node.inputs[0]
+                    true_net = node.inputs[1]
+                    false_net = node.inputs[2]
+
+                    if sel_net in const_inputs:
+                        if sel_net.drivers[0].value == 1:
+                            self._replace_with_buf(node, true_net)
+                        else:
+                            self._replace_with_buf(node, false_net)
+                        changed = True
+                    elif true_net in const_inputs and false_net in const_inputs:
+                        t_val = true_net.drivers[0].value
+                        f_val = false_net.drivers[0].value
+                        if t_val == 1 and f_val == 0:
+                            self._replace_with_buf(node, sel_net)
+                            changed = True
+                        elif t_val == 0 and f_val == 1:
+                            self._replace_with_not(node, sel_net)
+                            changed = True
+        
+
+        return changed
+
+    def _simplify_logic(self, netlist: Netlist) -> bool:
+        """
+        Simplify pure combinational logic using Boolean identities.
+        """
+        # is quite simple for now, only acting on 1-2 gates at most
+        changed = False
+        nodes = list(netlist.nodes)
+        
+        for node in nodes:
+            # Flatten BUF chains: bypass any input driven by a BUF
+            for i in range(len(node.inputs)):
+                in_net = node.inputs[i]
+                
+                # Don't bypass BUFs if the intermediate net is explicitly marked
+                # as a physical output port of the parent Netlist, otherwise the hierarchy output
+                # boundary gets silently erased
+                if in_net in netlist.outputs:
+                    continue
+                
+                if len(in_net.drivers) == 1 and getattr(in_net.drivers[0], "op", "") == "BUF":
+                    buf_src_net = in_net.drivers[0].inputs[0]
+                    node.inputs[i] = buf_src_net
+                    if node in in_net.sinks:
+                        in_net.sinks.remove(node)
+                    if node not in buf_src_net.sinks:
+                        buf_src_net.sinks.append(node)
+                    changed = True
+
+            if not isinstance(node, LogicGate):
+                continue
+
+            if len(node.inputs) == 2:
+                in1 = node.inputs[0]
+                in2 = node.inputs[1]
+
+                # operations with identical inputs
+                if in1 == in2:
+                    # A&A = A, and A|A = A
+                    if node.op in ("AND", "LOGIC_AND", "OR", "LOGIC_OR"):
+                        self._replace_with_buf(node, in1)
+                        changed = True
+                    elif node.op == "XOR":
+                        self._replace_with_const(netlist, node, 0)
+                        changed = True
+                
+                # operations with inverse inputs:
+                else:
+                    inv1 = self._get_inverted_source(in1)
+                    inv2 = self._get_inverted_source(in2)
+
+                    if (inv1 == in2) or (inv2 == in1):
+                        # A & ~A = 0
+                        if node.op in ("AND", "LOGIC_AND"):
+                            self._replace_with_const(netlist, node, 0)
+                            changed = True
+
+                        # A | ~A = 1
+                        elif node.op in ("OR", "LOGIC_OR"):
+                            self._replace_with_const(netlist, node, 1)
+                            changed = True
+
+                        # A ^ ~A = 1
+                        elif node.op == "XOR":
+                            self._replace_with_const(netlist, node, 1)
+                            changed = True
+            
+            elif node.op == "NOT":
+                inv = self._get_inverted_source(node.inputs[0])
+                if inv is not None:
+                    self._replace_with_buf(node, inv)
+                    changed = True
+            
+            elif node.op == "MUX":
+                if len(node.inputs) == 3:
+                    # mux(sel, A, A) = A
+                    t = node.inputs[1]
+                    f = node.inputs[2]
+                    if t == f:
+                        self._replace_with_buf(node, t)
+                        changed = True
+
+        return changed
