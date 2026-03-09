@@ -1,7 +1,0 @@
-.Node {
-    cursor: pointer;
-}
-
-.Node:hover {
-    stroke-width: 2;
-}

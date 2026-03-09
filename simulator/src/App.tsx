@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import LogicArray from './LogicArray';
-import { LogicElement } from './models/LogicElement';
-import { XC2064 } from './constants';
-import { SimulatorContext, SimulatorContextType } from './context/SimulatorContext';
-
+import React from 'react';
+import { SimulatorProvider } from './SimulatorContext';
+import SimulationToolbar from './components/SimulationToolbar';
+import SimulationCanvas from './components/SimulationCanvas';
 
 const App: React.FC = () => {
-  return <>
-  <div style={{userSelect: 'none'}}>
-    <LogicArray />
-  </div>
-  </>
+  return (
+    <SimulatorProvider>
+      <div style={{ userSelect: 'none' }}>
+        <SimulationToolbar />
+        <SimulationCanvas />
+      </div>
+    </SimulatorProvider>
+  );
 }
 
 export default App;
