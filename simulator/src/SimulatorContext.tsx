@@ -335,8 +335,15 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
         let destination = pip.destination;
 
         if (!source.startsWith("net")) {
-          let direction = source.split("_")[0];
-          let matrixIndex = parseInt(source.split("_")[1].substring(1));
+          let direction, matrixIndex;
+
+          if (source.includes("_M")) {
+            direction = source.split("_")[0];
+            matrixIndex = parseInt(source.split("_")[1].substring(1));
+          } else {
+            direction = source.split(".")[0];
+          }
+  
 
           let cellIndex = 0;
 
@@ -350,15 +357,24 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
             continue;
           }
 
-          source = `${cells[cellIndex].id}_M${matrixIndex}.${source.split(".")[1]}`;
+          if (matrixIndex !== undefined) {
+            source = `${cells[cellIndex].id}_M${matrixIndex}.${source.split(".")[1]}`;
+          } else {
+            source = `${cells[cellIndex].id}.${source.split(".")[1]}`;
+          }
         } else {
           source = `${cells[i * COLS + j].id}.${source}`;
         }
 
         if (!destination.startsWith("net")) {
-          let direction = destination.split("_")[0];
-          let matrixIndex = parseInt(destination.split("_")[1].substring(1));
-
+          let direction, matrixIndex;
+          if (destination.includes("_M")) {
+            direction = destination.split("_")[0];
+            matrixIndex = parseInt(destination.split("_")[1].substring(1));
+          } else {
+            direction = destination.split(".")[0];
+          }
+          
           let cellIndex = 0;
 
           let i_offset = direction.includes("N") ? -1 : direction.includes("S") ? 1 : 0;
@@ -371,7 +387,11 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
             continue;
           }
 
-          destination = `${cells[cellIndex].id}_M${matrixIndex}.${destination.split(".")[1]}`;
+          if (matrixIndex !== undefined) {
+            destination = `${cells[cellIndex].id}_M${matrixIndex}.${destination.split(".")[1]}`;
+          } else {
+            destination = `${cells[cellIndex].id}.${destination.split(".")[1]}`;
+          }
         } else {
           destination = `${cells[i * COLS + j].id}.${destination}`;
         }

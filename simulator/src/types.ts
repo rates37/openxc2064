@@ -1,7 +1,8 @@
 export interface Net {
     id: string,
     value: boolean,
-    points: {x: number, y: number}[]
+    points: {x: number, y: number, continuous?: boolean}[],
+    
 }
 
 export interface Mux {

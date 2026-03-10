@@ -26,6 +26,27 @@ const LogicCellRenderer = () => {
             <text x={x + CELL_WIDTH / 2} y={y + CELL_HEIGHT / 2} textAnchor="middle" dominantBaseline="middle" fontSize={48}>
                 {cell.id}
             </text>
+            <text x={x + CELL_WIDTH / 2 + 60} y={y + CELL_HEIGHT / 2 + -135} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                A
+            </text>
+            <text x={x + CELL_WIDTH / 2 -80} y={y + CELL_HEIGHT / 2 - 38} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                B
+            </text>
+            <text x={x + CELL_WIDTH / 2 - 80} y={y + CELL_HEIGHT / 2 + 23} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                C
+            </text>
+            <text x={x + CELL_WIDTH / 2} y={y + CELL_HEIGHT - 18} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                D
+            </text>
+            <text x={x + CELL_WIDTH / 2 +80} y={y + CELL_HEIGHT / 2 + 23} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                X
+            </text>
+            <text x={x + CELL_WIDTH / 2 + 80} y={y + CELL_HEIGHT / 2 + 142} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                Y
+            </text>
+            <text x={x + CELL_WIDTH / 2 -80} y={y + CELL_HEIGHT / 2 + 83} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">
+                K
+            </text>
 
 
         </React.Fragment>
@@ -87,7 +108,7 @@ const LogicCellRenderer = () => {
             {matrix.nets.filter(net => (net !== null)).filter(net => net.points.length > 0).map(
                 (net, netIndex) => {
                     if (netIndex > 3) return;
-                    return <LineSegment key={netIndex} value={net.value} baseX={cx} baseY={cy} points={net.points} />
+                    return <LineSegment key={netIndex} value={net.value} baseX={cx} baseY={cy} points={net.points} colour={"#888888ff"} />
                 }
             )}
         </React.Fragment>
