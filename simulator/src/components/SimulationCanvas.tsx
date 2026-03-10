@@ -2,16 +2,24 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useSimulator } from '../SimulatorContext';
 import LogicCellRenderer from './LogicCellRenderer';
 
-const CELL_SPACING_X = 220;
-const CELL_SPACING_Y = 300;
-const CELLS_PER_ROW = 8;
+
 
 const SimulationCanvas: React.FC = () => {
-  const { logicCells } = useSimulator();
+  const { logicCells, showGrid } = useSimulator();
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: 2000, h: 2000 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
+
+  // Set initial viewBox to match the container's aspect ratio
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { clientWidth, clientHeight } = el;
+    const aspect = clientWidth / clientHeight;
+    setViewBox(v => ({ ...v, w: v.h * aspect }));
+  }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     setIsPanning(true);
@@ -62,7 +70,7 @@ const SimulationCanvas: React.FC = () => {
   }, []);
 
   return (
-    <div style={{
+    <div ref={containerRef} style={{
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
@@ -85,6 +93,16 @@ const SimulationCanvas: React.FC = () => {
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
+        {showGrid && (
+          <>
+            <defs>
+              <pattern id="grid" width={20} height={20} patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#7e7e7e" strokeWidth={0.5} />
+              </pattern>
+            </defs>
+            <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#grid)" />
+          </>
+        )}
         <LogicCellRenderer />
       </svg>
     </div>

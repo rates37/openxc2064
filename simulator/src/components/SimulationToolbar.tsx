@@ -2,7 +2,7 @@ import React from 'react';
 import { useSimulator } from '../SimulatorContext';
 
 const SimulationToolbar: React.FC = () => {
-  const { simulate, isRunning } = useSimulator();
+  const { simulate, isRunning, showGrid, toggleGrid } = useSimulator();
 
   return (
     <div style={{
@@ -20,6 +20,16 @@ const SimulationToolbar: React.FC = () => {
         }}
       >
         {isRunning ? 'Simulating...' : 'Simulate'}
+      </button>
+      <button
+        onClick={toggleGrid}
+        style={{
+          marginLeft: '8px',
+          padding: '6px 16px',
+          cursor: 'pointer',
+        }}
+      >
+        {showGrid ? 'Hide Grid' : 'Show Grid'}
       </button>
     </div>
   );

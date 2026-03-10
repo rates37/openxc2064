@@ -2,31 +2,9 @@ import { Net, Mux, LUT } from "../types";
 
 export class LogicCell {
     id: string;
+    pos: { x: number; y: number } = { x: 0, y: 0 };
 
-    nets: Net[] = [
-        {id: "net_A", value: false},
-        {id: "net_B", value: false},
-        {id: "net_C", value: false},
-        {id: "net_D", value: false},
-        {id: "net_E", value: false},
-        {id: "net_F", value: false},
-        {id: "net_G", value: false},
-        {id: "net_K", value: false},
-        {id: "net_Q", value: false},
-        {id: "net_R", value: false},
-        {id: "net_S", value: false},
-        {id: "net_X", value: false},
-        {id: "net_Y", value: false},
-        {id: "net_gnd", value: false},
-        {id: "net_m6_out", value: false},
-        {id: "net_m8_out", value: false},
-        {id: "net_m13_out", value: false},
-        {id: "net_m18_out", value: false},
-        {id: "net_m20_out", value: false},
-        {id: "net_m24_out", value: false},
-        {id: "net_clk_1_out", value: false},
-        {id: "net_clk_2_out", value: false}
-    ];
+    nets: Net[] = [];
 
     muxes: Mux[] = [
         {id: "m6", select: 0},
@@ -48,8 +26,22 @@ export class LogicCell {
         {id: "lut_1", truthTable: [false, false, false, false, false, false, false, false]},
     ];
 
-    constructor(id: string) {
+    constructor(id: string, config?: {nets?: Net[], muxes?: Mux[], luts?: LUT[], pos?: {x: number, y: number}}) {
         this.id = id;
+        if (!config) return;
+
+        if (config.pos) {
+            this.pos = { ...config.pos };
+        }
+        if (config.nets) {
+            this.nets = [...config.nets];
+        }
+        if (config.muxes) {
+            this.muxes = [...config.muxes];
+        }
+        if (config.luts) {
+            this.luts = [...config.luts];
+        }
     }
 
     public reset(): void {
@@ -59,7 +51,10 @@ export class LogicCell {
     }
 
     public simulate(): void {
-        console.log(`Simulating logic cell [${this.id}]...`);
+        this.nets.forEach(net => {
+            // For demonstration, toggle the value of each net.
+            if (net.id === "net_X" || net.id === "net_Y") net.value = !net.value;
+        });
     }
 
 
