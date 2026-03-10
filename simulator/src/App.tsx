@@ -3,6 +3,7 @@ import { SimulatorProvider } from './SimulatorContext';
 import SimulationToolbar from './components/SimulationToolbar';
 import SimulationCanvas from './components/SimulationCanvas';
 import SwitchMatrixEditor from './components/SwitchMatrixEditor';
+import LogicElementModal from './components/LogicElementModal';
 
 const App: React.FC = () => {
   return (
@@ -11,6 +12,7 @@ const App: React.FC = () => {
         <SimulationToolbar />
         <SimulationCanvas />
         <SwitchMatrixEditor />
+        <LogicElementModal />
       </div>
     </SimulatorProvider>
   );

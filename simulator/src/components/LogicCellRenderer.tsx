@@ -6,7 +6,7 @@ import { CELL_WIDTH, CELL_HEIGHT, PIP_WIDTH, PIP_HEIGHT, MATRIX_WIDTH, MATRIX_HE
 
 
 const LogicCellRenderer = () => {
-    const { logicCells, switchMatrices, pips, togglePip, selectMatrix } = useSimulator();
+    const { logicCells, switchMatrices, pips, togglePip, selectMatrix, selectCell } = useSimulator();
 
     const logicCellDisplays = logicCells.map((cell, index) => {
         const { x, y } = cell.pos;
@@ -20,6 +20,8 @@ const LogicCellRenderer = () => {
             <rect
                 x={x} y={y} width={CELL_WIDTH} height={CELL_HEIGHT}
                 fill="#fff" stroke="#333" strokeWidth={8} rx={5} ry={5}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); selectCell(cell); }}
             />
             <text x={x + CELL_WIDTH / 2} y={y + CELL_HEIGHT / 2} textAnchor="middle" dominantBaseline="middle" fontSize={48}>
                 {cell.id}

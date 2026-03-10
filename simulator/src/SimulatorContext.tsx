@@ -32,6 +32,9 @@ interface SimulatorContextValue {
   selectedMatrix: SwitchMatrix | null;
   selectMatrix: (matrix: SwitchMatrix | null) => void;
   saveMatrixConnections: (matrixIndex: number, connections: number[][]) => void;
+  selectedCell: LogicCell | null;
+  selectCell: (cell: LogicCell | null) => void;
+  setLogicCells: React.Dispatch<React.SetStateAction<LogicCell[]>>;
 
   // To add more functions, declare them in this interface and
   // implement them inside SimulatorProvider below.
@@ -67,6 +70,11 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, []);
 
   const [selectedMatrix, setSelectedMatrix] = useState<SwitchMatrix | null>(null);
+  const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
+
+  const selectCell = useCallback((cell: LogicCell | null) => {
+    setSelectedCell(cell);
+  }, []);
 
   const selectMatrix = useCallback((matrix: SwitchMatrix | null) => {
     setSelectedMatrix(matrix);
@@ -143,14 +151,12 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     let steps = 0;
     let settled = false;
 
-    logicCells.forEach(cell => {
-      cell.simulate()
-    });
-
     while (!settled && steps < MAX_ITERATIONS) {
       const before = snapshotNets();
 
-
+      logicCells.forEach(cell => {
+        cell.simulate();
+      });
 
       switchMatrices.forEach(matrix => {
         matrix.simulate();
@@ -162,7 +168,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
           const destinationNet = getNet(pip.destination);
 
           if (sourceNet && destinationNet) {
-            console.log(`Pip ${pip.id} transferring value from ${pip.source} (${sourceNet.value}) to ${pip.destination} (was ${destinationNet.value})`);
+            // console.log(`Pip ${pip.id} transferring value from ${pip.source} (${sourceNet.value}) to ${pip.destination} (was ${destinationNet.value})`);
             destinationNet.value = sourceNet.value;
           }
         }
@@ -223,7 +229,10 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     togglePip,
     selectedMatrix,
     selectMatrix,
-    saveMatrixConnections
+    saveMatrixConnections,
+    selectedCell,
+    selectCell,
+    setLogicCells
   };
 
   return (
