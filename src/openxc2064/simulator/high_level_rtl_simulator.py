@@ -1,5 +1,6 @@
 from __future__ import annotations
 from ..synthesis.rtl_nodes import Net, Netlist, DFF, Input, Constant, LogicGate
+from ..mapping.xc2064_primitives import LUT, CLB
 from typing import Callable, Tuple, Optional
 import re
 
@@ -228,6 +229,57 @@ class RTLSimulator:
                         if prev_value != q_value_masked:
                             self.net_values[output_net.name] = q_value_masked
                             changed_flag = True
+                            
+                elif isinstance(n, LUT): # assuming LUT ALWAYS has 1-bit width inputs/outputs
+                    # collect LUT inputs from current state:
+                    input_values = [self.net_values.get(in_n.name, 0) for in_n in n.inputs]
+                    # build the k-bit state index from inputs [I0, I1, ..., IK-1]
+                    state = 0
+                    for i, val in enumerate(input_values):
+                        if val:
+                            state |= (1 << i)
+                            
+                    # extract the evaluation bit from the LUT truth table config
+                    result = (n.truth_table >> state) & 1
+                    
+                    if n.outputs:
+                        output_net = n.outputs[0]
+                        prev_value = self.net_values.get(output_net.name, 0)
+                        if prev_value != result:
+                            self.net_values[output_net.name] = result
+                            changed_flag = True
+                            
+                elif isinstance(n, CLB):
+                    # A CLB just evaluates its internal LUTs and its DFF
+                    # In this simulator, we can just flatten the evaluation 
+                    # of the CLB's internal LUT components, rather than modelling
+                    # this internal LUTs of the CLB (otherwise would need a separate
+                    # 'Lowering' style conversion)
+                    for internal_lut in n.luts:
+                        input_values = [self.net_values.get(in_n.name, 0) for in_n in internal_lut.inputs]
+                        state = 0
+                        for i, val in enumerate(input_values):
+                            if val:
+                                state |= (1 << i)
+                                
+                        result = (internal_lut.truth_table >> state) & 1
+                        
+                        if internal_lut.outputs:
+                            output_net = internal_lut.outputs[0]
+                            prev_value = self.net_values.get(output_net.name, 0)
+                            if prev_value != result:
+                                self.net_values[output_net.name] = result
+                                changed_flag = True
+                                
+                    if n.dff:
+                        q_value = self.dff_state.get(n.dff.id, 0)
+                        if n.dff.outputs:
+                            output_net = n.dff.outputs[0]
+                            q_value_masked = self._mask_value(q_value, output_net.width)
+                            prev_value = self.net_values.get(output_net.name, 0)
+                            if prev_value != q_value_masked:
+                                self.net_values[output_net.name] = q_value_masked
+                                changed_flag = True
 
             if not changed_flag:
                 break
@@ -326,6 +378,15 @@ class RTLSimulator:
                         d_value = self.net_values.get(d_net.name, 0)
                         d_value_masked = self._mask_value(d_value, d_net.width)
                         self.dff_state[n.id] = d_value_masked
+            elif isinstance(n, CLB) and n.dff:
+                # evaluate the DFF packed inside the CLB
+                if len(n.dff.inputs) >= 2:
+                    clk_net_name = n.dff.inputs[1].name
+                    if self._detect_edge(clk_net_name, n.dff.edge):
+                        d_net = n.dff.inputs[0]
+                        d_value = self.net_values.get(d_net.name, 0)
+                        d_value_masked = self._mask_value(d_value, d_net.width)
+                        self.dff_state[n.dff.id] = d_value_masked
 
     def _parse_port_spec(self, port_spec: str) -> Tuple[str, Optional[int], Optional[int]]:
         # Parse a port specification like "a", "a[2]", or "a[3:1]"
