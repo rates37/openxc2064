@@ -174,5 +174,15 @@ class GreedyMapper(TechnologyMapper):
                 lut_out_net.drivers.append(lut_node)
             else:
                 lut_node = LUT(id=f"lut{len(new_nl.nodes)}", inputs=[], outputs=[], truth_table=truth_table, k=k)
+                new_nl.nodes.append(lut_node)
+                lut_node.outputs.append(lut_out_net)
+                lut_out_net.drivers.append(lut_node)
+                
+                for new_in_net in new_in_nets:
+                    lut_node.inputs.append(new_in_net)
+                    new_in_net.sinks.append(lut_node)
+                    
+            return lut_out_net
+
         else:
             raise ValueError(f"Technology Mapper encountered unsupported Node Primitive driver of type: {type(driver)}")
