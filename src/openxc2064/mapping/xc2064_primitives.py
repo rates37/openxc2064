@@ -29,6 +29,7 @@ class CLB(Node):
     
     # internal config flags (routing)
     # todo
+    # TODO: clock
 
     def __post_init__(self):
         super().__post_init__()
