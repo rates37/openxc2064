@@ -4,6 +4,7 @@ import { SwitchMatrix } from "./models/SwitchMatrix";
 import { Net, Pip } from "./types";
 import getConfig from './configs/configs';
 import { CELL_WIDTH, CELL_HEIGHT, CELL_MARGIN_X, CELL_MARGIN_Y, CELL_OFFSET_X, CELL_OFFSET_Y, MATRIX_WIDTH, MATRIX_HEIGHT } from './configs/Routing';
+import { IOBank } from './models/IOBank';
 
 // =============================================================================
 // 1. Define the shape of your context value here.
@@ -12,6 +13,7 @@ import { CELL_WIDTH, CELL_HEIGHT, CELL_MARGIN_X, CELL_MARGIN_Y, CELL_OFFSET_X, C
 interface SimulatorContextValue {
   // -- Example primitive state --
   isRunning: boolean;
+  tick: number;
 
   // -- Example list --
   // Add arrays/lists here. For example:
@@ -19,6 +21,8 @@ interface SimulatorContextValue {
   logicCells: LogicCell[];
   switchMatrices: SwitchMatrix[];
   pips: Pip[];
+  ioBanks: IOBank[];
+  busNets: Net[];
 
   // -- Functions --
   // Add callable functions here. For example:
@@ -35,6 +39,11 @@ interface SimulatorContextValue {
   selectedCell: LogicCell | null;
   selectCell: (cell: LogicCell | null) => void;
   setLogicCells: React.Dispatch<React.SetStateAction<LogicCell[]>>;
+  toggleIONet: (bankIndex: number) => void;
+  cursorPos: { x: number; y: number } | null;
+  setCursorPos: (pos: { x: number; y: number } | null) => void;
+  exportState: () => void;
+  importState: () => void;
 
   // To add more functions, declare them in this interface and
   // implement them inside SimulatorProvider below.
@@ -54,6 +63,9 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
   // -- State --
   const [isRunning, setIsRunning] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  const bumpTick = useCallback(() => setTick(t => t + 1), []);
 
   const toggleGrid = useCallback(() => setShowGrid(prev => !prev), []);
 
@@ -64,6 +76,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [logicCells, setLogicCells] = useState<LogicCell[]>([]);
   const [switchMatrices, setSwitchMatrices] = useState<SwitchMatrix[]>([]);
   const [pips, setPips] = useState<Pip[]>([]);
+  const [ioBanks, setIoBanks] = useState<IOBank[]>([]);
+  const [busNets, setBusNets] = useState<Net[]>([]);
 
   const togglePip = useCallback((index: number) => {
     setPips(prev => prev.map((pip, i) => i === index ? { ...pip, enabled: !pip.enabled } : pip));
@@ -71,6 +85,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const [selectedMatrix, setSelectedMatrix] = useState<SwitchMatrix | null>(null);
   const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 
   const selectCell = useCallback((cell: LogicCell | null) => {
     setSelectedCell(cell);
@@ -85,16 +100,24 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (!matrix) return;
     if (!matrix.possibleConnections[row][col]) return;
     matrix.connections[row][col] = matrix.connections[row][col] ? 0 : 1;
-    setSwitchMatrices([...switchMatrices]);
+    bumpTick();
     setSelectedMatrix(matrix);
-  }, [switchMatrices]);
+  }, [switchMatrices, bumpTick]);
 
   const saveMatrixConnections = useCallback((matrixIndex: number, connections: number[][]) => {
     const matrix = switchMatrices[matrixIndex];
     if (!matrix) return;
     matrix.connections = connections;
-    setSwitchMatrices([...switchMatrices]);
-  }, [switchMatrices]);
+    bumpTick();
+  }, [switchMatrices, bumpTick]);
+
+  const toggleIONet = useCallback((bankIndex: number) => {
+    const bank = ioBanks[bankIndex];
+    if (!bank) return;
+    const net = bank.nets.find(n => n.id === `${bank.id}.net_O`);
+    if (net) net.value = !net.value;
+    bumpTick();
+  }, [ioBanks, bumpTick]);
 
   // -- Functions --
   // Wrap in useCallback to keep stable references and avoid unnecessary
@@ -115,6 +138,15 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (allCellIds.includes(location[0] + location[1]) && location.length === 5 && location[3] === "M") {
       const matrix = switchMatrices.find(matrix => matrix.id === location);
       return matrix?.nets.find(net => net && net.id === globalNetId);
+    }
+
+    if (allCellIds.includes(location[0] + location[1]) && location.length === 6 && location[3] === "I") {
+      const iobank = ioBanks.find(bank => bank.id === location);
+      return iobank?.nets.find(net => net && net.id === globalNetId);
+    }
+
+    if (busNets.find(net => net.id === globalNetId)) {
+      return busNets.find(net => net.id === globalNetId);
     }
 
     console.log(`Net ${globalNetId} not found in any cell.`, allCellIds.includes(location[0] + location[1]), location[0] + location[1]);
@@ -187,8 +219,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
 
     // Update Simulation
-    setLogicCells([...logicCells]);
-    setSwitchMatrices([...switchMatrices]);
+    bumpTick();
 
     const endTime = performance.now();
     console.log(`Simulation settled after ${steps} step(s) in ${(endTime - startTime).toFixed(2)} ms`);
@@ -199,10 +230,12 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, [logicCells, switchMatrices, pips, getNet]);
 
   useEffect(() => {
-    const { logicCells, switchMatrices, pips } = initialiseSimulation();
+    const { logicCells, switchMatrices, pips, ioBanks, busNets } = initialiseSimulation();
     setLogicCells(logicCells);
     setSwitchMatrices(switchMatrices);
     setPips(pips);
+    setIoBanks(ioBanks);
+    setBusNets(busNets);
 
   }, []);
 
@@ -217,8 +250,93 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
   //   3. (Optional) Create helper functions (addItem, removeItem, etc.).
   //   4. Include the list and helpers in the `value` object below.
 
+  const exportState = useCallback(() => {
+    const state = {
+      logicCells: logicCells.map(cell => ({
+        id: cell.id,
+        muxes: cell.muxes.map(m => ({ id: m.id, select: m.select })),
+        luts: cell.luts.map(l => ({ id: l.id, truthTable: [...l.truthTable] })),
+      })),
+      switchMatrices: switchMatrices.map(matrix => ({
+        id: matrix.id,
+        connections: matrix.connections.map(row => [...row]),
+      })),
+      pips: pips.map(pip => ({
+        id: pip.id,
+        source: pip.source,
+        destination: pip.destination,
+        enabled: pip.enabled,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'xc2064-config.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [logicCells, switchMatrices, pips]);
+
+  const importState = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const state = JSON.parse(reader.result as string);
+          if (state.logicCells) {
+            for (const saved of state.logicCells) {
+              const cell = logicCells.find(c => c.id === saved.id);
+              if (!cell) continue;
+              if (saved.muxes) {
+                for (const sm of saved.muxes) {
+                  const mux = cell.muxes.find(m => m.id === sm.id);
+                  if (mux) mux.select = sm.select;
+                }
+              }
+              if (saved.luts) {
+                for (const sl of saved.luts) {
+                  const lut = cell.luts.find(l => l.id === sl.id);
+                  if (lut && Array.isArray(sl.truthTable)) {
+                    lut.truthTable = sl.truthTable;
+                  }
+                }
+              }
+            }
+          }
+          if (state.switchMatrices) {
+            for (const saved of state.switchMatrices) {
+              const matrix = switchMatrices.find(m => m.id === saved.id);
+              if (matrix && saved.connections) {
+                matrix.connections = saved.connections;
+              }
+            }
+          }
+          if (state.pips) {
+            setPips(prev => prev.map(pip => {
+              const saved = state.pips.find(
+                (s: any) => s.source === pip.source && s.destination === pip.destination
+              );
+              return saved ? { ...pip, enabled: saved.enabled } : pip;
+            }));
+          }
+          bumpTick();
+        } catch (e) {
+          console.error('Failed to import state:', e);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [logicCells, switchMatrices, bumpTick]);
+
   const value: SimulatorContextValue = {
     isRunning,
+    tick,
     logicCells,
     simulate,
     showGrid,
@@ -226,13 +344,20 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     getNet,
     switchMatrices,
     pips,
+    ioBanks,
     togglePip,
     selectedMatrix,
     selectMatrix,
     saveMatrixConnections,
     selectedCell,
     selectCell,
-    setLogicCells
+    setLogicCells,
+    toggleIONet,
+    busNets,
+    cursorPos,
+    setCursorPos,
+    exportState,
+    importState
   };
 
   return (
@@ -261,10 +386,12 @@ export const useSimulator = (): SimulatorContextValue => {
 const ROWS = 8;
 const COLS = 8;
 
-const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: SwitchMatrix[], pips: Pip[] } => {
+const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: SwitchMatrix[], pips: Pip[], ioBanks: IOBank[], busNets: Net[] } => {
   const cells: LogicCell[] = [];
   const matrices: SwitchMatrix[] = [];
   const pips: Pip[] = [];
+  const ioBanks: IOBank[] = [];
+  const busNets: Net[] = (getConfig("bus", 0) || []).map((net: Net) => ({ ...net, points: net.points.map(p => ({ ...p })) }));
 
   // Local resolver that operates on the arrays being built, rather than
   // the (empty) React state that exists at mount time.
@@ -279,6 +406,11 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
     if (location.length === 5 && location[3] === "M") {
       const matrix = matrices.find(m => m.id === location);
       return matrix?.nets.find(net => net && net.id === globalNetId);
+    }
+
+    if (location.length === 6 && location[3] === "I") {
+      const iobank = ioBanks.find(bank => bank.id === location);
+      return iobank?.nets.find(net => net && net.id === globalNetId);
     }
 
     return undefined;
@@ -315,6 +447,21 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
           // console.log(matrix);
         });
       }
+
+      const ioConfig = getConfig("io", i * COLS + j);
+
+      if (ioConfig) {
+        ioConfig.forEach((ioBankConfig, index) => {
+          const ioBankId = `${cellId}_IO${index}`;
+          const x = j * (CELL_WIDTH + CELL_MARGIN_X) + CELL_OFFSET_X + CELL_WIDTH / 2 + ioBankConfig.pos.x - MATRIX_WIDTH / 2;
+          const y = i * (CELL_HEIGHT + CELL_MARGIN_Y) + CELL_OFFSET_Y + CELL_HEIGHT / 2 - MATRIX_HEIGHT / 2 + ioBankConfig.pos.y;
+          const ioBank = new IOBank(ioBankId, { x, y });
+          ioBank.nets = ioBankConfig.nets.map(net => ({ ...net, id: ioBankId + "." + net.id, points: net.points.map(p => ({ ...p })) }));
+
+          ioBanks.push(ioBank);
+        });
+      }
+
     }
   }
 
@@ -335,13 +482,14 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
         let destination = pip.destination;
 
         if (!source.startsWith("net")) {
-          let direction, matrixIndex;
+          let direction, device;
 
-          if (source.includes("_M")) {
-            direction = source.split("_")[0];
-            matrixIndex = parseInt(source.split("_")[1].substring(1));
-          } else {
+          if (source.split(".")[0].length <= 2) {
             direction = source.split(".")[0];
+            device = "";
+          } else {
+            direction = source.split("_")[0];
+            device = "_" + source.split("_")[1].split(".")[0];
           }
   
 
@@ -357,22 +505,20 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
             continue;
           }
 
-          if (matrixIndex !== undefined) {
-            source = `${cells[cellIndex].id}_M${matrixIndex}.${source.split(".")[1]}`;
-          } else {
-            source = `${cells[cellIndex].id}.${source.split(".")[1]}`;
-          }
+          source = `${cells[cellIndex].id}${device}.${source.split(".")[1]}`;
+
         } else {
           source = `${cells[i * COLS + j].id}.${source}`;
         }
 
         if (!destination.startsWith("net")) {
-          let direction, matrixIndex;
-          if (destination.includes("_M")) {
-            direction = destination.split("_")[0];
-            matrixIndex = parseInt(destination.split("_")[1].substring(1));
-          } else {
+          let direction, device;
+          if (destination.split(".")[0].length <= 2) {
             direction = destination.split(".")[0];
+            device = "";
+          } else {
+            direction = destination.split("_")[0];
+            device = "_" +destination.split("_")[1].split(".")[0];
           }
           
           let cellIndex = 0;
@@ -387,11 +533,9 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
             continue;
           }
 
-          if (matrixIndex !== undefined) {
-            destination = `${cells[cellIndex].id}_M${matrixIndex}.${destination.split(".")[1]}`;
-          } else {
-            destination = `${cells[cellIndex].id}.${destination.split(".")[1]}`;
-          }
+          destination = `${cells[cellIndex].id}${device}.${destination.split(".")[1]}`;
+          console.log(destination);
+          
         } else {
           destination = `${cells[i * COLS + j].id}.${destination}`;
         }
@@ -421,20 +565,39 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
           const left_code = cellId.charCodeAt(0);
           const right_code = cellId.charCodeAt(1);
 
-          const left_cell_id = j > 0 ? String.fromCharCode(left_code) + String.fromCharCode(right_code - 1) : null;
-          const bottom_cell_id = i < ROWS - 1 ? String.fromCharCode(left_code + 1) + String.fromCharCode(right_code) : null;
+          let left_cell_id = j > 0 ? String.fromCharCode(left_code) + String.fromCharCode(right_code - 1) : null;
+          let bottom_cell_id = i < ROWS - 1 ? String.fromCharCode(left_code + 1) + String.fromCharCode(right_code) : null;
 
-          if (!left_cell_id || !bottom_cell_id) {
-            console.warn(`Matrix ${matrixId} has invalid neighboring cells: left ${left_cell_id}, bottom ${bottom_cell_id}`);
+          let bottom_index = index;
+          let left_index = index;
+
+          if (!left_cell_id && bottom_cell_id) {
+            // If the switch cannot find a cell to the left, it must be on the left edge, so it should connect to switch M2 and M3 of the current cell instead.
+            if (index < 2) {
+              left_cell_id = cellId;
+              left_index = index + 2;
+            }
+            // console.warn(`Matrix ${matrixId} has invalid neighboring cells on the left ${left_cell_id}`); 
+          }
+          
+          if (!left_cell_id) {
+            console.warn(`Matrix ${matrixId} has invalid neighboring cell on the left`);
           } else {
-            matrix.nets[4] = localGetNet(`${bottom_cell_id}_M${index}.net_1`) || null;
-            matrix.nets[5] = localGetNet(`${bottom_cell_id}_M${index}.net_0`) || null;
-            matrix.nets[6] = localGetNet(`${left_cell_id}_M${index}.net_3`) || null;
-            matrix.nets[7] = localGetNet(`${left_cell_id}_M${index}.net_2`) || null;
+            matrix.nets[6] = localGetNet(`${left_cell_id}_M${left_index}.net_3`) || null;
+            matrix.nets[7] = localGetNet(`${left_cell_id}_M${left_index}.net_2`) || null;
+          }
+            
+            
+          if (!bottom_cell_id) {
+            console.warn(`Matrix ${matrixId} has invalid neighboring cell on the bottom`);
+          } else {
+            matrix.nets[4] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_1`) || null;
+            matrix.nets[5] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_0`) || null;
+            
           }
         });
       }
     }
   }
-  return { logicCells: cells, switchMatrices: matrices, pips }; // Placeholder for switch matrices
+  return { logicCells: cells, switchMatrices: matrices, pips, ioBanks, busNets };
 };

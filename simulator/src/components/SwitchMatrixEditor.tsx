@@ -163,6 +163,16 @@ const SwitchMatrixEditor: React.FC = () => {
                     </p>
                 )}
 
+                <div style={{ fontSize: 12, fontFamily: 'monospace', margin: '8px 0', padding: '8px', background: '#f5f5f5', borderRadius: 6 }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: 4, fontFamily: 'sans-serif', fontSize: 13 }}>Nets</div>
+                    {selectedMatrix.nets.map((net, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, color: net ? '#333' : '#aaa' }}>
+                            <span>{i}:</span>
+                            <span>{net ? net.id : '(empty)'}</span>
+                        </div>
+                    ))}
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
                     <button onClick={handleCancel} style={{
                         padding: '6px 16px', borderRadius: 6, border: '1px solid #ccc',

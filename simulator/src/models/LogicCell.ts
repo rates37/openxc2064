@@ -13,9 +13,9 @@ export class LogicCell {
         {id: "m18", select: 0},
         {id: "m20", select: 0},
         {id: "m24", select: 0},
-        {id: "m46", select: 0},
+        {id: "m46", select: 2},
         {id: "m51", select: 0},
-        {id: "m56", select: 0},
+        {id: "m56", select: 2},
         {id: "m59", select: 0},
         {id: "m61", select: 0},
         {id: "m100", select: 0}
@@ -117,7 +117,7 @@ export class LogicCell {
             // M100 (3-input): 0=clk_1_out, 1=~clk_1_out, 2=GND -> clk_2_out
             const m100sel = this.getMux("m100");
             const clk1 = this.getNet("net_clk_1_out");
-            this.setNet("net_clk_2_out", m100sel === 0 ? clk1 : m100sel === 1 ? !clk1 : false);
+            this.setNet("net_clk_2_out", m100sel === 0 ? !clk1 : m100sel === 1 ? clk1 : false);
             
             // --- FF Set/Reset Muxes ---
             // M56 (3-input): 0=A, 1=F, 2=GND -> net_S (FF set)

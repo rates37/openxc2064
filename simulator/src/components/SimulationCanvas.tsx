@@ -5,7 +5,7 @@ import LogicCellRenderer from './LogicCellRenderer';
 
 
 const SimulationCanvas: React.FC = () => {
-  const { logicCells, showGrid } = useSimulator();
+  const { logicCells, showGrid, setCursorPos } = useSimulator();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: 2000, h: 2000 });
@@ -28,6 +28,15 @@ const SimulationCanvas: React.FC = () => {
   }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (svgRef.current) {
+      const svg = svgRef.current;
+      const ctm = svg.getScreenCTM();
+      if (ctm) {
+        // const svgX = (e.clientX - ctm.e) / ctm.a;
+        // const svgY = (e.clientY - ctm.f) / ctm.d;
+        // setCursorPos({ x: Math.round(svgX), y: Math.round(svgY) });
+      }
+    }
     if (!isPanning || !svgRef.current) return;
     const svg = svgRef.current;
     const ctm = svg.getScreenCTM();
@@ -36,7 +45,7 @@ const SimulationCanvas: React.FC = () => {
     const dy = (e.clientY - panStart.current.y) / ctm.d;
     panStart.current = { x: e.clientX, y: e.clientY };
     setViewBox((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
-  }, [isPanning]);
+  }, [isPanning, setCursorPos]);
 
   const onPointerUp = useCallback(() => {
     setIsPanning(false);

@@ -164,10 +164,10 @@ const LogicElementModal: React.FC = () => {
                         {/* Triangle / Inverter */}
                         <path 
                             d="M 464 324.56 L 477 334.06 L 464 343.56 Z" 
-                            fill={highlightedNode === "clk_net" ? "red" : "#ffffff"} 
-                            stroke={highlightedNode === "clk_net" ? "red" : "#000000"} 
+                            fill={highlightedNode === "net_clk_1_out" ? "red" : "#ffffff"} 
+                            stroke={highlightedNode === "net_clk_1_out" ? "red" : "#000000"} 
                             strokeMiterlimit="10" 
-                            onMouseEnter={() => handleMouseEnter("clk_net")}
+                            onMouseEnter={() => handleMouseEnter("net_clk_1_out")}
                             onMouseLeave={handleMouseLeave}
                         />
                         {/* Ground symbols */}
@@ -180,9 +180,9 @@ const LogicElementModal: React.FC = () => {
                         <Wire d="M 436 432 L 444 432" id="net_GND" activated={nets["net_GND"] === 1} highlighted={highlightedNode === "net_GND"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <Wire d="M 437 434 L 443 434" id="net_GND" activated={nets["net_GND"] === 1} highlighted={highlightedNode === "net_GND"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <Wire d="M 438 436 L 442 436" id="net_GND" activated={nets["net_GND"] === 1} highlighted={highlightedNode === "net_GND"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
-                        <Wire d="M 446.89 334.06 L 464 334.06" id="clk_net2" activated={nets["clk_net2"] === 1} highlighted={highlightedNode === "clk_net2"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
-                        <Wire d="M 434.37 334.06 L 396.63 334.06" id="clk_net" activated={nets["clk_net"] === 1} highlighted={highlightedNode === "clk_net"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
-                        <Wire d="M 434.37 322.37 L 415.71 322.38 L 415.74 333.84" id="clk_net" activated={nets["clk_net"] === 1} highlighted={highlightedNode === "clk_net"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
+                        <Wire d="M 446.89 334.06 L 464 334.06" id="net_clk_2_out" activated={nets["net_clk_2_out"] === 1} highlighted={highlightedNode === "net_clk_2_out"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
+                        <Wire d="M 434.37 334.06 L 396.63 334.06" id="net_clk_1_out" activated={nets["net_clk_1_out"] === 1} highlighted={highlightedNode === "net_clk_1_out"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
+                        <Wire d="M 434.37 322.37 L 415.71 322.38 L 415.74 333.84" id="net_clk_1_out" activated={nets["net_clk_1_out"] === 1} highlighted={highlightedNode === "net_clk_1_out"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <Wire d="M 434 346 L 416 346 L 416 362" id="net_GND" activated={nets["net_GND"] === 1} highlighted={highlightedNode === "net_GND"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <Wire d="M 411 362 L 421 362" id="net_GND" activated={nets["net_GND"] === 1} highlighted={highlightedNode === "net_GND"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <Wire d="M 412 364 L 420 364" id="net_GND" activated={nets["net_GND"] === 1} highlighted={highlightedNode === "net_GND"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
@@ -203,7 +203,7 @@ const LogicElementModal: React.FC = () => {
                         <ConnectionDot x={79} y={255} id="net_D" activated={nets["net_D"] === 1} highlighted={highlightedNode === "net_D"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <ConnectionDot x={89} y={231} id="net_C" activated={nets["net_C"] === 1} highlighted={highlightedNode === "net_C"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <ConnectionDot x={119} y={49} id="net_B" activated={nets["net_B"] === 1} highlighted={highlightedNode === "net_B"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
-                        <ConnectionDot x={414} y={332} id="clk_net" activated={nets["clk_net"] === 1} highlighted={highlightedNode === "clk_net"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
+                        <ConnectionDot x={414} y={332} id="net_clk_1_out" activated={nets["net_clk_1_out"] === 1} highlighted={highlightedNode === "net_clk_1_out"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <ConnectionDot x={88} y={91} id="net_C" activated={nets["net_C"] === 1} highlighted={highlightedNode === "net_C"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <ConnectionDot x={120} y={91} id="net_C" activated={nets["net_C"] === 1} highlighted={highlightedNode === "net_C"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
                         <ConnectionDot x={99} y={50} id="net_B" activated={nets["net_B"] === 1} highlighted={highlightedNode === "net_B"} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} />
