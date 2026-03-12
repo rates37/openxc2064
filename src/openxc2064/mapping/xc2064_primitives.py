@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from openxc2064.synthesis.rtl_nodes import Node
+from openxc2064.synthesis.rtl_nodes import Node, DFF
 
 @dataclass(eq=False)
 class LUT(Node):
