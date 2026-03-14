@@ -248,7 +248,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
                     const destinationNet = getNet(pip.destination);
 
                     if (sourceNet && destinationNet) {
-                        console.log(`Pip ${pip.id} transferring value from ${pip.source} (${sourceNet.value}) to ${pip.destination} (was ${destinationNet.value})`);
+                        console.log(drivers)
+                        // console.log(`Pip ${pip.id} transferring value from ${pip.source} (${sourceNet.value}) to ${pip.destination} (was ${destinationNet.value})`);
                         destinationNet.value = sourceNet.value;
                     }
                 }
@@ -648,7 +649,7 @@ const initialiseSimulation = (): {
                     destination,
                     enabled: pip.enabled,
                     pos: { x: x + pip.pos.x, y: y + pip.pos.y },
-                    bidirectional: false,
+                    bidirectional: pip.bidirectional,
                 });
             }
         }

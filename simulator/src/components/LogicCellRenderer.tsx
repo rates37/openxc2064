@@ -190,7 +190,7 @@ const MatrixDisplay = React.memo(
     }
 );
 
-const PipDisplay = React.memo(({ pip, index, onToggle}: { pip: Pip; index: number; onToggle: (i: number) => boolean;}) => {
+const PipDisplay = React.memo(({ pip, index, onToggle }: { pip: Pip; index: number; onToggle: (i: number) => boolean }) => {
     const { drivers, hasDriver, setDriver, removeDriver } = useSimulator();
 
     return (
@@ -200,22 +200,51 @@ const PipDisplay = React.memo(({ pip, index, onToggle}: { pip: Pip; index: numbe
             width={PIP_WIDTH}
             height={PIP_HEIGHT}
             fill={pip.enabled ? "#696969" : "#ffffff"}
-            stroke="#333"
+            stroke={pip.bidirectional ? "#1717faff" : "#333"}
             strokeWidth={3}
             style={{ cursor: "pointer" }}
             onClick={() => {
-                console.log(pip.destination);
-                console.log(drivers);
-                
-                if (!pip.enabled && hasDriver(pip.destination)) {
-                    alert(`Failed to toggle pip. Net ${pip.destination} already has a driver.`);
+                if (pip.bidirectional) {
+                    const srcDriver = hasDriver(pip.source);
+                    const dstDriver = hasDriver(pip.destination);
+
+                    if (!pip.enabled && !srcDriver && !dstDriver) {
+                        alert(`Failed to toggle pip. Both ${pip.source} and ${pip.destination} have no driver.`);
+                        return;
+                    }
+
+                    if (!pip.enabled && srcDriver && dstDriver) {
+                        alert(`Failed to toggle pip. Both ${pip.source} and ${pip.destination} already have drivers.`);
+                        return;
+                    }
+
+                    if (!pip.enabled) {
+                        if (srcDriver) {
+                            setDriver(pip.source, pip.destination);
+                        } else {
+                            setDriver(pip.destination, pip.source);
+                        }
+                    } else {
+                        if (srcDriver && drivers[pip.source] === pip.destination) {
+                            removeDriver(pip.source);
+                        }
+
+                        if (dstDriver && drivers[pip.destination] === pip.source) {
+                            removeDriver(pip.destination);
+                        }
+                    }
+
                     return;
+                } else {
+                    if (!pip.enabled && hasDriver(pip.destination)) {
+                        alert(`Failed to toggle pip. Net ${pip.destination} already has a driver.`);
+                        return;
+                    }
+
+                    pip.enabled ? removeDriver(pip.destination) : setDriver(pip.source, pip.destination);
                 }
 
-                pip.enabled ? removeDriver(pip.destination) : setDriver(pip.source, pip.destination);
-
                 onToggle(index);
-
             }}
         />
     );
@@ -283,8 +312,21 @@ const BusNetDisplay = React.memo(({ net, tick }: { net: Net; tick: number }) => 
 // --- Main renderer ---
 
 const LogicCellRenderer = () => {
-    const { logicCells, switchMatrices, pips, ioBanks, busNets, togglePip, selectMatrix, selectCell, toggleIONet, simulate, tick, hasDriver, setDriver} =
-        useSimulator();
+    const {
+        logicCells,
+        switchMatrices,
+        pips,
+        ioBanks,
+        busNets,
+        togglePip,
+        selectMatrix,
+        selectCell,
+        toggleIONet,
+        simulate,
+        tick,
+        hasDriver,
+        setDriver,
+    } = useSimulator();
 
     return (
         <g>
@@ -301,7 +343,7 @@ const LogicCellRenderer = () => {
                 <IODisplay key={bank.id} bank={bank} index={i} tick={tick} onToggle={toggleIONet} onSimulate={simulate} />
             ))}
             {pips.map((pip, i) => (
-                <PipDisplay key={i} pip={pip} index={i} onToggle={togglePip}/>
+                <PipDisplay key={i} pip={pip} index={i} onToggle={togglePip} />
             ))}
         </g>
     );

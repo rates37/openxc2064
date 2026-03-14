@@ -767,7 +767,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
                 destination: "net_B",
                 enabled: false,
                 pos: { x: -CELL_WIDTH / 2 - 40, y: 120 },
-                bidirectional: true,
+                bidirectional: false,
             },
             {
                 id: "pip_v2_0",
@@ -775,7 +775,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
                 destination: "net_C",
                 enabled: false,
                 pos: { x: -CELL_WIDTH / 2 - 40, y: 180 },
-                bidirectional: true,
+                bidirectional: false,
             },
             {
                 id: "pip_v2_0",
