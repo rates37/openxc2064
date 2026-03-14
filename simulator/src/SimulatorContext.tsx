@@ -23,6 +23,7 @@ interface SimulatorContextValue {
   pips: Pip[];
   ioBanks: IOBank[];
   busNets: Net[];
+  drivers: { source: string; destination: string }[]; 
 
   // -- Functions --
   // Add callable functions here. For example:
@@ -44,6 +45,11 @@ interface SimulatorContextValue {
   setCursorPos: (pos: { x: number; y: number } | null) => void;
   exportState: () => void;
   importState: () => void;
+  setDriver(source: string | null, destination: string): void;
+  removeDriver(destination: string): void;
+  hasDriver(dest): boolean;
+
+
 
   // To add more functions, declare them in this interface and
   // implement them inside SimulatorProvider below.
@@ -78,8 +84,28 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [pips, setPips] = useState<Pip[]>([]);
   const [ioBanks, setIoBanks] = useState<IOBank[]>([]);
   const [busNets, setBusNets] = useState<Net[]>([]);
+  const [drivers, setDrivers] = useState<{ source: string; destination: string }[]>([]);
+
+  const setDriver = useCallback((source: string, destination: string) => {
+    console.log(source, destination);
+    setDrivers(prev => {
+      return [...prev, { source, destination }];
+    });
+  }, []);
+
+  const removeDriver = useCallback((destination: string) => {
+    setDrivers(prev => prev.filter(d => d.destination !== destination));
+  }, []);
+
+  const hasDriver = useCallback((destination: string) => {
+    return drivers.some(d => d.destination === destination);
+  }, [drivers]);
+
 
   const togglePip = useCallback((index: number) => {
+    const current_pips = pips;
+    const pip = current_pips[index];
+
     setPips(prev => prev.map((pip, i) => i === index ? { ...pip, enabled: !pip.enabled } : pip));
   }, []);
 
@@ -357,7 +383,11 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     cursorPos,
     setCursorPos,
     exportState,
-    importState
+    importState,
+    drivers,
+    setDriver,
+    removeDriver,
+    hasDriver,
   };
 
   return (
@@ -482,6 +512,7 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
         let destination = pip.destination;
 
         if (!source.startsWith("net")) {
+
           let direction, device;
 
           if (source.split(".")[0].length <= 2) {

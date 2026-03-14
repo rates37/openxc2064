@@ -205,7 +205,7 @@ function drawBusNet(ctx: CanvasRenderingContext2D, net: Net) {
 // --- Main component ---
 
 const SimulationCanvas: React.FC = () => {
-  const { logicCells, switchMatrices, pips, ioBanks, busNets, showGrid, togglePip, selectMatrix, selectCell, toggleIONet, simulate, tick } = useSimulator();
+  const { logicCells, switchMatrices, pips, ioBanks, busNets, showGrid, togglePip, selectMatrix, selectCell, toggleIONet, simulate, tick, drivers, hasDriver, setDriver, removeDriver } = useSimulator();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewBox, setViewBox] = useState(INITIAL_VIEW);
@@ -310,7 +310,18 @@ const SimulationCanvas: React.FC = () => {
         world.y >= pip.pos.y - PIP_HEIGHT / 2 &&
         world.y <= pip.pos.y + PIP_HEIGHT / 2
       ) {
+
+        if (!pip.enabled && hasDriver(pip.destination)) {
+          alert(`Cannot enable PIP ${pip.id} because destination (${pip.destination}) net already has a driver.`);
+          return;
+        }
+
+        console.log(pip);
+        
+        const driver = pip.enabled ? removeDriver(pip.destination) : setDriver(pip.source, pip.destination);
+        
         togglePip(i);
+        console.log(drivers);
         return;
       }
     }

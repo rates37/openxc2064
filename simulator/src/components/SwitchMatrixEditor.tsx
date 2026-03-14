@@ -22,7 +22,7 @@ const NODE_POSITIONS: { x: number; y: number }[] = [
 const NET_LABELS = ['0', '1', '2', '3', '4', '5', '6', '7'];
 
 const SwitchMatrixEditor: React.FC = () => {
-    const { selectedMatrix, selectMatrix, switchMatrices, saveMatrixConnections } = useSimulator();
+    const { selectedMatrix, selectMatrix, switchMatrices, saveMatrixConnections, drivers, hasDriver, setDriver, removeDriver } = useSimulator();
 
     const [localConnections, setLocalConnections] = useState<number[][]>([]);
     const [selectedNode, setSelectedNode] = useState<number | null>(null);
@@ -38,6 +38,7 @@ const SwitchMatrixEditor: React.FC = () => {
 
     const matrixIndex = switchMatrices.indexOf(selectedMatrix);
     const { possibleConnections } = selectedMatrix;
+    
 
     const handleNodeClick = (index: number) => {
         if (selectedNode === null) {
@@ -45,10 +46,48 @@ const SwitchMatrixEditor: React.FC = () => {
         } else if (selectedNode === index) {
             setSelectedNode(null);
         } else {
+            const n1 = selectedMatrix.nets[selectedNode];
+            const n2 = selectedMatrix.nets[index];
+            
             // Toggle connection between selectedNode and index
             if (possibleConnections[selectedNode][index]) {
+                let localDriver = null;
+                if (!localConnections[selectedNode][index] && !localConnections[index][selectedNode]) {
+                    console.log("Creating Connection")
+                    if (hasDriver(n1.id)) {
+                        if (hasDriver(n2.id)) {
+                            alert(`Cannot connect net ${n1.id} to ${n2.id} because both have drivers. Please remove one driver first.`);
+                            return;
+                        }
+                        
+                        setDriver(n1.id, n2.id);
+                        localDriver = n1.id;
+                    } else {
+                        if (hasDriver(n2.id)) {
+                            setDriver(n2.id, n1.id);
+                            localDriver = n2.id;
+                        } else {
+                            alert(`No drivers on either net. Please set a driver on one of them before connecting.`)
+                            return;
+                        }
+                    }
+                } else {
+                    if (localConnections[index][selectedNode]) {
+                        console.log(`Removing Connection - driver = ${n2.id}`)
+                        removeDriver(n1.id);
+                        localDriver = n2.id;
+                    }
+
+                    if (localConnections[selectedNode][index]) {
+                        console.log(`Removing Connection - driver = ${n1.id}`)
+                        console.log("Removing Connection")
+                        removeDriver(n2.id);
+                        localDriver = n1.id;
+                    }
+                }
+
                 setLocalConnections(prev => prev.map((r, i) =>
-                    i === selectedNode ? r.map((c, j) => j === index ? (c ? 0 : 1) : c) : [...r]
+                    i === (localDriver == n1.id ? selectedNode : index) ? r.map((c, j) => j === (localDriver == n2.id ? selectedNode : index) ? (c ? 0 : 1) : c) : [...r]
                 ));
             }
             setSelectedNode(null);
