@@ -5,10 +5,10 @@ import { CELL_WIDTH, CELL_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIG
 export type ConfigTypes = "logic_cell" | "bus" | "switch_matrix" | "io";
 
 
-export default function getConfig(device: ConfigTypes, idx: number): any {
+export default function getConfig(device: ConfigTypes, id: string): any {
     switch (device) {
         case "logic_cell": {
-            const matches = logic_cell_config.filter(config => config.idxs.includes(idx));
+            const matches = logic_cell_config.filter(config => config.ids.includes(id));
             if (matches.length === 0) return undefined;
             const allNets = matches.flatMap(m => m.nets);
             const netMap = new Map<string, Net>();
@@ -24,14 +24,14 @@ export default function getConfig(device: ConfigTypes, idx: number): any {
         case "bus":
             return bus_config;
         case "switch_matrix": {
-            const config = switch_matrix_config.find(config => config.idxs.includes(idx));
+            const config = switch_matrix_config.find(config => config.ids.includes(id));
             return config?.matrices.map(matrix => ({
                 nets: matrix?.nets.map(net => ({ ...net, points: net.points.map(p => ({ ...p })) })),
                 pos: matrix?.pos ? { ...matrix.pos } : undefined
             }));
         }
         case "io": {
-            const config = io_config.find(config => config.idxs.includes(idx));
+            const config = io_config.find(config => config.ids.includes(id));
             return config?.io_bank.map(io_bank => ({
                 nets: io_bank?.nets.map(net => ({ ...net, points: net.points.map(p => ({ ...p })) })),
                 pos: io_bank?.pos ? { ...io_bank.pos } : undefined
@@ -43,13 +43,50 @@ export default function getConfig(device: ConfigTypes, idx: number): any {
 
 }
 
-function range(start: number, end: number): number[] {
-    return Array.from({ length: end - start + 1 }, (_, i) => i + start);
+function id_range(expr: string): string[] {
+    const parts: string[][] = [];
+    let i = 0;
+
+    while (i < expr.length) {
+        if (expr[i] === "[") {
+            const end = expr.indexOf("]", i);
+            const inside = expr.slice(i + 1, end); // e.g. A-H
+            const [a, b] = inside.split("-");
+
+            const start = a.charCodeAt(0);
+            const stop = b.charCodeAt(0);
+
+            const chars: string[] = [];
+            for (let c = start; c <= stop; c++) {
+                chars.push(String.fromCharCode(c));
+            }
+
+            parts.push(chars);
+            i = end + 1;
+        } else {
+            parts.push([expr[i]]);
+            i++;
+        }
+    }
+
+    // cartesian product
+    return parts.reduce<string[]>(
+        (acc, set) => acc.flatMap(a => set.map(b => a + b)),
+        [""]
+    );
 }
 
-const logic_cell_config: { idxs: number[], nets: Net[], pips: Pip[] }[] = [
+
+
+const logic_cell_config: { ids: string[], nets: Net[], pips: Pip[] }[] = [
     {
-        idxs: [range(0, 64)].flat(),
+        /**
+         * 
+         * DEFAULT CONFIG
+         * 
+         */
+        // "Defualt" config for all cells. Only needed because the internals of each CLB (muxes, luts, clks, etc) need to be initialised for the simulation to work.
+        ids: id_range("[A-H][A-H]"),
         nets: [
             // Init all nets
             { id: "net_A", value: false, points: [] },
@@ -77,126 +114,243 @@ const logic_cell_config: { idxs: number[], nets: Net[], pips: Pip[] }[] = [
         ],
         pips: []
     },
+
+    /**
+     * 
+     * PIN A CONFIGURATION
+     * 
+     */
     {
-        idxs: [range(9, 14), range(17, 22), range(25, 30), range(33, 38), range(41, 46), range(49, 54)].flat(),
+        // All cells with standard pin A), 
+        // exluding top side because their pin As connect to the IO banks, 
+        // and exclduing the left side, because the pin As connect to M2 and M3 of the northern cell, not the north west cell
+        ids: id_range("[B-H][B-H]"),
         nets: [
             { id: "net_A", value: false, points: [{ x: 60, y: -CELL_HEIGHT / 2 }, { x: 60, y: -(CELL_HEIGHT / 2 + 160) }] },
-            { id: "net_B", value: false, points: [{ x: -CELL_WIDTH / 2, y: -40 }, { x: -CELL_WIDTH / 2 - 240, y: -40 }] },
-            { id: "net_C", value: false, points: [{ x: -CELL_WIDTH / 2, y: 20 }, { x: -CELL_WIDTH / 2 - 240, y: 20 }] },
-            { id: "net_D", value: false, points: [{ x: 0, y: CELL_HEIGHT / 2 }, { x: 0, y: CELL_HEIGHT / 2 + 180 }] },
-            { id: "net_K", value: false, points: [{ x: -CELL_WIDTH / 2, y: 80 }, { x: -CELL_WIDTH / 2 - 80, y: 80 }] },
-            { id: "net_X", value: false, points: [{ x: CELL_WIDTH / 2, y: 20 }, { x: CELL_WIDTH / 2 + 40, y: 20 }, { x: CELL_WIDTH / 2 + 40, y: -100 }, { x: CELL_WIDTH / 2 + 220, y: -100 }, { x: CELL_WIDTH / 2 + 40, y: -100 }, { x: CELL_WIDTH / 2 + 40, y: -360 }, { x: -CELL_WIDTH / 2 - 40, y: -360 }, { x: -CELL_WIDTH / 2 - 40, y: -540 }, { x: CELL_WIDTH / 2 + 40, y: 20, continuous: false }, { x: CELL_WIDTH / 2 + 40, y: 180 }, { x: CELL_WIDTH / 2, y: 180 }, { x: CELL_WIDTH / 2, y: 360 }, { x: CELL_WIDTH / 2 - 240, y: 360 }, { x: CELL_WIDTH / 2 - 240, y: 520 }] },
-            { id: "net_Y", value: false, points: [{ x: CELL_WIDTH / 2, y: 140 }, { x: CELL_WIDTH / 2 + 240, y: 140 }, { x: CELL_WIDTH / 2 + 200, y: 140 }, { x: CELL_WIDTH / 2 + 200, y: -40 }] },
         ],
         pips: [
             { id: "pip_0", source: "NW_M0.net_2", destination: "net_A", enabled: false, pos: { x: 160, y: -160 }, bidirectional: false },
             { id: "pip_1", source: "NW_M0.net_3", destination: "net_A", enabled: false, pos: { x: 160, y: -140 }, bidirectional: false },
             { id: "pip_2", source: "NW_M1.net_2", destination: "net_A", enabled: false, pos: { x: 160, y: -120 }, bidirectional: false },
             { id: "pip_3", source: "NW_M1.net_3", destination: "net_A", enabled: false, pos: { x: 160, y: -100 }, bidirectional: false },
-            { id: "pip_4", source: "W_M0.net_0", destination: "net_B", enabled: false, pos: { x: -240, y: 120 }, bidirectional: false },
-            { id: "pip_5", source: "W_M0.net_1", destination: "net_B", enabled: false, pos: { x: -220, y: 120 }, bidirectional: false },
-            { id: "pip_6", source: "W_M1.net_0", destination: "net_B", enabled: false, pos: { x: -200, y: 120 }, bidirectional: false },
-            { id: "pip_7", source: "W_M1.net_1", destination: "net_B", enabled: false, pos: { x: -180, y: 120 }, bidirectional: false },
-            { id: "pip_8", source: "W_M0.net_0", destination: "net_C", enabled: false, pos: { x: -240, y: 180 }, bidirectional: false },
-            { id: "pip_9", source: "W_M0.net_1", destination: "net_C", enabled: false, pos: { x: -220, y: 180 }, bidirectional: false },
-            { id: "pip_10", source: "W_M1.net_0", destination: "net_C", enabled: false, pos: { x: -200, y: 180 }, bidirectional: false },
-            { id: "pip_11", source: "W_M1.net_1", destination: "net_C", enabled: false, pos: { x: -180, y: 180 }, bidirectional: false },
-            { id: "pip_12", source: "W_M0.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 80 }, bidirectional: false },
-            { id: "pip_13", source: "W_M0.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 100 }, bidirectional: false },
-            { id: "pip_14", source: "W_M1.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 120 }, bidirectional: false },
-            { id: "pip_15", source: "W_M1.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 }, bidirectional: false },
-            { id: "pip_16", source: "net_X", destination: "T_M0.net_1", enabled: false, pos: { x: 300, y: 60 }, bidirectional: false },
-            { id: "pip_17", source: "net_X", destination: "T_M1.net_1", enabled: false, pos: { x: 340, y: 60 }, bidirectional: false },
-            { id: "pip_18", source: "net_Y", destination: "T_M0.net_0", enabled: false, pos: { x: 280, y: 300 }, bidirectional: false },
-            { id: "pip_19", source: "net_Y", destination: "T_M1.net_0", enabled: false, pos: { x: 320, y: 300 }, bidirectional: false },
-            { id: "pip_20", source: "net_X", destination: "N.net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: -200 }, bidirectional: false },
-            { id: "pip_21", source: "net_X", destination: "N.net_C", enabled: false, pos: { x: -40, y: -380 }, bidirectional: false },
-            { id: "pip_21", source: "net_X", destination: "S.net_A", enabled: false, pos: { x: CELL_HEIGHT / 2 + 0, y: 520 }, bidirectional: false },
-            { id: "pip_21", source: "net_X", destination: "S.net_B", enabled: false, pos: { x: -40, y: 680 }, bidirectional: false },
-            { id: "pip_21", source: "net_Y", destination: "E.net_B", enabled: false, pos: { x: 400, y: CELL_HEIGHT / 2 - 40 }, bidirectional: false },
-            { id: "pip_clk", source: "global.net_clk", destination: "net_K", enabled: false, pos: { x: -60, y: 240 }, bidirectional: false },
-
         ]
     },
-
     {
-        idxs: [8, 16, 24, 32, 40, 48].flat(),
+        // Port A, for all cells on the left edge except the top left corner (AA).
+        ids: id_range("[B-H]A"),
         nets: [
             { id: "net_A", value: false, points: [{ x: 60, y: -CELL_HEIGHT / 2 }, { x: 60, y: -(CELL_HEIGHT / 2 + 160) }] },
-            { id: "net_B", value: false, points: [{ x: -CELL_WIDTH / 2, y: -40 }, { x: -CELL_WIDTH / 2 - 320, y: -40 }] },
-            { id: "net_C", value: false, points: [{ x: -CELL_WIDTH / 2, y: 20 }, { x: -CELL_WIDTH / 2 - 320, y: 20 }] },
-            { id: "net_D", value: false, points: [{ x: 0, y: CELL_HEIGHT / 2 }, { x: 0, y: CELL_HEIGHT / 2 + 180 }] },
-            { id: "net_K", value: false, points: [{ x: -CELL_WIDTH / 2, y: 80 }, { x: -CELL_WIDTH / 2 - 180, y: 80 }] },
-            { id: "net_X", value: false, points: [{ x: CELL_WIDTH / 2, y: 20 }, { x: CELL_WIDTH / 2 + 40, y: 20 }, { x: CELL_WIDTH / 2 + 40, y: -100 }, { x: CELL_WIDTH / 2 + 220, y: -100 }, { x: CELL_WIDTH / 2 + 40, y: -100 }, { x: CELL_WIDTH / 2 + 40, y: -360 }, { x: -CELL_WIDTH / 2 - 40, y: -360 }, { x: -CELL_WIDTH / 2 - 40, y: -540 }, { x: CELL_WIDTH / 2 + 40, y: 20, continuous: false }, { x: CELL_WIDTH / 2 + 40, y: 180 }, { x: CELL_WIDTH / 2, y: 180 }, { x: CELL_WIDTH / 2, y: 360 }, { x: CELL_WIDTH / 2 - 240, y: 360 }, { x: CELL_WIDTH / 2 - 240, y: 520 }] },
-            { id: "net_Y", value: false, points: [{ x: CELL_WIDTH / 2, y: 140 }, { x: CELL_WIDTH / 2 + 240, y: 140 }, { x: CELL_WIDTH / 2 + 200, y: 140 }, { x: CELL_WIDTH / 2 + 200, y: -40 }] },
         ],
         pips: [
             { id: "pip_0", source: "N_M2.net_2", destination: "net_A", enabled: false, pos: { x: 160, y: -160 }, bidirectional: false },
             { id: "pip_1", source: "N_M2.net_3", destination: "net_A", enabled: false, pos: { x: 160, y: -140 }, bidirectional: false },
             { id: "pip_2", source: "N_M3.net_2", destination: "net_A", enabled: false, pos: { x: 160, y: -120 }, bidirectional: false },
             { id: "pip_3", source: "N_M3.net_3", destination: "net_A", enabled: false, pos: { x: 160, y: -100 }, bidirectional: false },
-            { id: "pip_3", source: "T_M2.net_0", destination: "net_B", enabled: false, pos: { x: -300, y: 120 }, bidirectional: false },
-            { id: "pip_3", source: "T_M2.net_1", destination: "net_B", enabled: false, pos: { x: -280, y: 120 }, bidirectional: false },
-            { id: "pip_3", source: "T_M3.net_0", destination: "net_B", enabled: false, pos: { x: -260, y: 120 }, bidirectional: false },
-            { id: "pip_3", source: "T_M3.net_1", destination: "net_B", enabled: false, pos: { x: -240, y: 120 }, bidirectional: false },
-            { id: "pip_3", source: "T_M2.net_0", destination: "net_C", enabled: false, pos: { x: -300, y: 180 }, bidirectional: false },
-            { id: "pip_3", source: "T_M2.net_1", destination: "net_C", enabled: false, pos: { x: -280, y: 180 }, bidirectional: false },
-            { id: "pip_3", source: "T_M3.net_0", destination: "net_C", enabled: false, pos: { x: -260, y: 180 }, bidirectional: false },
-            { id: "pip_3", source: "T_M3.net_1", destination: "net_C", enabled: false, pos: { x: -240, y: 180 }, bidirectional: false },
-            { id: "pip_12", source: "T_M2.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 80 }, bidirectional: false },
-            { id: "pip_13", source: "T_M2.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 100 }, bidirectional: false },
-            { id: "pip_14", source: "T_M3.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 120 }, bidirectional: false },
-            { id: "pip_15", source: "T_M3.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 }, bidirectional: false },
-            { id: "pip_16", source: "net_X", destination: "T_M0.net_1", enabled: false, pos: { x: 300, y: 60 }, bidirectional: false },
-            { id: "pip_17", source: "net_X", destination: "T_M1.net_1", enabled: false, pos: { x: 340, y: 60 }, bidirectional: false },
-            { id: "pip_18", source: "net_Y", destination: "T_M0.net_0", enabled: false, pos: { x: 280, y: 300 }, bidirectional: false },
-            { id: "pip_19", source: "net_Y", destination: "T_M1.net_0", enabled: false, pos: { x: 320, y: 300 }, bidirectional: false },
-            { id: "pip_20", source: "net_X", destination: "N.net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: -200 }, bidirectional: false },
-            { id: "pip_21", source: "net_X", destination: "N.net_C", enabled: false, pos: { x: -40, y: -380 }, bidirectional: false },
-            { id: "pip_21", source: "net_Y", destination: "S.net_A", enabled: false, pos: { x: CELL_HEIGHT / 2 + 0, y: 520 }, bidirectional: false },
-            { id: "pip_21", source: "net_Y", destination: "S.net_B", enabled: false, pos: { x: -40, y: 680 }, bidirectional: false },
-            { id: "pip_21", source: "net_Y", destination: "E.net_B", enabled: false, pos: { x: 400, y: CELL_HEIGHT / 2 - 40 }, bidirectional: false },
-            { id: "pip_clk", source: "global.net_clk", destination: "net_K", enabled: false, pos: { x: -160, y: 240 }, bidirectional: false },
+        ]
 
-        ]
     },
+
+    /**
+     * 
+     * PIN B CONFIGURATION
+     *
+     */
+    
     {
-        idxs: [0, 8, 16, 32, 40, 48].flat(),
-        nets: [],
-        pips: [
-            { id: "pip_0", source: "T_IO1.net_O", destination: "T_M3.net_3", enabled: false, pos: { x: -140, y: 460 }, bidirectional: false },
-        ]
-    },
-    {
-        idxs: [0, 8, 16, 32, 40, 48, 24].flat(),
-        nets: [],
-        pips: [
-            { id: "pip_0", source: "T_IO0.net_O", destination: "net_B", enabled: false, pos: { x: -60, y: 120 }, bidirectional: false },
-            { id: "pip_0", source: "T_IO0.net_O", destination: "T_M3.net_2", enabled: false, pos: { x: -60, y: 440 }, bidirectional: false },
-        ]
-    },
-    {
-        idxs: [range(1, 7)].flat(),
+        // All cells with the standard pin B, 
+        // only excludes the left edge, as the wires are extended to meet with the IO channels
+        ids: id_range("[A-H][B-H]"),
         nets: [
             { id: "net_B", value: false, points: [{ x: -CELL_WIDTH / 2, y: -40 }, { x: -CELL_WIDTH / 2 - 240, y: -40 }] },
-            { id: "net_C", value: false, points: [{ x: -CELL_WIDTH / 2, y: 20 }, { x: -CELL_WIDTH / 2 - 240, y: 20 }] },
         ],
         pips: [
             { id: "pip_4", source: "W_M0.net_0", destination: "net_B", enabled: false, pos: { x: -240, y: 120 }, bidirectional: false },
             { id: "pip_5", source: "W_M0.net_1", destination: "net_B", enabled: false, pos: { x: -220, y: 120 }, bidirectional: false },
             { id: "pip_6", source: "W_M1.net_0", destination: "net_B", enabled: false, pos: { x: -200, y: 120 }, bidirectional: false },
             { id: "pip_7", source: "W_M1.net_1", destination: "net_B", enabled: false, pos: { x: -180, y: 120 }, bidirectional: false },
+        ]
+    },
+    {
+        // Port B, for all cells on the left edge
+        ids: id_range("[A-H]A"),
+        nets: [
+            { id: "net_B", value: false, points: [{ x: -CELL_WIDTH / 2, y: -40 }, { x: -CELL_WIDTH / 2 - 240 - 60, y: -40 }] },
+        ],
+        pips: [
+            { id: "pip_4", source: "T_M2.net_0", destination: "net_B", enabled: false, pos: { x: -240 - 60, y: 120 }, bidirectional: false },
+            { id: "pip_5", source: "T_M2.net_1", destination: "net_B", enabled: false, pos: { x: -220 - 60, y: 120 }, bidirectional: false },
+            { id: "pip_6", source: "T_M3.net_0", destination: "net_B", enabled: false, pos: { x: -200 - 60, y: 120 }, bidirectional: false },
+            { id: "pip_7", source: "T_M3.net_1", destination: "net_B", enabled: false, pos: { x: -180 - 60, y: 120 }, bidirectional: false },
+        ]
+
+
+    },
+
+    /**
+     * 
+     * PIN C CONFIGURATION
+     * 
+     */
+    {
+        // All cells with the standard pin C,
+        ids: id_range("[A-H][B-H]"),
+        nets: [
+            { id: "net_C", value: false, points: [{ x: -CELL_WIDTH / 2, y: 20 }, { x: -CELL_WIDTH / 2 - 240, y: 20 }] },
+        ],
+        pips: [
             { id: "pip_8", source: "W_M0.net_0", destination: "net_C", enabled: false, pos: { x: -240, y: 180 }, bidirectional: false },
             { id: "pip_9", source: "W_M0.net_1", destination: "net_C", enabled: false, pos: { x: -220, y: 180 }, bidirectional: false },
             { id: "pip_10", source: "W_M1.net_0", destination: "net_C", enabled: false, pos: { x: -200, y: 180 }, bidirectional: false },
             { id: "pip_11", source: "W_M1.net_1", destination: "net_C", enabled: false, pos: { x: -180, y: 180 }, bidirectional: false },
         ]
-    }
+
+    },
+    {
+        // Port C, for all cells on the left edge 
+        ids: id_range("[A-H]A"),
+        nets: [
+            
+            { id: "net_C", value: false, points: [{ x: -CELL_WIDTH / 2, y: 20 }, { x: -CELL_WIDTH / 2 - 240 - 60, y: 20 }] },
+        ],
+        pips: [
+           
+            { id: "pip_8", source: "T_M2.net_0", destination: "net_C", enabled: false, pos: { x: -240 - 60, y: 180 }, bidirectional: false },
+            { id: "pip_9", source: "T_M2.net_1", destination: "net_C", enabled: false, pos: { x: -220 - 60, y: 180 }, bidirectional: false },
+            { id: "pip_10", source: "T_M3.net_0", destination: "net_C", enabled: false, pos: { x: -200 - 60, y: 180 }, bidirectional: false },
+            { id: "pip_11", source: "T_M3.net_1", destination: "net_C", enabled: false, pos: { x: -180 - 60, y: 180 }, bidirectional: false },
+        ]
+    },
+    
+    /**
+     * 
+     * PIN D CONFIGURATION
+     * 
+     */
+    {
+        // All standard pin D cells. doesn't include bottom because of the extra length on the wire, and doesnt include left + right sides because they connect to the M2/M3 extra switches.
+        ids: id_range("[A-G][B-G]"),
+        nets: [
+            { id: "net_D", value: false, points: [{ x: 0, y: CELL_HEIGHT / 2 }, { x: 0, y: CELL_HEIGHT / 2 + 180 }] },
+        ],
+        pips: [
+            { id: "pip_12", source: "W_M0.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 80 }, bidirectional: false },
+            { id: "pip_13", source: "W_M0.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 100 }, bidirectional: false },
+            { id: "pip_14", source: "W_M1.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 120 }, bidirectional: false },
+            { id: "pip_15", source: "W_M1.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 }, bidirectional: false },
+        ]
+    },
+    {
+        // Left edge pin D M2/M3 connections
+        ids: id_range("[A-G]A"),
+        nets: [
+            { id: "net_D", value: false, points: [{ x: 0, y: CELL_HEIGHT / 2 }, { x: 0, y: CELL_HEIGHT / 2 + 180 }] },
+        ],
+        pips: [
+            { id: "pip_12", source: "T_M2.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 80 }, bidirectional: false },
+            { id: "pip_13", source: "T_M2.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 100 }, bidirectional: false },
+            { id: "pip_14", source: "T_M3.net_2", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 120 }, bidirectional: false },
+            { id: "pip_15", source: "T_M3.net_3", destination: "net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 }, bidirectional: false },
+        ]
+    },
+
+    /**
+     * 
+     * PIN K CONFIGURATION
+     * 
+     */
+    {
+        // All cells but the left edge
+        ids: id_range("[A-H][B-H]"),
+        nets: [
+            { id: "net_K", value: false, points: [{ x: -CELL_WIDTH / 2, y: 80 }, { x: -CELL_WIDTH / 2 - 80, y: 80 }] },
+        ],
+        pips: [
+            { id: "pip_clk", source: "global.net_clk", destination: "net_K", enabled: false, pos: { x: -60, y: 240 }, bidirectional: false },
+        ]
+    },
+    {
+        // Left edge
+        ids: id_range("[A-H]A"),
+        nets: [
+            { id: "net_K", value: false, points: [{ x: -CELL_WIDTH / 2, y: 80 }, { x: -CELL_WIDTH / 2 - 180, y: 80 }] },
+        ],
+        pips: [
+            { id: "pip_clk", source: "global.net_clk", destination: "net_K", enabled: false, pos: { x: -160, y: 240 }, bidirectional: false },
+        ]
+    },
+
+    /**
+     * 
+     * PIN X CONFIGURATION
+     * 
+     */
+    {
+        // Everything but the top and bottom because there are no local cell connections above/below them, as well as the right edge needing custom IO connections
+        ids: id_range("[B-G][A-G]"),
+        nets: [
+            { id: "net_X", value: false, points: [{ x: CELL_WIDTH / 2, y: 20 }, { x: CELL_WIDTH / 2 + 40, y: 20 }, { x: CELL_WIDTH / 2 + 40, y: -100 }, { x: CELL_WIDTH / 2 + 220, y: -100 }, { x: CELL_WIDTH / 2 + 40, y: -100 }, { x: CELL_WIDTH / 2 + 40, y: -360 }, { x: -CELL_WIDTH / 2 - 40, y: -360 }, { x: -CELL_WIDTH / 2 - 40, y: -540 }, { x: CELL_WIDTH / 2 + 40, y: 20, continuous: false }, { x: CELL_WIDTH / 2 + 40, y: 180 }, { x: CELL_WIDTH / 2, y: 180 }, { x: CELL_WIDTH / 2, y: 360 }, { x: CELL_WIDTH / 2 - 240, y: 360 }, { x: CELL_WIDTH / 2 - 240, y: 520 }] },
+        ],
+        pips: [
+            { id: "pip_16", source: "net_X", destination: "T_M0.net_1", enabled: false, pos: { x: 300, y: 60 }, bidirectional: false },
+            { id: "pip_17", source: "net_X", destination: "T_M1.net_1", enabled: false, pos: { x: 340, y: 60 }, bidirectional: false },
+            { id: "pip_20", source: "net_X", destination: "N.net_D", enabled: false, pos: { x: CELL_WIDTH / 2, y: -200 }, bidirectional: false },
+            { id: "pip_21", source: "net_X", destination: "N.net_C", enabled: false, pos: { x: -40, y: -380 }, bidirectional: false },
+            { id: "pip_21", source: "net_X", destination: "S.net_A", enabled: false, pos: { x: CELL_HEIGHT / 2 + 0, y: 520 }, bidirectional: false },
+            { id: "pip_21", source: "net_X", destination: "S.net_B", enabled: false, pos: { x: -40, y: 680 }, bidirectional: false },
+        ]
+    },
+
+
+    /**
+     * 
+     * PIN Y CONFIGURATION
+     * 
+     */
+    {
+        // Everything but the right edge
+        ids: id_range("[A-H][A-G]"),
+        nets: [
+            { id: "net_Y", value: false, points: [{ x: CELL_WIDTH / 2, y: 140 }, { x: CELL_WIDTH / 2 + 240, y: 140 }, { x: CELL_WIDTH / 2 + 200, y: 140 }, { x: CELL_WIDTH / 2 + 200, y: -40 }] },
+        ],
+        pips: [
+            { id: "pip_18", source: "net_Y", destination: "T_M0.net_0", enabled: false, pos: { x: 280, y: 300 }, bidirectional: false },
+            { id: "pip_19", source: "net_Y", destination: "T_M1.net_0", enabled: false, pos: { x: 320, y: 300 }, bidirectional: false },
+            { id: "pip_21", source: "net_Y", destination: "E.net_B", enabled: false, pos: { x: 400, y: CELL_HEIGHT / 2 - 40 }, bidirectional: false },
+        ]
+    },
+
+    /**
+     * 
+     * IO BANK CONFIGURATIONS
+     * 
+     */
+
+    /**
+     * LEFT BANKS
+     */
+    {
+        ids: [...id_range("[A-C]A"), ...id_range("[E-G]A")],
+        nets: [],
+        pips: [
+            { id: "pip_0", source: "T_IO1.net_O", destination: "T_M3.net_3", enabled: false, pos: { x: -140, y: 460 }, bidirectional: false },
+        ]
+    },
+    {
+        ids: id_range("[A-G]A"),
+        nets: [],
+        pips: [
+            { id: "pip_0", source: "T_IO0.net_O", destination: "net_B", enabled: false, pos: { x: -60, y: 120 }, bidirectional: false },
+            { id: "pip_0", source: "T_IO0.net_O", destination: "T_M3.net_2", enabled: false, pos: { x: -60, y: 440 }, bidirectional: false },
+        ]
+    },
+
+
+
 ]
 
-const switch_matrix_config: { idxs: number[], matrices: { nets: Net[], pos: { x: number, y: number } }[] }[] = [
+const switch_matrix_config: { ids: string[], matrices: { nets: Net[], pos: { x: number, y: number } }[] }[] = [
     {
-        idxs: [range(1, 6), range(9, 14), range(17, 22), range(25, 30), range(33, 38), range(41, 46), range(49, 54)].flat(),
+        ids: [...id_range("A[B-G]"), ...id_range("[B-G][B-G]")],
         matrices: [
             {
                 pos: { x: CELL_WIDTH / 2 + 90, y: 250 },
@@ -221,7 +375,7 @@ const switch_matrix_config: { idxs: number[], matrices: { nets: Net[], pos: { x:
     },
 
     {
-        idxs: [8, 16, 24, 32, 40, 48].flat(),
+        ids: id_range("[B-G]A"),
         matrices: [
             {
                 pos: { x: CELL_WIDTH / 2 + 90, y: 250 },
@@ -263,9 +417,9 @@ const switch_matrix_config: { idxs: number[], matrices: { nets: Net[], pos: { x:
     }
 ]
 
-const io_config: { idxs: number[], io_bank: { nets: Net[], pos: { x: number, y: number } }[] }[] = [
+const io_config: { ids: string[], io_bank: { nets: Net[], pos: { x: number, y: number } }[] }[] = [
     {
-        idxs: [0, 8, 16, 32, 40, 48].flat(),
+        ids: [...id_range("[A-C]A"), ...id_range("[E-G]A")],
         io_bank: [
             {
                 pos: { x: -560, y: 60 },
@@ -286,7 +440,7 @@ const io_config: { idxs: number[], io_bank: { nets: Net[], pos: { x: number, y: 
         ]
     },
     {
-        idxs: [24].flat(),
+        ids: ["DA"],
         io_bank: [
             {
                 pos: { x: -560, y: 60 },

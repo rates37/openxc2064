@@ -391,7 +391,7 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
   const matrices: SwitchMatrix[] = [];
   const pips: Pip[] = [];
   const ioBanks: IOBank[] = [];
-  const busNets: Net[] = (getConfig("bus", 0) || []).map((net: Net) => ({ ...net, points: net.points.map(p => ({ ...p })) }));
+  const busNets: Net[] = (getConfig("bus", "") || []).map((net: Net) => ({ ...net, points: net.points.map(p => ({ ...p })) }));
 
   // Local resolver that operates on the arrays being built, rather than
   // the (empty) React state that exists at mount time.
@@ -419,13 +419,12 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
       // Cell Ids are letters, one for row, one for col, so top left is AA
-      let config = getConfig("logic_cell", i * COLS + j);
+      const cellId = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
+      let config = getConfig("logic_cell", cellId);
 
       if (!config) {
         config = { "nets": [], "pips": [] };
       }
-
-      const cellId = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
 
       const x = j * (CELL_WIDTH + CELL_MARGIN_X) + CELL_OFFSET_X;
       const y = i * (CELL_HEIGHT + CELL_MARGIN_Y) + CELL_OFFSET_Y;
@@ -433,7 +432,7 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
 
       cells.push(new LogicCell(cellId, { ...config, pos: { x, y } }));
 
-      const switchMatrixConfig = getConfig("switch_matrix", i * COLS + j);
+      const switchMatrixConfig = getConfig("switch_matrix", cellId);
 
       if (switchMatrixConfig) {
         switchMatrixConfig.forEach((matrixConfig, index) => {
@@ -448,7 +447,7 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
         });
       }
 
-      const ioConfig = getConfig("io", i * COLS + j);
+      const ioConfig = getConfig("io", cellId);
 
       if (ioConfig) {
         ioConfig.forEach((ioBankConfig, index) => {
@@ -468,7 +467,8 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
       // Cell Ids are letters, one for row, one for col, so top left is AA
-      let config = getConfig("logic_cell", i * COLS + j);
+      const cellId = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
+      let config = getConfig("logic_cell", cellId);
 
       if (!config) {
         config = { "nets": [], "pips": [] };
@@ -551,8 +551,8 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
 
-      const switchMatrixConfig = getConfig("switch_matrix", i * COLS + j);
       const cellId = String.fromCharCode(65 + i) + String.fromCharCode(65 + j);
+      const switchMatrixConfig = getConfig("switch_matrix", cellId);
 
       if (switchMatrixConfig) {
         switchMatrixConfig.forEach((matrixConfig, index) => {
