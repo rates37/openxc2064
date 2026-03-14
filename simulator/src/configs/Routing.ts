@@ -14,4 +14,4 @@ export const MATRIX_HEIGHT = 40;
 export const IO_WIDTH = 140;
 export const IO_HEIGHT = 200;
 
-export const CLK_TOP = -400;
+export const CLK_TOP = -240;

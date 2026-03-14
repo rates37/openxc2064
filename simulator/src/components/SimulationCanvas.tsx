@@ -2,13 +2,20 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useSimulator } from '../SimulatorContext';
 import LogicCellRenderer from './LogicCellRenderer';
 
+// Full content bounds (8x8 grid with margins)
+const CONTENT_X = -600;
+const CONTENT_Y = -600;
+const CONTENT_WIDTH = 5000;
+const CONTENT_HEIGHT = 5200;
 
+// Initial view position (top-left area showing first few cells)
+const INITIAL_VIEW = { x: -3500, y: -100, w: 7000, h: 5000 };
 
 const SimulationCanvas: React.FC = () => {
   const { logicCells, showGrid, setCursorPos } = useSimulator();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: 2000, h: 2000 });
+  const [viewBox, setViewBox] = useState(INITIAL_VIEW);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
 
@@ -109,6 +116,7 @@ const SimulationCanvas: React.FC = () => {
                 <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#7e7e7e" strokeWidth={0.5} />
               </pattern>
             </defs>
+            {/* Render grid over entire content area, not just viewBox */}
             <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#grid)" />
           </>
         )}

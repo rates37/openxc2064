@@ -29,7 +29,7 @@ const CellDisplay = React.memo(({ cell, tick, onSelect }: { cell: LogicCell; tic
         <text x={x + CELL_WIDTH / 2 - 80} y={y + CELL_HEIGHT / 2 + 23} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">C</text>
         <text x={x + CELL_WIDTH / 2} y={y + CELL_HEIGHT - 18} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">D</text>
         <text x={x + CELL_WIDTH / 2 + 80} y={y + CELL_HEIGHT / 2 + 23} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">X</text>
-        <text x={x + CELL_WIDTH / 2 + 80} y={y + CELL_HEIGHT / 2 + 142} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">Y</text>
+        <text x={x + CELL_WIDTH / 2 + 80} y={y + CELL_HEIGHT / 2 + 102} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">Y</text>
         <text x={x + CELL_WIDTH / 2 - 80} y={y + CELL_HEIGHT / 2 + 83} textAnchor="middle" dominantBaseline="middle" fontSize={24} fill="#666">K</text>
     </g>;
 });
@@ -109,7 +109,7 @@ const IODisplay = React.memo(({ bank, index, tick, onToggle, onSimulate }: { ban
 
     return <g>
         <rect
-            x={x} y={y} width={IO_WIDTH} height={IO_HEIGHT}
+            x={x} y={y} width={bank.size.width} height={bank.size.height}
             fill={isActive ? "#f76420" : "#fff"} stroke="#333" strokeWidth={5} rx={5} ry={5}
             style={{ cursor: 'pointer' }}
             onClick={(e) => { e.stopPropagation(); onToggle(index); onSimulate(); }}

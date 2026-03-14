@@ -452,10 +452,10 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
       if (ioConfig) {
         ioConfig.forEach((ioBankConfig, index) => {
           const ioBankId = `${cellId}_IO${index}`;
-          const x = j * (CELL_WIDTH + CELL_MARGIN_X) + CELL_OFFSET_X + CELL_WIDTH / 2 + ioBankConfig.pos.x - MATRIX_WIDTH / 2;
-          const y = i * (CELL_HEIGHT + CELL_MARGIN_Y) + CELL_OFFSET_Y + CELL_HEIGHT / 2 - MATRIX_HEIGHT / 2 + ioBankConfig.pos.y;
-          const ioBank = new IOBank(ioBankId, { x, y });
-          ioBank.nets = ioBankConfig.nets.map(net => ({ ...net, id: ioBankId + "." + net.id, points: net.points.map(p => ({ ...p })) }));
+          const x = j * (CELL_WIDTH + CELL_MARGIN_X) + CELL_OFFSET_X + CELL_WIDTH / 2 + ioBankConfig.pos.x - ioBankConfig.size.width / 2;
+          const y = i * (CELL_HEIGHT + CELL_MARGIN_Y) + CELL_OFFSET_Y + CELL_HEIGHT / 2 - ioBankConfig.size.height / 2 + ioBankConfig.pos.y;
+          const ioBank = new IOBank(ioBankId, { x, y }, { width: ioBankConfig.size.width, height: ioBankConfig.size.height });
+          ioBank.nets = ioBankConfig.nets.map(net => ({ ...net, id: ioBankId + "." + net.id, points: net.points.map(p => ({ ...p }))}));
 
           ioBanks.push(ioBank);
         });
@@ -534,7 +534,7 @@ const initialiseSimulation = (): { logicCells: LogicCell[], switchMatrices: Swit
           }
 
           destination = `${cells[cellIndex].id}${device}.${destination.split(".")[1]}`;
-          console.log(destination);
+          // console.log(destination);
           
         } else {
           destination = `${cells[i * COLS + j].id}.${destination}`;
