@@ -199,7 +199,10 @@ function drawIOBank(ctx: CanvasRenderingContext2D, bank: IOBank) {
 
 function drawBusNet(ctx: CanvasRenderingContext2D, net: Net) {
   if (net.points.length < 2) return;
-  drawLineSegment(ctx, 0, 0, net.points, net.value, 'rgb(68, 68, 68)');
+  const isActive = net.value;
+
+  console.log(`Drawing bus net ${net.id} with value ${net.value} and points:`, net.points);
+  drawLineSegment(ctx, 0, 0, net.points, net.value, "rgba(199, 199, 199, 1)");
 }
 
 // --- Main component ---

@@ -571,6 +571,224 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 
     /**
      *
+     * GLOBAL LONG LINE CONFIGURATION
+     *
+     */
+
+    {
+        ids: [...id_range("[A-H][A-G]")],
+        nets: [],
+        pips: [
+            {
+                id: "pip_v2_0",
+                source: "net_X",
+                destination: "global_VR.net_0",
+                enabled: false,
+                pos: { x: 420, y: 60 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global_VL.net_0",
+                destination: "net_B",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2, y: 120 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global_VL.net_0",
+                destination: "net_C",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2, y: 180 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global_VL.net_1",
+                destination: "net_K",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2 + 20, y: 240 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "net_Y",
+                destination: "global_VR.net_1",
+                enabled: false,
+                pos: { x: 440, y: 260 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global_VL.net_1",
+                destination: "net_B",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2 + 20, y: 120 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global_VL.net_1",
+                destination: "net_C",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2 + 20, y: 180 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global.net_clk",
+                destination: "net_B",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2 + 40, y: 120 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T_M0.net_2",
+                destination: "global_VR.net_1",
+                enabled: false,
+                pos: { x: 440, y: 400 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T_M0.net_3",
+                destination: "global_VR.net_0",
+                enabled: false,
+                pos: { x: 420, y: 420 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T_M1.net_2",
+                destination: "global_VR.net_1",
+                enabled: false,
+                pos: { x: 440, y: 440 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T_M1.net_3",
+                destination: "global_VR.net_0",
+                enabled: false,
+                pos: { x: 420, y: 460 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "global_HL.net_0",
+                destination: "net_D",
+                enabled: false,
+                pos: { x: 100, y: 500 },
+                bidirectional: false,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T_M1.net_1",
+                destination: "global_HU.net_0",
+                enabled: false,
+                pos: { x: 340, y: -60 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T_M0.net_0",
+                destination: "global_HU.net_0",
+                enabled: false,
+                pos: { x: 280, y: -60 },
+                bidirectional: true,
+            },
+        ],
+    },
+
+    /**
+     * BIDIRECTIONAL PARTIAL VERTICAL LONG LINES.
+     */
+    {
+        ids: id_range("[B-G][A-G]"),
+        nets: [
+            {
+                id: "net_rhl",
+                value: false,
+                points: [
+                    { x: 280, y: -340 },
+                    { x: 300, y: -340 },
+                    { x: 300, y: -200 },
+                    { x: 280, y: -200 },
+                    { x: 280, y: 280 }
+                ]
+            }
+        ],
+        pips: [
+            {
+                id: "pip_v2_0",
+                source: "T.net_rhl",
+                destination: "S.net_rhl",
+                enabled: false,
+                pos: { x: 380, y: 380 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T.net_rhl",
+                destination: "T_M0.net_3",
+                enabled: false,
+                pos: { x: 380, y: 420 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T.net_rhl",
+                destination: "T_M1.net_2",
+                enabled: false,
+                pos: { x: 380, y: 440 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T.net_rhl",
+                destination: "N_M0.net_3",
+                enabled: false,
+                pos: { x: 400, y: -140 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "T.net_rhl",
+                destination: "N_M1.net_2",
+                enabled: false,
+                pos: { x: 400, y: -120 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "W.net_rhl",
+                destination: "net_B",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2 - 40, y: 120 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "W.net_rhl",
+                destination: "net_C",
+                enabled: false,
+                pos: { x: -CELL_WIDTH / 2 - 40, y: 180 },
+                bidirectional: true,
+            },
+            {
+                id: "pip_v2_0",
+                source: "net_Y",
+                destination: "T.net_rhl",
+                enabled: false,
+                pos: { x: 380, y: 260 },
+                bidirectional: false,
+            },
+        ],
+    },
+    /**
+     *
      * IO BANK CONFIGURATIONS
      *
      */
@@ -1252,8 +1470,8 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
                             { x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210 },
                             { x: IO_HEIGHT / 2 - 270, y: IO_WIDTH / 2 + 210 },
                             { x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210, continuous: false },
-                            { x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 170},
-                            { x: IO_HEIGHT / 2 + 50, y: IO_WIDTH / 2 + 170},
+                            { x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 170 },
+                            { x: IO_HEIGHT / 2 + 50, y: IO_WIDTH / 2 + 170 },
                         ],
                     },
 
@@ -1335,4 +1553,40 @@ const bus_config: Net[] = [
             { x: 3580, y: 4160 },
         ],
     },
+
+    /**
+     *
+     *  VERTICAL GLOBAL BUSSES, 0 = Top, 9 = Bottom
+     *
+     */
+    {
+        id: "global_V2.net_0",
+        value: false,
+        points: [
+            { x: 940, y: 0 },
+            { x: 940, y: 6000 },
+        ],
+    },
+    {
+        id: "global_V2.net_1",
+        value: false,
+        points: [
+            { x: 960, y: 0 },
+            { x: 960, y: 6000 },
+        ],
+    },
+
+    /**
+     *
+     *  HORIZONTAL GLOBAL BUSSES, 0 = Left, 9 = Right
+     *
+     */
+    {
+        id: "global_H3.net_0",
+        value: false,
+        points: [
+            { x: -2000, y: 1620 },
+            { x: 5400, y: 1620 },
+        ],
+    }
 ];
