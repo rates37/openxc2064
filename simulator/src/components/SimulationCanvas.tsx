@@ -1,6 +1,10 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useSimulator } from '../SimulatorContext';
-import LogicCellRenderer from './LogicCellRenderer';
+import { CELL_WIDTH, CELL_HEIGHT, PIP_WIDTH, PIP_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT } from '../configs/Routing';
+import { LogicCell } from '../models/LogicCell';
+import { SwitchMatrix } from '../models/SwitchMatrix';
+import { IOBank } from '../models/IOBank';
+import { Net, Pip } from '../types';
 
 // Full content bounds (8x8 grid with margins)
 const CONTENT_X = -600;
@@ -8,26 +12,243 @@ const CONTENT_Y = -600;
 const CONTENT_WIDTH = 5000;
 const CONTENT_HEIGHT = 5200;
 
-// Initial view position (top-left area showing first few cells)
+// Initial view position
 const INITIAL_VIEW = { x: -3500, y: -100, w: 7000, h: 5000 };
 
+// Matrix mini-node offsets
+const R = (MATRIX_WIDTH / 2) - 2;
+const miniNodeOffsets = [
+  { dx: -10, dy: -R },
+  { dx: 10, dy: -R },
+  { dx: R, dy: -10 },
+  { dx: R, dy: 10 },
+  { dx: 10, dy: R },
+  { dx: -10, dy: R },
+  { dx: -R, dy: 10 },
+  { dx: -R, dy: -10 },
+];
+
+// --- Canvas drawing functions ---
+
+function drawLineSegment(
+  ctx: CanvasRenderingContext2D,
+  baseX: number,
+  baseY: number,
+  points: { x: number; y: number; continuous?: boolean }[],
+  value: boolean,
+  colour?: string
+) {
+  if (points.length < 2) return;
+  ctx.strokeStyle = value ? '#ff0000' : colour || '#333';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].continuous === false) continue;
+    ctx.beginPath();
+    ctx.moveTo(points[i - 1].x + baseX, points[i - 1].y + baseY);
+    ctx.lineTo(points[i].x + baseX, points[i].y + baseY);
+    ctx.stroke();
+  }
+}
+
+function drawGrid(ctx: CanvasRenderingContext2D, viewBox: { x: number; y: number; w: number; h: number }) {
+  const gridSize = 20;
+  ctx.strokeStyle = '#7e7e7e';
+  ctx.lineWidth = 0.5;
+
+  const startX = Math.floor(viewBox.x / gridSize) * gridSize;
+  const startY = Math.floor(viewBox.y / gridSize) * gridSize;
+  const endX = viewBox.x + viewBox.w;
+  const endY = viewBox.y + viewBox.h;
+
+  ctx.beginPath();
+  for (let x = startX; x <= endX; x += gridSize) {
+    ctx.moveTo(x, viewBox.y);
+    ctx.lineTo(x, endY);
+  }
+  for (let y = startY; y <= endY; y += gridSize) {
+    ctx.moveTo(viewBox.x, y);
+    ctx.lineTo(endX, y);
+  }
+  ctx.stroke();
+}
+
+function drawCell(ctx: CanvasRenderingContext2D, cell: LogicCell) {
+  const { x, y } = cell.pos;
+  const cx = x + CELL_WIDTH / 2;
+  const cy = y + CELL_HEIGHT / 2;
+
+  // Draw nets
+  for (const net of cell.nets) {
+    if (net.points.length > 0) {
+      drawLineSegment(ctx, cx, cy, net.points, net.value);
+    }
+  }
+
+  // Draw cell rectangle
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.roundRect(x, y, CELL_WIDTH, CELL_HEIGHT, 5);
+  ctx.fill();
+  ctx.stroke();
+
+  // Draw cell ID
+  ctx.fillStyle = '#000';
+  ctx.font = '48px Computer Modern, Latin Modern, STIXGeneral, Times New Roman, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(cell.id, cx, cy);
+
+  // Draw port labels
+  ctx.fillStyle = '#666';
+  ctx.font = '24px Computer Modern, Latin Modern, STIXGeneral, Times New Roman, serif';
+  ctx.fillText('A', cx + 60, cy - 135);
+  ctx.fillText('B', cx - 80, cy - 38);
+  ctx.fillText('C', cx - 80, cy + 23);
+  ctx.fillText('D', cx, y + CELL_HEIGHT - 18);
+  ctx.fillText('X', cx + 80, cy + 23);
+  ctx.fillText('Y', cx + 80, cy + 102);
+  ctx.fillText('K', cx - 80, cy + 83);
+}
+
+function drawMatrix(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix) {
+  const { x, y } = matrix.pos;
+  const cx = x + MATRIX_WIDTH / 2;
+  const cy = y + MATRIX_HEIGHT / 2;
+
+  // Draw nets
+  for (let i = 0; i < Math.min(4, matrix.nets.length); i++) {
+    const net = matrix.nets[i];
+    if (net && net.points.length > 0) {
+      drawLineSegment(ctx, cx, cy, net.points, net.value, 'rgb(199, 199, 199)');
+    }
+  }
+
+  // Draw matrix rectangle
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(x, y, MATRIX_WIDTH, MATRIX_HEIGHT, 5);
+  ctx.fill();
+  ctx.stroke();
+
+  // Draw connection lines
+  const lines: { from: number; to: number }[] = [];
+  for (let i = 0; i < 8; i++) {
+    for (let j = i + 1; j < 8; j++) {
+      if (matrix.connections[i]?.[j] || matrix.connections[j]?.[i]) {
+        lines.push({ from: i, to: j });
+      }
+    }
+  }
+
+  ctx.strokeStyle = '#2196F3';
+  ctx.lineWidth = 1.5;
+  for (const { from, to } of lines) {
+    ctx.beginPath();
+    ctx.moveTo(cx + miniNodeOffsets[from].dx, cy + miniNodeOffsets[from].dy);
+    ctx.lineTo(cx + miniNodeOffsets[to].dx, cy + miniNodeOffsets[to].dy);
+    ctx.stroke();
+  }
+
+  // Draw mini nodes
+  ctx.fillStyle = '#333';
+  for (const off of miniNodeOffsets) {
+    ctx.beginPath();
+    ctx.arc(cx + off.dx, cy + off.dy, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPip(ctx: CanvasRenderingContext2D, pip: Pip) {
+  const { x, y } = pip.pos;
+  ctx.fillStyle = pip.enabled ? '#696969' : '#ffffff';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.rect(x - PIP_WIDTH / 2, y - PIP_HEIGHT / 2, PIP_WIDTH, PIP_HEIGHT);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawIOBank(ctx: CanvasRenderingContext2D, bank: IOBank) {
+  const { x, y } = bank.pos;
+  const netO = bank.nets.find(n => n.id === `${bank.id}.net_O`);
+  const isActive = netO?.value ?? false;
+
+  // Draw IO bank rectangle
+  ctx.fillStyle = isActive ? '#f76420' : '#fff';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.roundRect(x, y, bank.size.width, bank.size.height, 5);
+  ctx.fill();
+  ctx.stroke();
+
+  // Draw nets
+  for (const net of bank.nets) {
+    if (net.points.length > 0) {
+      drawLineSegment(ctx, x + IO_WIDTH / 2, y + IO_HEIGHT / 2, net.points, net.value, '#333');
+    }
+  }
+}
+
+function drawBusNet(ctx: CanvasRenderingContext2D, net: Net) {
+  if (net.points.length < 2) return;
+  drawLineSegment(ctx, 0, 0, net.points, net.value, 'rgb(68, 68, 68)');
+}
+
+// --- Main component ---
+
 const SimulationCanvas: React.FC = () => {
-  const { logicCells, showGrid, setCursorPos } = useSimulator();
-  const svgRef = useRef<SVGSVGElement>(null);
+  const { logicCells, switchMatrices, pips, ioBanks, busNets, showGrid, togglePip, selectMatrix, selectCell, toggleIONet, simulate, tick } = useSimulator();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewBox, setViewBox] = useState(INITIAL_VIEW);
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600, cssWidth: 800, cssHeight: 600 });
 
-  // Set initial viewBox to match the container's aspect ratio
+  // Update canvas size on resize
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const { clientWidth, clientHeight } = el;
-    const aspect = clientWidth / clientHeight;
-    setViewBox(v => ({ ...v, w: v.h * aspect }));
+
+    const updateSize = () => {
+      const { clientWidth, clientHeight } = el;
+      const dpr = window.devicePixelRatio || 1;
+      setCanvasSize({ width: Math.round(clientWidth * dpr), height: Math.round(clientHeight * dpr), cssWidth: clientWidth, cssHeight: clientHeight });
+      // Adjust viewBox to maintain aspect ratio
+      const aspect = clientWidth / clientHeight;
+      setViewBox(v => ({ ...v, w: v.h * aspect }));
+    };
+
+    updateSize();
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(el);
+    return () => resizeObserver.disconnect();
   }, []);
 
+  // Use a ref to track the latest viewBox for event handlers
+  const viewBoxRef = useRef(viewBox);
+  viewBoxRef.current = viewBox;
+
+  // Convert screen coordinates to world coordinates
+  const screenToWorld = useCallback((screenX: number, screenY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const vb = viewBoxRef.current;
+    const x = vb.x + ((screenX - rect.left) / rect.width) * vb.w;
+    const y = vb.y + ((screenY - rect.top) / rect.height) * vb.h;
+    return { x, y };
+  }, []);
+
+  // Handle panning
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     setIsPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY };
@@ -35,93 +256,197 @@ const SimulationCanvas: React.FC = () => {
   }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (svgRef.current) {
-      const svg = svgRef.current;
-      const ctm = svg.getScreenCTM();
-      if (ctm) {
-        // const svgX = (e.clientX - ctm.e) / ctm.a;
-        // const svgY = (e.clientY - ctm.f) / ctm.d;
-        // setCursorPos({ x: Math.round(svgX), y: Math.round(svgY) });
-      }
-    }
-    if (!isPanning || !svgRef.current) return;
-    const svg = svgRef.current;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    const dx = (e.clientX - panStart.current.x) / ctm.a;
-    const dy = (e.clientY - panStart.current.y) / ctm.d;
+    if (!isPanning) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const vb = viewBoxRef.current;
+    const scaleX = vb.w / rect.width;
+    const scaleY = vb.h / rect.height;
+    const dx = (e.clientX - panStart.current.x) * scaleX;
+    const dy = (e.clientY - panStart.current.y) * scaleY;
     panStart.current = { x: e.clientX, y: e.clientY };
-    setViewBox((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
-  }, [isPanning, setCursorPos]);
+    setViewBox(v => ({ ...v, x: v.x - dx, y: v.y - dy }));
+  }, [isPanning]);
 
   const onPointerUp = useCallback(() => {
     setIsPanning(false);
   }, []);
 
-  // Use a ref to track the latest viewBox so the native listener never goes stale.
-  const viewBoxRef = useRef(viewBox);
-  viewBoxRef.current = viewBox;
-
+  // Handle zooming
   useEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const scale = e.deltaY > 0 ? 1.1 : 0.9;
-      const rect = svg.getBoundingClientRect();
+      const world = screenToWorld(e.clientX, e.clientY);
       const vb = viewBoxRef.current;
-      const cx = vb.x + ((e.clientX - rect.left) / rect.width) * vb.w;
-      const cy = vb.y + ((e.clientY - rect.top) / rect.height) * vb.h;
       const newW = vb.w * scale;
       const newH = vb.h * scale;
       setViewBox({
-        x: cx - (cx - vb.x) * scale,
-        y: cy - (cy - vb.y) * scale,
+        x: world.x - (world.x - vb.x) * scale,
+        y: world.y - (world.y - vb.y) * scale,
         w: newW,
         h: newH,
       });
     };
-    svg.addEventListener('wheel', handleWheel, { passive: false });
-    return () => svg.removeEventListener('wheel', handleWheel);
-  }, []);
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [screenToWorld]);
+
+  // Handle click events for interaction
+  const onClick = useCallback((e: React.MouseEvent) => {
+    const world = screenToWorld(e.clientX, e.clientY);
+
+    // Check PIPs first (smallest clickable area)
+    for (let i = 0; i < pips.length; i++) {
+      const pip = pips[i];
+      if (
+        world.x >= pip.pos.x - PIP_WIDTH / 2 &&
+        world.x <= pip.pos.x + PIP_WIDTH / 2 &&
+        world.y >= pip.pos.y - PIP_HEIGHT / 2 &&
+        world.y <= pip.pos.y + PIP_HEIGHT / 2
+      ) {
+        togglePip(i);
+        return;
+      }
+    }
+
+    // Check IO banks
+    for (let i = 0; i < ioBanks.length; i++) {
+      const bank = ioBanks[i];
+      if (
+        world.x >= bank.pos.x &&
+        world.x <= bank.pos.x + bank.size.width &&
+        world.y >= bank.pos.y &&
+        world.y <= bank.pos.y + bank.size.height
+      ) {
+        toggleIONet(i);
+        simulate();
+        return;
+      }
+    }
+
+    // Check switch matrices
+    for (const matrix of switchMatrices) {
+      if (
+        world.x >= matrix.pos.x &&
+        world.x <= matrix.pos.x + MATRIX_WIDTH &&
+        world.y >= matrix.pos.y &&
+        world.y <= matrix.pos.y + MATRIX_HEIGHT
+      ) {
+        selectMatrix(matrix);
+        return;
+      }
+    }
+
+    // Check logic cells
+    for (const cell of logicCells) {
+      if (
+        world.x >= cell.pos.x &&
+        world.x <= cell.pos.x + CELL_WIDTH &&
+        world.y >= cell.pos.y &&
+        world.y <= cell.pos.y + CELL_HEIGHT
+      ) {
+        selectCell(cell);
+        return;
+      }
+    }
+  }, [screenToWorld, pips, ioBanks, switchMatrices, logicCells, togglePip, toggleIONet, simulate, selectMatrix, selectCell]);
+
+  // Render the canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size for device pixel ratio
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvasSize.width;
+    canvas.height = canvasSize.height;
+    canvas.style.width = `${canvasSize.cssWidth}px`;
+    canvas.style.height = `${canvasSize.cssHeight}px`;
+
+    // Enable anti-aliasing for smooth rendering when zoomed out
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Clear canvas
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Set up transform: scale and translate to show viewBox
+    ctx.save();
+    const scaleX = canvas.width / viewBox.w;
+    const scaleY = canvas.height / viewBox.h;
+    ctx.scale(scaleX, scaleY);
+    ctx.translate(-viewBox.x, -viewBox.y);
+
+    // Draw grid
+    if (showGrid) {
+      drawGrid(ctx, viewBox);
+    }
+
+    // Draw bus nets
+    for (const net of busNets) {
+      drawBusNet(ctx, net);
+    }
+
+    // Draw switch matrices
+    for (const matrix of switchMatrices) {
+      drawMatrix(ctx, matrix);
+    }
+
+    // Draw logic cells
+    for (const cell of logicCells) {
+      drawCell(ctx, cell);
+    }
+
+    // Draw IO banks
+    for (const bank of ioBanks) {
+      drawIOBank(ctx, bank);
+    }
+
+    // Draw PIPs
+    for (const pip of pips) {
+      drawPip(ctx, pip);
+    }
+
+    ctx.restore();
+  }, [viewBox, showGrid, logicCells, switchMatrices, pips, ioBanks, busNets, tick, canvasSize]);
 
   return (
-    <div ref={containerRef} style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: 'calc(100vh - 50px)',
-    }}>
-      <svg
-        ref={svgRef}
-        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+    <div
+      ref={containerRef}
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: 'calc(100vh - 50px)',
+        width: '100%',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
         style={{
-          width: '100%',
-          height: '100%',
           border: '1px solid #ccc',
           borderRadius: '8px',
           boxShadow: '0 0 6px rgba(0, 0, 0, 0.08)',
           cursor: isPanning ? 'grabbing' : 'grab',
           touchAction: 'none',
+          width: `${canvasSize.cssWidth}px`,
+          height: `${canvasSize.cssHeight}px`,
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
-      >
-        {showGrid && (
-          <>
-            <defs>
-              <pattern id="grid" width={20} height={20} patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#7e7e7e" strokeWidth={0.5} />
-              </pattern>
-            </defs>
-            {/* Render grid over entire content area, not just viewBox */}
-            <rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="url(#grid)" />
-          </>
-        )}
-        <LogicCellRenderer />
-      </svg>
+        onClick={onClick}
+      />
     </div>
   );
 };
