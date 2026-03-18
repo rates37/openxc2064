@@ -209,3 +209,7 @@ __marimo__/
 
 temp/
 *.DS_Store
+
+
+# VSCode Counter extension files
+.VSCodeCounter/
