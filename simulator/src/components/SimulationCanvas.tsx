@@ -167,7 +167,7 @@ function drawMatrix(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix) {
 function drawPip(ctx: CanvasRenderingContext2D, pip: Pip) {
     const { x, y } = pip.pos;
     ctx.fillStyle = pip.enabled ? "#696969" : "#ffffff";
-    ctx.strokeStyle = pip.bidirectional ? "#862a2aff" : "#362d86ff";
+    ctx.strokeStyle = pip.bidirectional ? "rgb(150, 150, 150)" : "rgb(94, 94, 94)";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.rect(x - PIP_WIDTH / 2, y - PIP_HEIGHT / 2, PIP_WIDTH, PIP_HEIGHT);

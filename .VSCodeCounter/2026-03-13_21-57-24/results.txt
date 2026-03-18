@@ -1,0 +1,47 @@
+Date : 2026-03-13 21:57:24
+Directory : c:\Xilinx\Projects\openxc2064\simulator\src
+Total : 16 files,  2012 codes, 114 comments, 310 blanks, all 2436 lines
+
+Languages
++----------------+------------+------------+------------+------------+------------+
+| language       | files      | code       | comment    | blank      | total      |
++----------------+------------+------------+------------+------------+------------+
+| TypeScript JSX |          9 |      1,404 |         90 |        215 |      1,709 |
+| TypeScript     |          6 |        504 |         24 |         84 |        612 |
+| PostCSS        |          1 |        104 |          0 |         11 |        115 |
++----------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                              | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                 |         16 |      2,012 |        114 |        310 |      2,436 |
+| . (Files)                                                                         |          3 |        480 |         62 |        111 |        653 |
+| components                                                                        |          7 |        946 |         28 |        110 |      1,084 |
+| configs                                                                           |          2 |        322 |          1 |         27 |        350 |
+| models                                                                            |          3 |        160 |         23 |         51 |        234 |
+| styles                                                                            |          1 |        104 |          0 |         11 |        115 |
++-----------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| filename                                                                          | language       | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
+| c:\Xilinx\Projects\openxc2064\simulator\src\App.tsx                               | TypeScript JSX |         19 |          0 |          3 |         22 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\SimulatorContext.tsx                  | TypeScript JSX |        439 |         62 |        102 |        603 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\LineSegment.tsx            | TypeScript JSX |         28 |          0 |          3 |         31 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\LogicCellRenderer.tsx      | TypeScript JSX |        138 |          2 |         15 |        155 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\LogicElementModal.tsx      | TypeScript JSX |        219 |         15 |         31 |        265 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\LogicElementPrimitives.tsx | TypeScript JSX |        232 |          0 |         22 |        254 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\SimulationCanvas.tsx       | TypeScript JSX |        105 |          5 |         12 |        122 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\SimulationToolbar.tsx      | TypeScript JSX |         61 |          0 |          4 |         65 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\components\SwitchMatrixEditor.tsx     | TypeScript JSX |        163 |          6 |         23 |        192 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\configs\Routing.ts                    | TypeScript     |         13 |          0 |          4 |         17 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\configs\configs.ts                    | TypeScript     |        309 |          1 |         23 |        333 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\models\IOBank.ts                      | TypeScript     |         16 |          0 |          8 |         24 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\models\LogicCell.ts                   | TypeScript     |        102 |         23 |         32 |        157 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\models\SwitchMatrix.ts                | TypeScript     |         42 |          0 |         11 |         53 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\styles\Modal.css                      | PostCSS        |        104 |          0 |         11 |        115 |
+| c:\Xilinx\Projects\openxc2064\simulator\src\types.ts                              | TypeScript     |         22 |          0 |          6 |         28 |
+| Total                                                                             |                |      2,012 |        114 |        310 |      2,436 |
++-----------------------------------------------------------------------------------+----------------+------------+------------+------------+------------+
