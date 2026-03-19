@@ -23,18 +23,34 @@ class CLB(Node):
     The fundamental element of the XC2064 logic fabric.
     Encapsulates up to two 3-input LUTs and one D-Flip-Flop.
     """
-    # components inside the CLB:
-    luts: list[LUT] = field(default_factory=list)
+    # LUTs
+    lut_f_init: int = 0
+    lut_g_init: int = 0
+    
+    # Optional paired DFF
     dff: DFF | None = None
     
-    # internal config flags (routing)
-    # todo
-    # TODO: clock
-
+    # Input Routing MUXes
+    sel_f_in1: int = 0 # 0: A, 1: B
+    sel_f_in2: int = 0 # 0: B, 1: C
+    sel_f_in3: int = 0 # 0: C, 1: D, 2: Q
+    
+    sel_g_in1: int = 0 # 0: A, 1: B
+    sel_g_in2: int = 0 # 0: B, 1: C
+    sel_g_in3: int = 0 # 0: C, 1: D, 2: Q
+    
+    # Output Routing MUXes
+    sel_x: int = 0 # 0: G, 1: Q, 2: F
+    sel_y: int = 0 # 0: G, 1: Q, 2: F
+    
+    # Clock MUXes
+    sel_clk1: int = 0 # 0: G, 1: C, 2: K
+    sel_clk2: int = 0 # 0: !CLK1, 1: CLK1, 2: GND
+    
     def __post_init__(self):
         super().__post_init__()
-        assert len(self.inputs) <= 4, "A CLB is bound to a maximum of 4 distinct logical inputs (A,B,C,D)."
-        assert len(self.luts) <= 2, "A CLB can house at most two 3-input LUTs."
+        assert len(self.inputs) <= 5, "A CLB is bound to a maximum of 5 inputs (A,B,C,D, + K clock)."
+        assert len(self.outputs) <= 2, "A CLB can only drive a maximum of 2 output pins (X, Y)."
 
 @dataclass(eq=False)
 class IOB(Node):
