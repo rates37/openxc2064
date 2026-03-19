@@ -5,9 +5,12 @@ import re
 from pathlib import Path
 
 
-COORDINATE_PATTERN = re.compile(r"\b\d+G\d+\b")
+COORDINATE_PATTERN = re.compile(r"\d+G\d+")
 
+import matplotlib.pyplot as plt
 
+    
+    
 def collect_coordinates_from_csv(csv_path: Path) -> set[str]:
 	"""Scan every CSV cell and return unique coordinate-like values (e.g. 156G9)."""
 	coordinates: set[str] = set()
@@ -16,9 +19,47 @@ def collect_coordinates_from_csv(csv_path: Path) -> set[str]:
 		reader = csv.reader(csv_file)
 		for row in reader:
 			for cell in row:
-				coordinates.update(COORDINATE_PATTERN.findall(cell))
+				if "PIP" in cell:
+					coordinates.update(COORDINATE_PATTERN.findall(cell))
 
 	return coordinates
+
+def plot_coordinates_from_csv(csv_path: Path, out_path: Path = None):
+    coordinates = collect_coordinates_from_csv(csv_path)
+    points = [tuple(map(int, coord.split("G"))) for coord in coordinates]
+    xs, ys = zip(*points) if points else ([], [])
+
+    plt.figure(figsize=(6, 6))
+    plt.scatter(xs, ys, s=10, color='blue')
+    plt.title('Spreadsheet Coordinates')
+    plt.axis('equal')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.tight_layout()
+    if out_path is None:
+        out_path = csv_path.with_suffix('.png')
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+    print(f"Saved plot to {out_path}")
+
+def export_coordinates_to_ts(csv_path: Path, ts_path: Path = None):
+    coordinates = collect_coordinates_from_csv(csv_path)
+    xy_list = [
+        {"x": int(coord.split("G")[0]), "y": int(coord.split("G")[1])}
+        for coord in coordinates
+    ]
+    xy_list.sort(key=lambda c: (c["x"], c["y"]))
+    if ts_path is None:
+        ts_path = csv_path.with_suffix('.ts')
+    with open(ts_path, 'w', encoding='utf-8') as f:
+        f.write("// Auto-generated coordinate list\n")
+        f.write("export const coordinates = [\n")
+        for c in xy_list:
+            f.write(f'  {{ x: {c["x"]}, y: {c["y"]} }},\n')
+        f.write("];\n")
+    print(f"Wrote {len(xy_list)} coordinates to {ts_path}")
+
+
 
 
 def print_coordinates_from_csv(csv_path: Path) -> None:
@@ -49,3 +90,5 @@ def print_coordinates_from_csv(csv_path: Path) -> None:
 if __name__ == "__main__":
 	default_csv = Path(__file__).with_name("XC2064-spreadsheet.csv")
 	print_coordinates_from_csv(default_csv)
+	plot_coordinates_from_csv(default_csv)
+	export_coordinates_to_ts(default_csv)

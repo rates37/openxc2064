@@ -1,6 +1,18 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useSimulator } from "../SimulatorContext";
 import { CELL_WIDTH, CELL_HEIGHT, PIP_WIDTH, PIP_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT } from "../configs/Routing";
+import { coordinates } from "../configs/coords";
+// --- Coordinate mapping constants ---
+// Replace COORD_MAX with your desired constant later
+const COORD_MAX_X = 4200; // <-- Set this to your desired max value
+const COORD_MAX_Y = 2200; // <-- Set this to your desired max value
+const COORD_OFFSET_X = 335;
+const COORD_OFFSET_Y = 365;
+const RAW_MAX = 175;
+
+function mapCoord(val: number, maxCoord: number) {
+    return (val / RAW_MAX) * maxCoord;
+}
 import { LogicCell } from "../models/LogicCell";
 import { SwitchMatrix } from "../models/SwitchMatrix";
 import { IOBank } from "../models/IOBank";
@@ -489,6 +501,19 @@ const SimulationCanvas: React.FC = () => {
         for (const pip of pips) {
             drawPip(ctx, pip);
         }
+
+        // Draw coordinate boxes (bright red)
+        ctx.save();
+        ctx.strokeStyle = "#ff0000";
+        ctx.fillStyle = "#ff0000";
+        for (const pt of coordinates) {
+            const x = mapCoord(pt.x, COORD_MAX_X) - COORD_OFFSET_X;
+            const y = mapCoord(175-pt.y, COORD_MAX_Y) - COORD_OFFSET_Y;
+            ctx.globalAlpha = 0.85;
+            ctx.fillRect(x - 5, y - 5, 10, 10);
+            ctx.globalAlpha = 1.0;
+        }
+        ctx.restore();
 
         ctx.restore();
     }, [viewBox, showGrid, logicCells, switchMatrices, pips, ioBanks, busNets, tick, canvasSize]);
