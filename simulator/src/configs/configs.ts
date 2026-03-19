@@ -75,6 +75,14 @@ function id_range(expr: string): string[] {
     return parts.reduce<string[]>((acc, set) => acc.flatMap((a) => set.map((b) => a + b)), [""]);
 }
 
+const range = (start: number, end: number): number[] => {
+    const arr: number[] = [];
+    for (let i = start; i <= end; i++) {
+        arr.push(i);
+    }
+    return arr;
+}
+
 const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
     {
         /**
@@ -576,7 +584,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
      */
 
     {
-        ids: [...id_range("[A-H][B-G]")],
+        ids: [...id_range("[A-G][B-G]")],
         nets: [],
         pips: [
             {
@@ -1304,7 +1312,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
      */
     {
         // All the same but the one in the middle, which shares IO space with the VCC input
-        ids: [...id_range("[A-C]H"), ...id_range("[E-H]H")],
+        ids: [...id_range("[A-C]H"), ...id_range("[E-G]H")],
         io_bank: [
             // Top IO Bank
             {
@@ -1556,15 +1564,53 @@ const bus_config: Net[] = [
 
     /**
      *
-     *  VERTICAL GLOBAL BUSSES, 0 = Top, 9 = Bottom
+     *  VERTICAL GLOBAL BUSSES, 0 = Left, 8 = Right
      *
      */
+
+    // Left most verilog long lines (IDX 0)
+    {
+        id: "global_V0.net_0",
+        value: false,
+        points: [
+            { x: -200, y: 0 },
+            { x: -200, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V0.net_1",
+        value: false,
+        points: [
+            { x: -180, y: 0 },
+            { x: -180, y: 4500 },
+        ],
+    },
+
+    // Vertical set 1
+    {
+        id: "global_V1.net_0",
+        value: false,
+        points: [
+            { x: 420, y: 0 },
+            { x: 420, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V1.net_1",
+        value: false,
+        points: [
+            { x: 440, y: 0 },
+            { x: 440, y: 4500 },
+        ],
+    }, 
+    
+    // Vertical set 2
     {
         id: "global_V2.net_0",
         value: false,
         points: [
             { x: 940, y: 0 },
-            { x: 940, y: 6000 },
+            { x: 940, y: 4460 },
         ],
     },
     {
@@ -1572,21 +1618,197 @@ const bus_config: Net[] = [
         value: false,
         points: [
             { x: 960, y: 0 },
-            { x: 960, y: 6000 },
+            { x: 960, y: 4500 },
         ],
     },
+    
+    // Vertical set 3
+    {
+        id: "global_V3.net_0",
+        value: false,
+        points: [
+            { x: 1460, y: 0 },
+            { x: 1460, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V3.net_1",
+        value: false,
+        points: [
+            { x: 1480, y: 0 },
+            { x: 1480, y: 4500 },
+        ],
+    },
+    
+    // Vertical set 4
+    {
+        id: "global_V4.net_0",
+        value: false,
+        points: [
+            { x: 1980, y: 0 },
+            { x: 1980, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V4.net_1",
+        value: false,
+        points: [
+            { x: 2000, y: 0 },
+            { x: 2000, y: 4500 },
+        ],
+    },
+    
+    // Vertical set 5
+    {
+        id: "global_V5.net_0",
+        value: false,
+        points: [
+            { x: 2500, y: 0 },
+            { x: 2500, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V5.net_1",
+        value: false,
+        points: [
+            { x: 2520, y: 0 },
+            { x: 2520, y: 4500 },
+        ],
+    },
+    
+    // Vertical set 6
+    {
+        id: "global_V6.net_0",
+        value: false,
+        points: [
+            { x: 3020, y: 0 },
+            { x: 3020, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V6.net_1",
+        value: false,
+        points: [
+            { x: 3040, y: 0 },
+            { x: 3040, y: 4500 },
+        ],
+    },
+    
+    // Vertical set 7
+    {
+        id: "global_V7.net_0",
+        value: false,
+        points: [
+            { x: 3540, y: 0 },
+            { x: 3540, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V7.net_1",
+        value: false,
+        points: [
+            { x: 3560, y: 0 },
+            { x: 3560, y: 4500 },
+        ],
+    },
+    
+    // Vertical set 8
+    {
+        id: "global_V8.net_0",
+        value: false,
+        points: [
+            { x: 3980, y: 0 },
+            { x: 3980, y: 4460 },
+        ],
+    },
+    {
+        id: "global_V8.net_1",
+        value: false,
+        points: [
+            { x: 4000, y: 0 },
+            { x: 4000, y: 4500 },
+        ],
+    },
+    
+
 
     /**
      *
      *  HORIZONTAL GLOBAL BUSSES, 0 = Left, 9 = Right
      *
      */
+    
+    // Top most horizontal long lines (IDX 0)
+    {
+        id: "global_H0.net_0",
+        value: false,
+        points: [
+            { x: -240, y: -120 },
+            { x: 4000, y: -120 },
+        ],
+    },
+    {
+        id: "global_H1.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 500 },
+            { x: 4120, y: 500 },
+        ],
+    },
+    {
+        id: "global_H2.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 1060 },
+            { x: 4120, y: 1060 },
+        ],
+    },
     {
         id: "global_H3.net_0",
         value: false,
         points: [
-            { x: -2000, y: 1620 },
-            { x: 5400, y: 1620 },
+            { x: -320, y: 1620 },
+            { x: 4120, y: 1620 },
+        ],
+    },
+    {
+        id: "global_H4.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 2180 },
+            { x: 4120, y: 2180 },
+        ],
+    },
+    {
+        id: "global_H5.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 2740 },
+            { x: 4120, y: 2740 },
+        ],
+    },
+    {
+        id: "global_H6.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 3300 },
+            { x: 4120, y: 3300 },
+        ],
+    },
+    {
+        id: "global_H7.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 3860 },
+            { x: 4120, y: 3860 },
+        ],
+    },
+    {
+        id: "global_H8.net_0",
+        value: false,
+        points: [
+            { x: -320, y: 4460 },
+            { x: 4120, y: 4460 },
         ],
     }
 ];
