@@ -576,7 +576,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
      */
 
     {
-        ids: [...id_range("[A-H][A-G]")],
+        ids: [...id_range("[A-H][B-G]")],
         nets: [],
         pips: [
             {

@@ -114,7 +114,7 @@ export class LogicCell {
             const m51sel = this.getMux("m51");
             this.setNet("net_clk_1_out", m51sel === 0 ? this.getNet("net_G") : m51sel === 1 ? this.getNet("net_C") : this.getNet("net_K"));
             
-            // M100 (3-input): 0=clk_1_out, 1=~clk_1_out, 2=GND -> clk_2_out
+            // M100 (3-input): 0=~clk_1_out, 1=clk_1_out, 2=GND -> clk_2_out
             const m100sel = this.getMux("m100");
             const clk1 = this.getNet("net_clk_1_out");
             this.setNet("net_clk_2_out", m100sel === 0 ? !clk1 : m100sel === 1 ? clk1 : false);
