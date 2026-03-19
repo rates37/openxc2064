@@ -82,9 +82,9 @@ module XC2064_CLB #(
     assign LUT_F_IN[1] = SEL_F_IN2 ? C : B;
     assign LUT_F_IN[2] = SEL_F_IN3[0] ? D : SEL_F_IN3[1] ? DFF_Q : C;
 
-    assign LUT_G_IN[0] = SEL_F_IN1 ? B : A;
-    assign LUT_G_IN[1] = SEL_F_IN2 ? C : B;
-    assign LUT_G_IN[2] = SEL_F_IN3[0] ? D : SEL_F_IN3[1] ? DFF_Q : C;
+    assign LUT_G_IN[0] = SEL_G_IN1 ? B : A;
+    assign LUT_G_IN[1] = SEL_G_IN2 ? C : B;
+    assign LUT_G_IN[2] = SEL_G_IN3[0] ? D : SEL_G_IN3[1] ? DFF_Q : C;
 
     LUT3 #(LUT_G_INIT) LG (LUT_G_IN[0], LUT_G_IN[1], LUT_G_IN[2], G);
     LUT3 #(LUT_F_INIT) LF (LUT_F_IN[0], LUT_F_IN[1], LUT_F_IN[2], F);
@@ -100,6 +100,4 @@ module XC2064_CLB #(
     assign X = SEL_X[0] ? DFF_Q : SEL_X[1] ? F : G;
     assign Y = SEL_Y[0] ? DFF_Q : SEL_Y[1] ? F : G;
 
-
-    // todo
 endmodule
