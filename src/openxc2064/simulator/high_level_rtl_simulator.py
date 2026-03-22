@@ -1,6 +1,6 @@
 from __future__ import annotations
 from ..synthesis.rtl_nodes import Net, Netlist, DFF, Input, Constant, LogicGate
-from ..mapping.xc2064_primitives import LUT, CLB
+from ..mapping.xc2064_primitives import LUT, CLB, IOB
 from typing import Callable, Tuple, Optional
 import re
 
@@ -145,11 +145,9 @@ class RTLSimulator:
         return value
 
     def step(self) -> None:
-        # cheap implementation right now, # todo need to somehow intertwine the dff updates and the propagate comb?
-        self._update_dffs()
-
         self._propagate_comb()
-
+        self._update_dffs()
+        self._propagate_comb()
         self.prev_net_values = self.net_values.copy()
 
     def reset(self) -> None:
@@ -168,13 +166,24 @@ class RTLSimulator:
         for n in self.netlist.nodes:
             if isinstance(n, DFF):
                 self.dff_state[n.id] = 0
+            elif isinstance(n, CLB) and n.dff:
+                self.dff_state[n.dff.id] = 0
 
         # input / output maps:
         for n in self.netlist.nodes:
             if isinstance(n, Input):
                 self.input_ports[n.port_name] = n.outputs[0].name
+            elif isinstance(n, IOB):
+                if n.is_input and n.inputs[0]:
+                    port_name = n.pad_name if n.pad_name else n.inputs[0].name
+                    self.input_ports[port_name] = n.inputs[0].name
+                if n.is_output and n.outputs[0]:
+                    port_name = n.pad_name if n.pad_name else n.outputs[0].name
+                    self.output_ports[port_name] = n.outputs[0].name
+        
         for n in self.netlist.outputs:
-            self.output_ports[n.name] = n.name
+            if n.name not in self.output_ports:
+                self.output_ports[n.name] = n.name
 
         # set constant values
         for n in self.netlist.nodes:
@@ -249,37 +258,82 @@ class RTLSimulator:
                             self.net_values[output_net.name] = result
                             changed_flag = True
                             
+                elif isinstance(n, IOB):
+                    # inputs: [PIN_in, OUT, TS, IO_CLK]
+                    # outputs: [PIN_out, IN]
+                    pin_val_in = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs)>0 and n.inputs[0] else 0
+                    out_val = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs)>1 and n.inputs[1] else 0
+                    ts_val = self.net_values.get(n.inputs[2].name, 1) if len(n.inputs)>2 and n.inputs[2] else 1
+                    
+                    internal_ts = 1
+                    if n.ts_mux_sel == 0: internal_ts = 1
+                    elif n.ts_mux_sel == 1: internal_ts = ts_val
+                    elif n.ts_mux_sel == 2: internal_ts = 0
+                    
+                    pin_val_out = pin_val_in
+                    if internal_ts == 0:
+                         pin_val_out = out_val
+                         
+                    if len(n.outputs)>0 and n.outputs[0]:
+                        if self.net_values.get(n.outputs[0].name, 0) != pin_val_out:
+                            self.net_values[n.outputs[0].name] = pin_val_out
+                            changed_flag = True
+                            
+                    # PIN to IN path
+                    if n.in_mux_sel == 0:
+                        if len(n.outputs)>1 and n.outputs[1]:
+                            if self.net_values.get(n.outputs[1].name, 0) != pin_val_out:
+                                self.net_values[n.outputs[1].name] = pin_val_out
+                                changed_flag = True
+                    else:
+                        q_val = self.dff_state.get(n.dff.id, 0) if n.dff else 0
+                        if len(n.outputs)>1 and n.outputs[1]:
+                            if self.net_values.get(n.outputs[1].name, 0) != q_val:
+                                self.net_values[n.outputs[1].name] = q_val
+                                changed_flag = True
+                                
                 elif isinstance(n, CLB):
-                    # A CLB just evaluates its internal LUTs and its DFF
-                    # In this simulator, we can just flatten the evaluation 
-                    # of the CLB's internal LUT components, rather than modelling
-                    # this internal LUTs of the CLB (otherwise would need a separate
-                    # 'Lowering' style conversion)
-                    for internal_lut in n.luts:
-                        input_values = [self.net_values.get(in_n.name, 0) for in_n in internal_lut.inputs]
-                        state = 0
-                        for i, val in enumerate(input_values):
-                            if val:
-                                state |= (1 << i)
-                                
-                        result = (internal_lut.truth_table >> state) & 1
-                        
-                        if internal_lut.outputs:
-                            output_net = internal_lut.outputs[0]
-                            prev_value = self.net_values.get(output_net.name, 0)
-                            if prev_value != result:
-                                self.net_values[output_net.name] = result
-                                changed_flag = True
-                                
-                    if n.dff:
-                        q_value = self.dff_state.get(n.dff.id, 0)
-                        if n.dff.outputs:
-                            output_net = n.dff.outputs[0]
-                            q_value_masked = self._mask_value(q_value, output_net.width)
-                            prev_value = self.net_values.get(output_net.name, 0)
-                            if prev_value != q_value_masked:
-                                self.net_values[output_net.name] = q_value_masked
-                                changed_flag = True
+                    # Evaluate CLB given strict physical mapping
+                    A = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs) > 0 and n.inputs[0] else 0
+                    B = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs) > 1 and n.inputs[1] else 0
+                    C = self.net_values.get(n.inputs[2].name, 0) if len(n.inputs) > 2 and n.inputs[2] else 0
+                    D = self.net_values.get(n.inputs[3].name, 0) if len(n.inputs) > 3 and n.inputs[3] else 0
+                    
+                    # Q is the current state of the DFF
+                    Q = self.dff_state.get(n.dff.id, 0) if n.dff else 0
+                    
+                    # Evaluate LUT F
+                    f_in0 = B if n.sel_f_in1 else A
+                    f_in1 = C if n.sel_f_in2 else B
+                    f_in2 = D if n.sel_f_in3 == 1 else (Q if n.sel_f_in3 == 2 else C)
+                    f_state = (f_in2 << 2) | (f_in1 << 1) | f_in0
+                    F = (n.lut_f_init >> f_state) & 1
+                    
+                    # Evaluate LUT G
+                    g_in0 = B if n.sel_g_in1 else A
+                    g_in1 = C if n.sel_g_in2 else B
+                    g_in2 = D if n.sel_g_in3 == 1 else (Q if n.sel_g_in3 == 2 else C)
+                    g_state = (g_in2 << 2) | (g_in1 << 1) | g_in0
+                    G = (n.lut_g_init >> g_state) & 1
+                    
+                    # Drive outputs X and Y based on MUXes
+                    X = F if n.sel_x == 2 else (Q if n.sel_x == 1 else G)
+                    Y = F if n.sel_y == 2 else (Q if n.sel_y == 1 else G)
+                    
+                    # Map back to nets
+                    if len(n.outputs) > 0 and n.outputs[0]:
+                        out_net = n.outputs[0] # X
+                        prev = self.net_values.get(out_net.name, 0)
+                        if prev != X:
+                            self.net_values[out_net.name] = X
+                            changed_flag = True
+                            
+                    if len(n.outputs) > 1 and n.outputs[1]:
+                        out_net = n.outputs[1] # Y
+                        prev = self.net_values.get(out_net.name, 0)
+                        if prev != Y:
+                            self.net_values[out_net.name] = Y
+                            changed_flag = True
 
             if not changed_flag:
                 break
@@ -378,15 +432,54 @@ class RTLSimulator:
                         d_value = self.net_values.get(d_net.name, 0)
                         d_value_masked = self._mask_value(d_value, d_net.width)
                         self.dff_state[n.id] = d_value_masked
+                        
+            elif isinstance(n, IOB) and n.dff:
+                clk_net_name = n.dff.inputs[1].name if len(n.dff.inputs) >= 2 else None
+                if clk_net_name and self._detect_edge(clk_net_name, n.dff.edge):
+                    pin_val_in = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs)>0 and n.inputs[0] else 0
+                    self.dff_state[n.dff.id] = self._mask_value(pin_val_in, 1)
+                    
             elif isinstance(n, CLB) and n.dff:
-                # evaluate the DFF packed inside the CLB
-                if len(n.dff.inputs) >= 2:
-                    clk_net_name = n.dff.inputs[1].name
-                    if self._detect_edge(clk_net_name, n.dff.edge):
-                        d_net = n.dff.inputs[0]
-                        d_value = self.net_values.get(d_net.name, 0)
-                        d_value_masked = self._mask_value(d_value, d_net.width)
-                        self.dff_state[n.dff.id] = d_value_masked
+                # Calculate internal clock state based on current dict (prev or current)
+                def calc_clk(vals_dict, dff_q):
+                    A = vals_dict.get(n.inputs[0].name, 0) if len(n.inputs)>0 and n.inputs[0] else 0
+                    B = vals_dict.get(n.inputs[1].name, 0) if len(n.inputs)>1 and n.inputs[1] else 0
+                    C = vals_dict.get(n.inputs[2].name, 0) if len(n.inputs)>2 and n.inputs[2] else 0
+                    D = vals_dict.get(n.inputs[3].name, 0) if len(n.inputs)>3 and n.inputs[3] else 0
+                    K = vals_dict.get(n.inputs[4].name, 0) if len(n.inputs)>4 and n.inputs[4] else 0
+                    
+                    g_in0 = B if n.sel_g_in1 else A
+                    g_in1 = C if n.sel_g_in2 else B
+                    g_in2 = D if n.sel_g_in3 == 1 else (dff_q if n.sel_g_in3 == 2 else C)
+                    G = (n.lut_g_init >> ((g_in2<<2)|(g_in1<<1)|g_in0)) & 1
+                    
+                    clk1 = K if n.sel_clk1 == 2 else (C if n.sel_clk1 == 1 else G)
+                    clk2 = 0 if n.sel_clk2 == 2 else (clk1 if n.sel_clk2 == 1 else (1 - clk1))
+                    return clk2
+                
+                q_state = self.dff_state.get(n.dff.id, 0)
+                old_clk = calc_clk(self.prev_net_values, q_state)
+                new_clk = calc_clk(self.net_values, q_state)
+                
+                is_edge = False
+                if n.dff.edge == "posedge":
+                    is_edge = (old_clk == 0 and new_clk == 1)
+                else:
+                    is_edge = (old_clk == 1 and new_clk == 0)
+
+                if is_edge:
+                    # Evaluate F which drives D hardwired
+                    A = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs)>0 and n.inputs[0] else 0
+                    B = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs)>1 and n.inputs[1] else 0
+                    C = self.net_values.get(n.inputs[2].name, 0) if len(n.inputs)>2 and n.inputs[2] else 0
+                    D = self.net_values.get(n.inputs[3].name, 0) if len(n.inputs)>3 and n.inputs[3] else 0
+                    
+                    f_in0 = B if n.sel_f_in1 else A
+                    f_in1 = C if n.sel_f_in2 else B
+                    f_in2 = D if n.sel_f_in3 == 1 else (q_state if n.sel_f_in3 == 2 else C)
+                    F = (n.lut_f_init >> ((f_in2<<2)|(f_in1<<1)|f_in0)) & 1
+                    
+                    self.dff_state[n.dff.id] = F
 
     def _parse_port_spec(self, port_spec: str) -> Tuple[str, Optional[int], Optional[int]]:
         # Parse a port specification like "a", "a[2]", or "a[3:1]"
