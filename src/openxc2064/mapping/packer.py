@@ -217,8 +217,9 @@ class GreedyPacker(Packer):
                     unpacked_luts.remove(driving_lut)
 
             if not driving_lut:
-                # todo: not sure if this can actually happen?
-                pass
+                # Standalone DFF -> Buffer LUT F
+                # use 0xAA (10101010) because we want the output to exactly mirror in0
+                driving_lut = LUT(f"dummy_{dff.id}", inputs=[data_net], outputs=[data_net], truth_table=0xAA)
 
             clb_configs.append({"lut_f": driving_lut, "lut_g": None, "dff": dff})
             unpacked_dffs.remove(dff)
