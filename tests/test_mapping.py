@@ -239,3 +239,52 @@ def test_packer_clustering():
         assert sim.get("out1") == (a_val & b_val)
         assert sim.get("out2") == (a_val | c_val)
 
+def test_packer_dff_pairing():
+    nl = Netlist("test")
+    a = nl.create_net("a", 1)
+    b = nl.create_net("b", 1)
+    clk = nl.create_net("clk", 1)
+    
+    out1 = nl.create_net("out1", 1)
+    nl.add_logic("XOR", [a, b], [out1])
+    
+    q = nl.create_net("q", 1)
+    nl.add_dff([out1, clk], [q])
+    
+    nl.add_input("a", a)
+    nl.add_input("b", b)
+    nl.add_input("clk", clk)
+    nl.outputs.append(q)
+    
+    mapped_nl = GreedyMapper(k_max=3).run(nl)
+    packed_nl = GreedyPacker(max_clbs=64).run(mapped_nl)
+    
+    clbs = [n for n in packed_nl.nodes if isinstance(n, CLB)]
+    
+    # The XOR should map perfectly into a single LUT, which also drives the DFF
+    assert len(clbs) == 1
+    assert clbs[0].dff is not None
+
+    # Verify via Simulator
+    sim = RTLSimulator(packed_nl)
+    # Clock edge verification
+    sim.set("clk", 0)
+    sim.set("a", 1)
+    sim.set("b", 0)
+    sim.step()
+    assert sim.get("q") == 0 # No edge yet
+    
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 1 # 1 ^ 0 = 1
+
+    sim.set("clk", 0)
+    sim.set("a", 1)
+    sim.set("b", 1)
+    sim.step()
+    assert sim.get("q") == 1 # Still 1 (previous state)
+    
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 0 # 1 ^ 1 = 0
+
