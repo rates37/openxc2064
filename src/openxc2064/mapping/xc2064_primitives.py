@@ -58,6 +58,18 @@ class IOB(Node):
     Input/Output Block primitive.
     Wraps external I/O pins of the FPGA.
     """
-    is_input: bool = True
-    is_output: bool = False
+    ts_mux_sel: int = 0  # 0: OFF (Input), 1: TS PIN, 2: ON (Output)
+    in_mux_sel: int = 0  # 0: Combinational, 1: Clocked DFF Q
     pad_name: str = ""
+    
+    dff: DFF | None = None
+    
+    @property
+    def is_input(self) -> bool:
+        # A pad is an input if not permanently driven by a constant OUT ON
+        return self.ts_mux_sel == 0 or self.ts_mux_sel == 1
+        
+    @property
+    def is_output(self) -> bool:
+        # A pad is an output if not permanently high-Z OFF
+        return self.ts_mux_sel == 2 or self.ts_mux_sel == 1
