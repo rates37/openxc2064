@@ -288,3 +288,58 @@ def test_packer_dff_pairing():
     sim.step()
     assert sim.get("q") == 0 # 1 ^ 1 = 0
 
+def test_packer_small_fsm():
+    # A tiny state machine: q_next = (a & b) ^ q
+    nl = Netlist("complex")
+    a = nl.create_net("a", 1)
+    b = nl.create_net("b", 1)
+    clk = nl.create_net("clk", 1)
+    q = nl.create_net("q", 1)
+    
+    comb_out = nl.create_net("comb_out", 1)
+    and_out = nl.create_net("and_out", 1)
+    
+    nl.add_logic("AND", [a, b], [and_out])
+    nl.add_logic("XOR", [and_out, q], [comb_out])
+    nl.add_dff([comb_out, clk], [q])
+    
+    nl.add_input("a", a)
+    nl.add_input("b", b)
+    nl.add_input("clk", clk)
+    nl.outputs.append(q)
+    
+    mapped_nl = GreedyMapper(k_max=3).run(nl)
+    packed_nl = GreedyPacker(max_clbs=64).run(mapped_nl)
+    
+    clbs = [n for n in packed_nl.nodes if isinstance(n, CLB)]
+    # (a & b) ^ q has 3 inputs: a, b, q
+    # It should map to 1 LUT and 1 DFF, all inside 1 CLB
+    assert len(clbs) == 1
+    
+    sim = RTLSimulator(packed_nl)
+    sim.set("clk", 0)
+    sim.set("a", 1)
+    sim.set("b", 1)
+    # Initial state should be 0
+    sim.step()
+    
+    # Tick 1: (1 & 1) ^ 0 = 1
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 1
+    
+    # Tick 2: (1 & 1) ^ 1 = 0
+    sim.set("clk", 0)
+    sim.step()
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 0
+    
+    # Tick 3 with inputs changed: (0 & 1) ^ 0 = 0
+    sim.set("clk", 0)
+    sim.set("a", 0)
+    sim.step()
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 0
+
