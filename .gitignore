@@ -213,3 +213,6 @@ temp/
 
 # VSCode Counter extension files
 .VSCodeCounter/
+
+# Ignore visualisations directory
+visualisations/
