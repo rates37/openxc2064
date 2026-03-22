@@ -3,6 +3,7 @@ import itertools
 from openxc2064.synthesis.rtl_nodes import Netlist, Constant, LogicGate
 from openxc2064.mapping.xc2064_primitives import LUT, CLB, IOB
 from openxc2064.mapping.mapper import GreedyMapper
+from openxc2064.mapping.packer import GreedyPacker, CapacityError
 from openxc2064.simulator.high_level_rtl_simulator import RTLSimulator
 
 def test_mapper_simple_and():
@@ -197,4 +198,44 @@ def test_mapper_complex_tree():
         
         expected = ((vals[0] & vals[1]) ^ vals[2]) | ((~vals[3] & 1) & vals[4])
         assert sim.get("q") == expected
+
+def test_packer_clustering():
+    nl = Netlist("test")
+    a = nl.create_net("a", 1)
+    b = nl.create_net("b", 1)
+    c = nl.create_net("c", 1)
+    
+    # LUT 1: a AND b
+    out1 = nl.create_net("out1", 1)
+    nl.add_logic("AND", [a, b], [out1])
+    
+    # LUT 2: a OR c
+    out2 = nl.create_net("out2", 1)
+    nl.add_logic("OR", [a, c], [out2])
+    
+    nl.add_input("a", a)
+    nl.add_input("b", b)
+    nl.add_input("c", c)
+    nl.outputs.extend([out1, out2])
+    
+    mapper = GreedyMapper(k_max=3)
+    mapped_nl = mapper.run(nl)
+    
+    packer = GreedyPacker(max_clbs=64)
+    packed_nl = packer.run(mapped_nl)
+    
+    clbs = [n for n in packed_nl.nodes if isinstance(n, CLB)]
+    # They share 'a' input, total inputs = {a, b, c} = 3 <= 4.
+    # Therefore, the packer should have packed both into exactly 1 CLB
+    assert len(clbs) == 1
+
+    # Verify via Simulator
+    sim = RTLSimulator(packed_nl)
+    for a_val, b_val, c_val in itertools.product([0, 1], repeat=3):
+        sim.set("a", a_val)
+        sim.set("b", b_val)
+        sim.set("c", c_val)
+        sim.step()
+        assert sim.get("out1") == (a_val & b_val)
+        assert sim.get("out2") == (a_val | c_val)
 
