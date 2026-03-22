@@ -343,3 +343,58 @@ def test_packer_small_fsm():
     sim.step()
     assert sim.get("q") == 0
 
+
+def test_packer_standalone_dff():
+    nl = Netlist("standalone")
+    a = nl.create_net("a", 1)
+    clk = nl.create_net("clk", 1)
+    q = nl.create_net("q", 1)
+    
+    # DFF driven directly by 'a'
+    nl.add_dff([a, clk], [q])
+    
+    nl.add_input("a", a)
+    nl.add_input("clk", clk)
+    nl.outputs.append(q)
+    
+    mapped_nl = GreedyMapper(k_max=3).run(nl)
+    packed_nl = GreedyPacker(max_clbs=64).run(mapped_nl)
+    
+    clbs = [n for n in packed_nl.nodes if isinstance(n, CLB)]
+    assert len(clbs) == 1
+    assert clbs[0].lut_f_init == 0xAA
+    
+    sim = RTLSimulator(packed_nl)
+    sim.set("clk", 0)
+    sim.set("a", 1)
+    sim.step()
+    assert sim.get("q") == 0
+    
+    sim.set("clk", 1)
+    sim.step()
+    assert sim.get("q") == 1
+
+def test_packer_capacity_error():
+    # Create a netlist that definitely requires > 64 CLBs
+    nl = Netlist("huge")
+    for i in range(70):
+        a = nl.create_net(f"a{i}", 1)
+        b = nl.create_net(f"b{i}", 1)
+        c = nl.create_net(f"c{i}", 1)
+        and_out = nl.create_net(f"and{i}", 1)
+        q = nl.create_net(f"q{i}", 1)
+        
+        nl.add_input(f"a{i}", a)
+        nl.add_input(f"b{i}", b)
+        nl.add_input(f"c{i}", c)
+        
+        nl.add_logic("AND", [a, b], [and_out])
+        nl.add_logic("OR", [and_out, c], [q])
+        nl.outputs.append(q)
+    
+    mapped_nl = GreedyMapper(k_max=3).run(nl)
+    # Each (a & b) | c should map to 1 LUT with 3 unique inputs
+    # Since inputs are unique (a{i}, b{i}, c{i}), they cannot be merged with others
+    # 70 LUTs -> 70 CLBs. This should trigger CapacityError.
+    with pytest.raises(CapacityError):
+        GreedyPacker(max_clbs=64).run(mapped_nl)
