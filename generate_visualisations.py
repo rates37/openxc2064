@@ -11,6 +11,13 @@ module adder(input [3:0] a, input [3:0] b, output [3:0] sum);
 endmodule
 """
 
+HDL_ADDER_REG = """
+module adder(input [3:0] a, input [3:0] b, output reg [3:0] sum, input clk);
+    always : seq @(posedge clk)
+        sum = a + b;
+endmodule
+"""
+
 HDL_REG = """
 module simple_reg(input clk, input [3:0] d, output reg [3:0] q);
     always : seq @(posedge clk)
@@ -64,6 +71,7 @@ def main():
         vis.generate_html(packed_netlist, f"visualisations/{prefix}_5_packed.html")
 
     process_hdl(HDL_ADDER, "adder", "adder")
+    process_hdl(HDL_ADDER_REG, "adder", "adder_reg")
     process_hdl(HDL_REG, "simple_reg", "reg")
     process_hdl(HDL_OPT, "optimisable", "opt")
     
