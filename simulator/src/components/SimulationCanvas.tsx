@@ -1,28 +1,11 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useSimulator } from "../SimulatorContext";
 import { CELL_WIDTH, CELL_HEIGHT, PIP_WIDTH, PIP_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT } from "../configs/Routing";
-import { coordinates } from "../configs/coords";
-// --- Coordinate mapping constants ---
-// Replace COORD_MAX with your desired constant later
-const COORD_MAX_X = 4200; // <-- Set this to your desired max value
-const COORD_MAX_Y = 2200; // <-- Set this to your desired max value
-const COORD_OFFSET_X = 335;
-const COORD_OFFSET_Y = 365;
-const RAW_MAX = 175;
 
-function mapCoord(val: number, maxCoord: number) {
-    return (val / RAW_MAX) * maxCoord;
-}
 import { LogicCell } from "../models/LogicCell";
 import { SwitchMatrix } from "../models/SwitchMatrix";
-import { IOBank } from "../models/IOBank";
+import { IOBank, IOPad } from "../models/IOBank";
 import { Net, Pip } from "../types";
-
-// Full content bounds (8x8 grid with margins)
-const CONTENT_X = -600;
-const CONTENT_Y = -600;
-const CONTENT_WIDTH = 5000;
-const CONTENT_HEIGHT = 5200;
 
 // Initial view position
 const INITIAL_VIEW = { x: -3500, y: -100, w: 7000, h: 5000 };
@@ -48,10 +31,12 @@ function drawLineSegment(
     baseY: number,
     points: { x: number; y: number; continuous?: boolean }[],
     value: boolean,
-    colour?: string
+    colour?: string,
+    overrideColour?: string
 ) {
     if (points.length < 2) return;
-    ctx.strokeStyle = value ? "#ff0000" : colour || "#333";
+    if (overrideColour) ctx.strokeStyle = overrideColour;
+    else ctx.strokeStyle = value ? "#ff0000" : colour || "#333";
     ctx.lineWidth = 4;
     ctx.lineCap = "round";
 
@@ -86,7 +71,7 @@ function drawGrid(ctx: CanvasRenderingContext2D, viewBox: { x: number; y: number
     ctx.stroke();
 }
 
-function drawCell(ctx: CanvasRenderingContext2D, cell: LogicCell) {
+function drawCell(ctx: CanvasRenderingContext2D, cell: LogicCell, highlightId?: string | null) {
     const { x, y } = cell.pos;
     const cx = x + CELL_WIDTH / 2;
     const cy = y + CELL_HEIGHT / 2;
@@ -94,7 +79,9 @@ function drawCell(ctx: CanvasRenderingContext2D, cell: LogicCell) {
     // Draw nets
     for (const net of cell.nets) {
         if (net.points.length > 0) {
-            drawLineSegment(ctx, cx, cy, net.points, net.value);
+            const fullId = `${cell.id}.${net.id}`;
+            const override = fullId === highlightId ? "purple" : undefined;
+            drawLineSegment(ctx, cx, cy, net.points, net.value, undefined, override);
         }
     }
 
@@ -126,18 +113,10 @@ function drawCell(ctx: CanvasRenderingContext2D, cell: LogicCell) {
     ctx.fillText("K", cx - 80, cy + 83);
 }
 
-function drawMatrix(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix) {
+function drawMatrixBox(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix, highlightId?: string | null) {
     const { x, y } = matrix.pos;
     const cx = x + MATRIX_WIDTH / 2;
     const cy = y + MATRIX_HEIGHT / 2;
-
-    // Draw nets
-    for (let i = 0; i < Math.min(4, matrix.nets.length); i++) {
-        const net = matrix.nets[i];
-        if (net && net.points.length > 0) {
-            drawLineSegment(ctx, cx, cy, net.points, net.value, "rgb(199, 199, 199)");
-        }
-    }
 
     // Draw matrix rectangle
     ctx.fillStyle = "#fff";
@@ -158,22 +137,49 @@ function drawMatrix(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix) {
         }
     }
 
-    ctx.strokeStyle = "#2196F3";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#55848a";
+    ctx.lineWidth = 3;
     for (const { from, to } of lines) {
         ctx.beginPath();
         ctx.moveTo(cx + miniNodeOffsets[from].dx, cy + miniNodeOffsets[from].dy);
         ctx.lineTo(cx + miniNodeOffsets[to].dx, cy + miniNodeOffsets[to].dy);
         ctx.stroke();
     }
+    
+    // Draw matrix rectangle
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.roundRect(x, y, MATRIX_WIDTH, MATRIX_HEIGHT, 5);
+    ctx.stroke();
 
-    // Draw mini nodes
-    ctx.fillStyle = "#333";
-    for (const off of miniNodeOffsets) {
-        ctx.beginPath();
-        ctx.arc(cx + off.dx, cy + off.dy, 2, 0, Math.PI * 2);
-        ctx.fill();
+
+    // // Draw mini nodes
+    // ctx.fillStyle = "#333";
+    // for (const off of miniNodeOffsets) {
+    //     ctx.beginPath();
+    //     ctx.arc(cx + off.dx, cy + off.dy, 2, 0, Math.PI * 2);
+    //     ctx.fill();
+    // }
+}
+
+function drawMatrixNets(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix, highlightId?: string | null) {
+    const { x, y } = matrix.pos;
+    const cx = x + MATRIX_WIDTH / 2;
+    const cy = y + MATRIX_HEIGHT / 2;
+
+    
+    
+    // Draw nets
+    for (let i = 0; i < Math.min(4, matrix.nets.length); i++) {
+        const net = matrix.nets[i];
+        if (net && net.points.length > 0) {
+            const override = net.id === highlightId ? "purple" : undefined;
+            drawLineSegment(ctx, cx, cy, net.points, net.value, "rgb(199, 199, 199)", override);
+        }
     }
+
 }
 
 function drawPip(ctx: CanvasRenderingContext2D, pip: Pip) {
@@ -187,34 +193,65 @@ function drawPip(ctx: CanvasRenderingContext2D, pip: Pip) {
     ctx.stroke();
 }
 
-function drawIOBank(ctx: CanvasRenderingContext2D, bank: IOBank) {
+function drawIOBank(ctx: CanvasRenderingContext2D, bank: IOBank, highlightId?: string | null) {
     const { x, y } = bank.pos;
-    const netO = bank.nets.find((n) => n.id === `${bank.id}.net_O`);
+    const netO = bank.nets.find((n) => n.id === `${bank.id}.net_I`);
     const isActive = netO?.value ?? false;
 
     // Draw IO bank rectangle
-    ctx.fillStyle = isActive ? "#f76420" : "#fff";
-    ctx.strokeStyle = "#333";
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = isActive ? "#f00" : "#333";
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.roundRect(x, y, bank.size.width, bank.size.height, 5);
     ctx.fill();
     ctx.stroke();
 
+    // Draw Bank ID
+    const cx = x + bank.size.width / 2;
+    const cy = y + bank.size.height / 2;
+    ctx.fillStyle = "#000";
+    ctx.font = "30px Computer Modern, Latin Modern, STIXGeneral, Times New Roman, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(bank.id, cx, cy);
+
     // Draw nets
     for (const net of bank.nets) {
         if (net.points.length > 0) {
-            drawLineSegment(ctx, x + IO_WIDTH / 2, y + IO_HEIGHT / 2, net.points, net.value, "#333");
+            const override = net.id === highlightId ? "purple" : undefined;
+            drawLineSegment(ctx, x + IO_WIDTH / 2, y + IO_HEIGHT / 2, net.points, net.value, "#333", override);
         }
     }
 }
 
-function drawBusNet(ctx: CanvasRenderingContext2D, net: Net) {
+function drawIOPad(ctx: CanvasRenderingContext2D, bank: IOBank, highlightId?: string | null) {
+    const pad = bank.pad;
+
+    if (!pad) return;
+
+    const { x, y } = { x: pad.pos.x + bank.pos.x, y: pad.pos.y + bank.pos.y };
+    const netO = bank.nets.find((n) => n.id === `${bank.id}.net_pad`);
+    const isActive = netO?.value ?? false;
+
+    // Draw IO bank rectangle
+    ctx.fillStyle = isActive ? "rgb(255, 112, 112)" : "#fff";
+    ctx.strokeStyle = isActive ? "#f00" : "#333";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.roundRect(x, y, pad.size.width, pad.size.height, 5);
+    ctx.fill();
+    ctx.stroke();
+
+}
+
+function drawBusNet(ctx: CanvasRenderingContext2D, net: Net, highlightId?: string | null) {
     if (net.points.length < 2) return;
     const isActive = net.value;
 
     // console.log(`Drawing bus net ${net.id} with value ${net.value} and points:`, net.points);
-    drawLineSegment(ctx, 0, 0, net.points, net.value, "rgba(199, 199, 199, 1)");
+    const override = net.id === highlightId ? "purple" : undefined;
+    drawLineSegment(ctx, 0, 0, net.points, net.value, "rgba(199, 199, 199, 1)", override);
 }
 
 // --- Main component ---
@@ -237,6 +274,8 @@ const SimulationCanvas: React.FC = () => {
         hasDriver,
         setDriver,
         removeDriver,
+        searchQuery,
+        selectIOBank,
     } = useSimulator();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -351,9 +390,7 @@ const SimulationCanvas: React.FC = () => {
                     world.y >= pip.pos.y - PIP_HEIGHT / 2 &&
                     world.y <= pip.pos.y + PIP_HEIGHT / 2
                 ) {
-                    console.log(pip);
                     if (pip.bidirectional) {
-                        console.log("Clicked bidirectional PIP", pip.id);
                         const srcDriver = hasDriver(pip.source);
                         const dstDriver = hasDriver(pip.destination);
 
@@ -399,7 +436,7 @@ const SimulationCanvas: React.FC = () => {
                 }
             }
 
-            // Check IO banks
+            // Check IO banks - open modal instead of toggling net
             for (let i = 0; i < ioBanks.length; i++) {
                 const bank = ioBanks[i];
                 if (
@@ -408,11 +445,25 @@ const SimulationCanvas: React.FC = () => {
                     world.y >= bank.pos.y &&
                     world.y <= bank.pos.y + bank.size.height
                 ) {
+                    // open the IO bank modal for editing
+                    selectIOBank(bank);
+                    return;
+                }
+
+                const pad = bank.pad;
+                if (
+                    pad &&
+                    world.x >= bank.pos.x + pad.pos.x &&
+                    world.x <= bank.pos.x + pad.pos.x + pad.size.width &&
+                    world.y >= bank.pos.y + pad.pos.y &&
+                    world.y <= bank.pos.y + pad.pos.y + pad.size.height
+                ) {
+                    // open the IO bank modal for editing
                     toggleIONet(i);
-                    simulate();
                     return;
                 }
             }
+
 
             // Check switch matrices
             for (const matrix of switchMatrices) {
@@ -440,7 +491,7 @@ const SimulationCanvas: React.FC = () => {
                 }
             }
         },
-        [screenToWorld, pips, ioBanks, switchMatrices, logicCells, togglePip, toggleIONet, simulate, selectMatrix, selectCell]
+        [screenToWorld, pips, ioBanks, switchMatrices, logicCells, togglePip, toggleIONet, simulate, selectMatrix, selectCell, hasDriver, setDriver, removeDriver, drivers]
     );
 
     // Render the canvas
@@ -479,22 +530,26 @@ const SimulationCanvas: React.FC = () => {
 
         // Draw bus nets
         for (const net of busNets) {
-            drawBusNet(ctx, net);
+            drawBusNet(ctx, net, searchQuery);
         }
 
         // Draw switch matrices
         for (const matrix of switchMatrices) {
-            drawMatrix(ctx, matrix);
+            drawMatrixNets(ctx, matrix, searchQuery);
+        }
+        for (const matrix of switchMatrices) {
+            drawMatrixBox(ctx, matrix, searchQuery);
         }
 
         // Draw logic cells
         for (const cell of logicCells) {
-            drawCell(ctx, cell);
+            drawCell(ctx, cell, searchQuery);
         }
 
         // Draw IO banks
         for (const bank of ioBanks) {
-            drawIOBank(ctx, bank);
+            drawIOBank(ctx, bank, searchQuery);
+            drawIOPad(ctx, bank, searchQuery);
         }
 
         // Draw PIPs
@@ -502,21 +557,9 @@ const SimulationCanvas: React.FC = () => {
             drawPip(ctx, pip);
         }
 
-        // Draw coordinate boxes (bright red)
-        ctx.save();
-        ctx.strokeStyle = "#ff0000";
-        ctx.fillStyle = "#ff0000";
-        for (const pt of coordinates) {
-            const x = mapCoord(pt.x, COORD_MAX_X) - COORD_OFFSET_X;
-            const y = mapCoord(175-pt.y, COORD_MAX_Y) - COORD_OFFSET_Y;
-            ctx.globalAlpha = 0.85;
-            ctx.fillRect(x - 5, y - 5, 10, 10);
-            ctx.globalAlpha = 1.0;
-        }
-        ctx.restore();
 
         ctx.restore();
-    }, [viewBox, showGrid, logicCells, switchMatrices, pips, ioBanks, busNets, tick, canvasSize]);
+    }, [viewBox, showGrid, logicCells, switchMatrices, pips, ioBanks, busNets, tick, canvasSize, searchQuery]);
 
     return (
         <div
@@ -551,3 +594,4 @@ const SimulationCanvas: React.FC = () => {
 };
 
 export default SimulationCanvas;
+

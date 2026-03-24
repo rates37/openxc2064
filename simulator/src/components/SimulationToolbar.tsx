@@ -2,7 +2,7 @@ import React from 'react';
 import { useSimulator } from '../SimulatorContext';
 
 const SimulationToolbar: React.FC = () => {
-  const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState } = useSimulator();
+  const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState, searchQuery, setSearchQuery } = useSimulator();
 
   return (
     <div style={{
@@ -53,6 +53,19 @@ const SimulationToolbar: React.FC = () => {
         >
           Import Config
         </button>
+        <input
+          aria-label="Search net"
+          placeholder="Search net (e.g. AA.net_0)"
+          value={searchQuery ?? ''}
+          onChange={(e) => setSearchQuery(e.target.value.trim() === '' ? null : e.target.value)}
+          style={{
+            marginLeft: '12px',
+            padding: '6px 10px',
+            borderRadius: 4,
+            border: '1px solid #ccc',
+            minWidth: 220,
+          }}
+        />
       </div>
       <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#555' }}>
         {cursorPos ? `X: ${cursorPos.x}  Y: ${cursorPos.y}` : ''}

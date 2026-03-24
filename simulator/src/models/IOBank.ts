@@ -8,6 +8,10 @@ export class IOBank {
     pos = { x: 0, y: 0 };
     size = { width: 100, height: 50 };
 
+    pad: IOPad | null = null;
+
+    used = false;
+
     constructor(id: string, pos: { x: number, y: number }, size: { width: number, height: number }) {
         this.id = id;
         this.pos = pos;
@@ -23,4 +27,15 @@ export class IOBank {
     }
 
 
+}
+
+
+export class IOPad {
+    pos = { x: 0, y: 0 };
+    size = { width: 20, height: 20 };
+
+    constructor(pos: { x: number, y: number }, size: { width: number, height: number }) {
+        this.pos = pos;
+        this.size = size;
+    }
 }

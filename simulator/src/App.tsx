@@ -4,6 +4,7 @@ import SimulationToolbar from './components/SimulationToolbar';
 import SimulationCanvas from './components/SimulationCanvas';
 import SwitchMatrixEditor from './components/SwitchMatrixEditor';
 import LogicElementModal from './components/LogicElementModal';
+import IOBankModal from './components/IOBankModal';
 
 const App: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ const App: React.FC = () => {
         <SimulationCanvas />
         <SwitchMatrixEditor />
         <LogicElementModal />
+        <IOBankModal />
       </div>
     </SimulatorProvider>
   );

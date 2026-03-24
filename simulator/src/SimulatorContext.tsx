@@ -13,7 +13,7 @@ import {
     MATRIX_WIDTH,
     MATRIX_HEIGHT,
 } from "./configs/Routing";
-import { IOBank } from "./models/IOBank";
+import { IOBank, IOPad } from "./models/IOBank";
 
 // =============================================================================
 // 1. Define the shape of your context value here.
@@ -50,10 +50,16 @@ interface SimulatorContextValue {
     selectCell: (cell: LogicCell | null) => void;
     setLogicCells: React.Dispatch<React.SetStateAction<LogicCell[]>>;
     toggleIONet: (bankIndex: number) => void;
+    // Selected IO bank for modal editing
+    selectedIOBank: IOBank | null;
+    selectIOBank: (bank: IOBank | null) => void;
     cursorPos: { x: number; y: number } | null;
     setCursorPos: (pos: { x: number; y: number } | null) => void;
     exportState: () => void;
     importState: () => void;
+    // Search state: id of net to highlight (e.g. "AA.net_0")
+    searchQuery: string | null;
+    setSearchQuery: (q: string | null) => void;
     setDriver(source: string | null, destination: string): void;
     removeDriver(destination: string): void;
     hasDriver(dest): boolean;
@@ -119,7 +125,9 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const [selectedMatrix, setSelectedMatrix] = useState<SwitchMatrix | null>(null);
     const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
+    const [selectedIOBank, setSelectedIOBank] = useState<IOBank | null>(null);
     const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string | null>(null);
 
     const selectCell = useCallback((cell: LogicCell | null) => {
         setSelectedCell(cell);
@@ -127,6 +135,10 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     const selectMatrix = useCallback((matrix: SwitchMatrix | null) => {
         setSelectedMatrix(matrix);
+    }, []);
+
+    const selectIOBank = useCallback((bank: IOBank | null) => {
+        setSelectedIOBank(bank);
     }, []);
 
     const toggleConnection = useCallback(
@@ -155,7 +167,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
         (bankIndex: number) => {
             const bank = ioBanks[bankIndex];
             if (!bank) return;
-            const net = bank.nets.find((n) => n.id === `${bank.id}.net_O`);
+            const net = bank.nets.find((n) => n.id === `${bank.id}.net_pad`);
             if (net) net.value = !net.value;
             bumpTick();
         },
@@ -220,11 +232,23 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
                     snap.set(`${cell.id}.${net.id}`, net.value);
                 }
             }
+
             for (const matrix of switchMatrices) {
                 for (const net of matrix.nets) {
                     if (net) snap.set(`${matrix.id}.${net.id}`, net.value);
                 }
             }
+
+            for (const bank of ioBanks) {
+                for (const net of bank.nets) {
+                    if (net) snap.set(`${bank.id}.${net.id}`, net.value);
+                }
+            }
+
+            for (const net of busNets) {
+                snap.set(net.id, net.value);
+            }
+            
             return snap;
         };
 
@@ -233,6 +257,12 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         while (!settled && steps < MAX_ITERATIONS) {
             const before = snapshotNets();
+
+            ioBanks.forEach((bank) => {
+                if (bank.used) {
+                    bank.simulate();
+                }
+            });
 
             logicCells.forEach((cell) => {
                 cell.simulate();
@@ -248,9 +278,20 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
                     const destinationNet = getNet(pip.destination);
 
                     if (sourceNet && destinationNet) {
-                        console.log(drivers)
-                        // console.log(`Pip ${pip.id} transferring value from ${pip.source} (${sourceNet.value}) to ${pip.destination} (was ${destinationNet.value})`);
-                        destinationNet.value = sourceNet.value;
+                        if (pip.bidirectional) {
+                            // console.log("Has driver source: " + hasDriver(pip.source) + " destination: " + hasDriver(pip.destination));
+                            if (drivers.filter((driver) => driver.source === pip.destination).length > 0) {
+                                sourceNet.value = destinationNet.value;
+                            } else {
+                                destinationNet.value = sourceNet.value;
+                            }
+
+                        } else {
+                            destinationNet.value = sourceNet.value;
+                        }
+
+
+
                     }
                 }
             });
@@ -383,33 +424,37 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
     }, [logicCells, switchMatrices, bumpTick]);
 
     const value: SimulatorContextValue = {
-        isRunning,
-        tick,
-        logicCells,
-        simulate,
-        showGrid,
-        toggleGrid,
-        getNet,
-        switchMatrices,
-        pips,
-        ioBanks,
-        togglePip,
-        selectedMatrix,
-        selectMatrix,
-        saveMatrixConnections,
-        selectedCell,
-        selectCell,
-        setLogicCells,
-        toggleIONet,
-        busNets,
-        cursorPos,
-        setCursorPos,
-        exportState,
-        importState,
-        drivers,
-        setDriver,
-        removeDriver,
-        hasDriver,
+        isRunning: isRunning,
+        tick: tick,
+        logicCells: logicCells,
+        simulate: simulate,
+        showGrid: showGrid,
+        toggleGrid: toggleGrid,
+        getNet: getNet,
+        switchMatrices: switchMatrices,
+        pips: pips,
+        ioBanks: ioBanks,
+        togglePip: togglePip,
+        selectedMatrix: selectedMatrix,
+        selectMatrix: selectMatrix,
+        saveMatrixConnections: saveMatrixConnections,
+        selectedCell: selectedCell,
+        selectCell: selectCell,
+        setLogicCells: setLogicCells,
+        toggleIONet: toggleIONet,
+        selectedIOBank: selectedIOBank,
+        selectIOBank: selectIOBank,
+        busNets: busNets,
+        cursorPos: cursorPos,
+        setCursorPos: setCursorPos,
+        exportState: exportState,
+        importState: importState,
+        drivers: drivers,
+        setDriver: setDriver,
+        removeDriver: removeDriver,
+        hasDriver: hasDriver,
+        searchQuery: searchQuery,
+        setSearchQuery: setSearchQuery,
     };
 
     return <SimulatorContext.Provider value={value}>{children}</SimulatorContext.Provider>;
@@ -530,6 +575,9 @@ const initialiseSimulation = (): {
                         id: ioBankId + "." + net.id,
                         points: net.points.map((p) => ({ ...p })),
                     }));
+                    if (ioBankConfig.pads) {
+                        ioBank.pad = new IOPad(ioBankConfig.pads[0].pos, ioBankConfig.pads[0].size);
+                    }
 
                     ioBanks.push(ioBank);
                 });
@@ -561,11 +609,13 @@ const initialiseSimulation = (): {
                             let isHorizontal = address.startsWith("H");
                             let dir = address[1];
 
-                            if (isHorizontal) {
-                                let busIdx = j + 1 + (dir === "R" ? 1 : -1);
-                                source = `global_H${busIdx}.${source.split(".")[1]}`;
+                            if (dir !== "U" && dir !== "D" && dir !== "L" && dir !== "R") {
+                                
+                            } else if (!isHorizontal) {
+                                let busIdx = j + (dir === "R" ? 1 : 0);
+                                source = `global_V${busIdx}.${source.split(".")[1]}`;
                             } else {
-                                let busIdx = i + 1 + (dir === "U" ? -1 : 1);
+                                let busIdx = i + (dir === "U" ? 0 : 1);
                                 source = `global_H${busIdx}.${source.split(".")[1]}`;
                             }
                         }
@@ -605,7 +655,9 @@ const initialiseSimulation = (): {
                             let isHorizontal = address.startsWith("H");
                             let dir = address[1];
 
-                            if (!isHorizontal) {
+                            if (dir !== "U" && dir !== "D" && dir !== "L" && dir !== "R") {
+                                
+                            } else if (!isHorizontal) {
                                 let busIdx = j + (dir === "R" ? 1 : 0);
                                 destination = `global_V${busIdx}.${destination.split(".")[1]}`;
                             } else {

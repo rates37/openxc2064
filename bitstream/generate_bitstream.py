@@ -35,11 +35,13 @@ def parse_clb(data) -> dict[str, int]:
             bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 1 if mux["select"] == 1 else 0
             bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 1 if mux["select"] == 2 else 0
         elif (mux["id"] == "m46"):
-            pass
+            bitstream[f"CLB {data['id']} Reset-Enable"] = 1 if mux["select"] != 2 else 0
+            bitstream[f"CLB {data['id']} Reset D/G"] = 1 if mux["select"] == 0 else 0
         elif (mux["id"] == "m51"):
             pass
         elif (mux["id"] == "m56"):
-            pass
+            bitstream[f"CLB {data['id']} Set-Enable"] = 1 if mux["select"] != 2 else 0
+            bitstream[f"CLB {data['id']} Set A/F"] = 1 if mux["select"] == 0 else 0
         elif (mux["id"] == "m59"):
             bitstream[f"CLB {data['id']}.Y G"] = 1 if mux["select"] == 0 else 0
             bitstream[f"CLB {data['id']}.Y F/M or Q"] = 1 if mux["select"] == 2 else 0
@@ -47,6 +49,7 @@ def parse_clb(data) -> dict[str, int]:
             bitstream[f"CLB {data['id']}.X G"] = 1 if mux["select"] == 0 else 0
             bitstream[f"CLB {data['id']}.X F/M or Q"] = 1 if mux["select"] == 2 else 0
         elif (mux["id"] == "m100"):
+
             pass
 
         
