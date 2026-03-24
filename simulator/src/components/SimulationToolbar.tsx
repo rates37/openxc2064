@@ -2,7 +2,10 @@ import React from 'react';
 import { useSimulator } from '../SimulatorContext';
 
 const SimulationToolbar: React.FC = () => {
-  const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState, searchQuery, setSearchQuery } = useSimulator();
+  const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState, searchQuery, setSearchQuery, drivers } = useSimulator();
+
+  // Find the driver for the searched net (if any)
+  const searchedNetDriver = searchQuery ? drivers.find((d) => d.destination === searchQuery)?.source : null;
 
   return (
     <div style={{
@@ -12,7 +15,7 @@ const SimulationToolbar: React.FC = () => {
       padding: '8px 16px',
       borderBottom: '1px solid #ddd',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button
           onClick={simulate}
           disabled={isRunning}
@@ -26,7 +29,6 @@ const SimulationToolbar: React.FC = () => {
         <button
           onClick={toggleGrid}
           style={{
-            marginLeft: '8px',
             padding: '6px 16px',
             cursor: 'pointer',
           }}
@@ -36,7 +38,6 @@ const SimulationToolbar: React.FC = () => {
         <button
           onClick={exportState}
           style={{
-            marginLeft: '8px',
             padding: '6px 16px',
             cursor: 'pointer',
           }}
@@ -46,26 +47,31 @@ const SimulationToolbar: React.FC = () => {
         <button
           onClick={importState}
           style={{
-            marginLeft: '8px',
             padding: '6px 16px',
             cursor: 'pointer',
           }}
         >
           Import Config
         </button>
-        <input
-          aria-label="Search net"
-          placeholder="Search net (e.g. AA.net_0)"
-          value={searchQuery ?? ''}
-          onChange={(e) => setSearchQuery(e.target.value.trim() === '' ? null : e.target.value)}
-          style={{
-            marginLeft: '12px',
-            padding: '6px 10px',
-            borderRadius: 4,
-            border: '1px solid #ccc',
-            minWidth: 220,
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input
+            aria-label="Search net"
+            placeholder="Search net (e.g. AA.net_0)"
+            value={searchQuery ?? ''}
+            onChange={(e) => setSearchQuery(e.target.value.trim() === '' ? null : e.target.value)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 4,
+              border: '1px solid #ccc',
+              minWidth: 220,
+            }}
+          />
+          {searchedNetDriver && (
+            <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#0066cc', whiteSpace: 'nowrap' }}>
+              driver: {searchedNetDriver}
+            </span>
+          )}
+        </div>
       </div>
       <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#555' }}>
         {cursorPos ? `X: ${cursorPos.x}  Y: ${cursorPos.y}` : ''}

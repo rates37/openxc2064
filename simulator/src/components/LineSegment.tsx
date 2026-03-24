@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 
 interface LineSegmentProps {
     baseX: number;
@@ -6,49 +6,29 @@ interface LineSegmentProps {
     points: { x: number; y: number, continuous?: boolean }[];
     value: boolean;
     colour?: string;
+    strokeWidth?: number;
 }
 
-export const LineSegment = React.memo(function LineSegment({ baseX, baseY, points, value, colour }: LineSegmentProps) {
-    if (points.length < 2) return null;
-    
-    // Build a single path string instead of multiple <line> elements
-    const strokeColor = value ? "#ff0000" : colour ? colour : "#333";
-    
-    let pathData = '';
-    let isNewSegment = true;
-    
-    for (let i = 0; i < points.length; i++) {
-        const point = points[i];
-        const x = point.x + baseX;
-        const y = point.y + baseY;
-        
-        if (point.continuous === false || isNewSegment) {
-            pathData += `M${x},${y}`;
-            isNewSegment = false;
-        } else {
-            pathData += `L${x},${y}`;
-        }
-        
-        // Check if next point starts a new segment
-        if (i < points.length - 1 && points[i + 1].continuous === false) {
-            isNewSegment = true;
-        }
-    }
+export const LineSegment = React.memo(function LineSegment({ baseX, baseY, points, value, colour, strokeWidth }: LineSegmentProps) {
+
     
     return (
-        <path
-            d={pathData}
-            stroke={strokeColor}
-            strokeWidth={4}
-            fill="none"
-            shapeRendering="geometricPrecision"
-        />
+        <g>
+            {points.map((point, index) => {
+                if (index === 0 || point.continuous == false) {
+                    return;
+                }
+
+                return (
+                    <line
+                        key={`${baseX}-${baseY}-${index}`}
+                        x1={points[index - 1].x + baseX} y1={points[index - 1].y + baseY}
+                        x2={point.x + baseX} y2={point.y + baseY}
+                        stroke={value ? "#ff0000" : colour ? colour : "#333"} strokeWidth={strokeWidth || 4}
+                    />
+                );
+            }
+            )}
+        </g>
     );
-}, (prevProps, nextProps) => {
-    // Custom comparison - only re-render if value or points change
-    return prevProps.value === nextProps.value &&
-           prevProps.baseX === nextProps.baseX &&
-           prevProps.baseY === nextProps.baseY &&
-           prevProps.colour === nextProps.colour &&
-           prevProps.points === nextProps.points;
 });

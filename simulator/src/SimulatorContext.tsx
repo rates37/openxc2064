@@ -53,6 +53,7 @@ interface SimulatorContextValue {
     // Selected IO bank for modal editing
     selectedIOBank: IOBank | null;
     selectIOBank: (bank: IOBank | null) => void;
+    updateIOBank: (updatedBank: IOBank) => void;
     cursorPos: { x: number; y: number } | null;
     setCursorPos: (pos: { x: number; y: number } | null) => void;
     exportState: () => void;
@@ -122,6 +123,10 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
         setPips((prev) => prev.map((pip, i) => (i === index ? { ...pip, enabled: !pip.enabled } : pip)));
     }, []);
+    
+    const updateIOBank = useCallback((updatedBank: IOBank) => {
+        setIoBanks((prev) => prev.map((bank, i) => (bank.id === updatedBank.id ? updatedBank : bank)));
+    }, []);
 
     const [selectedMatrix, setSelectedMatrix] = useState<SwitchMatrix | null>(null);
     const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
@@ -141,24 +146,12 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
         setSelectedIOBank(bank);
     }, []);
 
-    const toggleConnection = useCallback(
-        (matrixIndex: number, row: number, col: number) => {
-            const matrix = switchMatrices[matrixIndex];
-            if (!matrix) return;
-            if (!matrix.possibleConnections[row][col]) return;
-            matrix.connections[row][col] = matrix.connections[row][col] ? 0 : 1;
-            bumpTick();
-            setSelectedMatrix(matrix);
-        },
-        [switchMatrices, bumpTick]
-    );
-
     const saveMatrixConnections = useCallback(
         (matrixIndex: number, connections: number[][]) => {
             const matrix = switchMatrices[matrixIndex];
             if (!matrix) return;
             matrix.connections = connections;
-            bumpTick();
+            simulate();
         },
         [switchMatrices, bumpTick]
     );
@@ -169,9 +162,11 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
             if (!bank) return;
             const net = bank.nets.find((n) => n.id === `${bank.id}.net_pad`);
             if (net) net.value = !net.value;
-            bumpTick();
+            // Trigger state update to ensure React re-renders with the new value
+            setIoBanks((prev) => [...prev]);
+            simulate();
         },
-        [ioBanks, bumpTick]
+        [ioBanks, pips, bumpTick]
     );
 
     // -- Functions --
@@ -258,12 +253,6 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
         while (!settled && steps < MAX_ITERATIONS) {
             const before = snapshotNets();
 
-            ioBanks.forEach((bank) => {
-                if (bank.used) {
-                    bank.simulate();
-                }
-            });
-
             logicCells.forEach((cell) => {
                 cell.simulate();
             });
@@ -279,21 +268,25 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
                     if (sourceNet && destinationNet) {
                         if (pip.bidirectional) {
-                            // console.log("Has driver source: " + hasDriver(pip.source) + " destination: " + hasDriver(pip.destination));
-                            if (drivers.filter((driver) => driver.source === pip.destination).length > 0) {
+                            // Destination is driven by something else, so it drives back to source
+                            const sourceDrivers = drivers.filter((d) => d.destination === pip.source);
+
+                            if (sourceDrivers.some((d) => d.source === pip.destination)) {
                                 sourceNet.value = destinationNet.value;
                             } else {
                                 destinationNet.value = sourceNet.value;
                             }
-
                         } else {
+                            // Unidirectional: source always drives destination
                             destinationNet.value = sourceNet.value;
                         }
-
-
-
                     }
                 }
+            });
+
+            // Simulate IOBanks after PIPs propagate, so they account for any incoming values
+            ioBanks.forEach((bank) => {
+                bank.simulate();
             });
 
             steps++;
@@ -317,7 +310,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
             console.warn(`Simulation did not settle within ${MAX_ITERATIONS} iterations`);
         }
         setIsRunning(false);
-    }, [logicCells, switchMatrices, pips, getNet]);
+    }, [logicCells, switchMatrices, pips, ioBanks, drivers, getNet]);
 
     useEffect(() => {
         const { logicCells, switchMatrices, pips, ioBanks, busNets } = initialiseSimulation();
@@ -455,6 +448,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
         hasDriver: hasDriver,
         searchQuery: searchQuery,
         setSearchQuery: setSearchQuery,
+        updateIOBank: updateIOBank,
     };
 
     return <SimulatorContext.Provider value={value}>{children}</SimulatorContext.Provider>;
@@ -578,7 +572,8 @@ const initialiseSimulation = (): {
                     if (ioBankConfig.pads) {
                         ioBank.pad = new IOPad(ioBankConfig.pads[0].pos, ioBankConfig.pads[0].size);
                     }
-
+                    
+                    ioBank.index = ioBanks.length;
                     ioBanks.push(ioBank);
                 });
             }

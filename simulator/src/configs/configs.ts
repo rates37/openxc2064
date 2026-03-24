@@ -1174,7 +1174,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 	},
 ];
 
-const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: number }; size: { width: number; height: number }, pads?: { pos: { x: number; y: number }; size: { width: number; height: number } }[] }[] }[] = [
+const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: number }; size: { width: number; height: number }; pads?: { pos: { x: number; y: number }; size: { width: number; height: number } }[] }[] }[] = [
 	/**
 	 *
 	 * LEFT SIDE IO BANKS
@@ -1189,6 +1189,9 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				pos: { x: -510, y: 140 },
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
 					{
 						id: 'net_O',
 						value: false,
@@ -1224,19 +1227,22 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: -IO_WIDTH / 2, y: 0 },
 							{ x: -IO_WIDTH / 2 - 150, y: 0 },
 						],
-					}
+					},
 				],
 				pads: [
 					{
-						pos: { x: -IO_WIDTH / 2 - 125, y: IO_HEIGHT / 2 - 25},
+						pos: { x: -IO_WIDTH / 2 - 125, y: IO_HEIGHT / 2 - 25 },
 						size: { width: 50, height: 50 },
-					}
-				]
+					},
+				],
 			},
 			{
 				pos: { x: -510, y: 400 },
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
 					{
 						id: 'net_O',
 						value: false,
@@ -1270,14 +1276,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: -IO_WIDTH / 2, y: 0 },
 							{ x: -IO_WIDTH / 2 - 150, y: 0 },
 						],
-					}
+					},
 				],
 				pads: [
 					{
-						pos: { x: -IO_WIDTH / 2 - 125, y: IO_HEIGHT / 2 - 25},
+						pos: { x: -IO_WIDTH / 2 - 125, y: IO_HEIGHT / 2 - 25 },
 						size: { width: 50, height: 50 },
-					}
-				]
+					},
+				],
 			},
 		],
 	},
@@ -1289,6 +1295,9 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				pos: { x: -510, y: 140 },
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
 					{
 						id: 'net_O',
 						value: false,
@@ -1324,14 +1333,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: -IO_WIDTH / 2, y: 0 },
 							{ x: -IO_WIDTH / 2 - 150, y: 0 },
 						],
-					}
+					},
 				],
 				pads: [
 					{
-						pos: { x: -IO_WIDTH / 2 - 125, y: IO_HEIGHT / 2 - 25},
+						pos: { x: -IO_WIDTH / 2 - 125, y: IO_HEIGHT / 2 - 25 },
 						size: { width: 50, height: 50 },
-					}
-				]
+					},
+				],
 			},
 		],
 	},

@@ -411,7 +411,6 @@ const SimulationCanvas: React.FC = () => {
                                 setDriver(pip.destination, pip.source);
                             }
                         } else {
-                          console.log(`Driver for the source is : ${drivers.find(d => d.source).destination}`)
                             if (srcDriver && drivers.find(d => d.destination === pip.source).source === pip.destination) {
                                 removeDriver(pip.source);
                             }
