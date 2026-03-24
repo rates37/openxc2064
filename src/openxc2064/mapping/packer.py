@@ -304,8 +304,17 @@ class GreedyPacker(Packer):
             outputs_needed = []
             if config["dff"]:
                 outputs_needed.append(("Q", config["dff"]))
+                
             if config["lut_f"]:
-                outputs_needed.append(("F", config["lut_f"]))
+                f_net = config["lut_f"].outputs[0]
+                is_f_exported = f_net in netlist.outputs
+                for sink in f_net.sinks:
+                    if sink != config["dff"]:
+                        is_f_exported = True
+                        break
+                if is_f_exported:
+                    outputs_needed.append(("F", config["lut_f"]))
+                    
             if config["lut_g"]:
                 outputs_needed.append(("G", config["lut_g"]))
 
