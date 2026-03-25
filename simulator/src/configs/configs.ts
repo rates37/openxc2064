@@ -1,5 +1,5 @@
 import { Net, Pip } from '../types';
-import { CELL_WIDTH, CELL_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT, CLK_TOP } from './Routing';
+import { CELL_WIDTH, CELL_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT, CLK_TOP } from './constants';
 
 export type ConfigTypes = 'logic_cell' | 'bus' | 'switch_matrix' | 'io';
 
@@ -1172,6 +1172,86 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 			},
 		],
 	},
+	{
+		// M1/M0 matrices for the bottom of the chip, same purpose as the M1/0 of the middle, but slightly different location.
+		ids: id_range('H[A-H]'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: CELL_HEIGHT / 2 + 190 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 630 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 630 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2+ 10},
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30},
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 30 },
+						],
+					},
+				]
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 130, y: CELL_HEIGHT / 2 + 150 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 540 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 630 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2+ 10},
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30},
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 30 },
+						],
+					},
+				]
+			}
+		]
+	}
 ];
 
 const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: number }; size: { width: number; height: number }; pads?: { pos: { x: number; y: number }; size: { width: number; height: number } }[] }[] }[] = [

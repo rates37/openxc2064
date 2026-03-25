@@ -5,7 +5,7 @@ import { IOBank } from "../models/IOBank";
 import { Net, Pip } from "../types";
 import { useSimulator } from "../SimulatorContext";
 import { LineSegment } from "./LineSegment";
-import { CELL_WIDTH, CELL_HEIGHT, PIP_WIDTH, PIP_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT } from "../configs/Routing";
+import { CELL_WIDTH, CELL_HEIGHT, PIP_WIDTH, PIP_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIGHT } from "../configs/constants";
 
 // --- Individual memoized components ---
 
