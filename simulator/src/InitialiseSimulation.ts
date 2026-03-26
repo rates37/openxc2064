@@ -252,15 +252,17 @@ export const initialiseSimulation = (): {
 		if (!left_cell_id) {
 			console.warn(`Matrix ${matrix.id} has invalid neighboring cell on the left`);
 		} else {
-			matrix.nets[6] = localGetNet(`${left_cell_id}_M${left_index}.net_3`) || null;
-			matrix.nets[7] = localGetNet(`${left_cell_id}_M${left_index}.net_2`) || null;
+			// Dont set the bottom and left netss if they already exist, there are some edge cases where it matters.
+			if (matrix.nets[6] == undefined) matrix.nets[6] = localGetNet(`${left_cell_id}_M${left_index}.net_3`) || null;
+			if (matrix.nets[7] == undefined) matrix.nets[7] = localGetNet(`${left_cell_id}_M${left_index}.net_2`) || null;
 		}
-
+		
 		if (!bottom_cell_id) {
 			console.warn(`Matrix ${matrix.id} has invalid neighboring cell on the bottom`);
 		} else {
-			matrix.nets[4] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_1`) || null;
-			matrix.nets[5] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_0`) || null;
+			// Dont set the bottom and left netss if they already exist, there are some edge cases where it matters.
+			if (matrix.nets[4] == undefined) matrix.nets[4] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_1`) || null;
+			if (matrix.nets[5] == undefined) matrix.nets[5] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_0`) || null;
 		}
 	});
 

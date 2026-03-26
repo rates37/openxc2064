@@ -297,7 +297,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		}
 
 		setIsRunning(false);
-	}, [logicCells, switchMatrices, pips, ioBanks, drivers, getNet]);
+		bumpTick();
+	}, [logicCells, switchMatrices, pips, ioBanks, drivers, getNet, bumpTick]);
 
 	useEffect(() => {
 		const { logicCells, switchMatrices, pips, ioBanks, busNets } = initialiseSimulation();

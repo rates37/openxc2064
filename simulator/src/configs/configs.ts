@@ -424,7 +424,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	 */
 	{
 		// All standard pin D cells. doesn't include bottom because of the extra length on the wire, and doesnt include left + right sides because they connect to the M2/M3 extra switches.
-		ids: id_range('[A-G][B-G]'),
+		ids: id_range('[A-G][A-H]'),
 		nets: [
 			{
 				id: 'net_D',
@@ -474,54 +474,6 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 				destination: 'net_D',
 				enabled: false,
 				pos: { x: 100, y: 500 },
-				bidirectional: false,
-			},
-		],
-	},
-	{
-		// Left edge pin D M2/M3 connections
-		ids: id_range('[A-G]A'),
-		nets: [
-			{
-				id: 'net_D',
-				value: false,
-				points: [
-					{ x: 0, y: CELL_HEIGHT / 2 },
-					{ x: 0, y: CELL_HEIGHT / 2 + 180 },
-				],
-			},
-		],
-		pips: [
-			{
-				id: 'pip_12',
-				source: 'T_M2.net_2',
-				destination: 'net_D',
-				enabled: false,
-				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 80 },
-				bidirectional: false,
-			},
-			{
-				id: 'pip_13',
-				source: 'T_M2.net_3',
-				destination: 'net_D',
-				enabled: false,
-				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 100 },
-				bidirectional: false,
-			},
-			{
-				id: 'pip_14',
-				source: 'T_M3.net_2',
-				destination: 'net_D',
-				enabled: false,
-				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 120 },
-				bidirectional: false,
-			},
-			{
-				id: 'pip_15',
-				source: 'T_M3.net_3',
-				destination: 'net_D',
-				enabled: false,
-				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 },
 				bidirectional: false,
 			},
 		],
@@ -644,6 +596,36 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_v2_0', source: 'net_X', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: 60 }, bidirectional: false },
 		],
 	},
+	{
+		// Bottom row of CLBS with that are missing the bottom local CLB interconnect
+		ids: id_range('H[A-G]'),
+		nets: [
+			{
+				id: 'net_X',
+				value: false,
+				points: [
+					{ x: CELL_WIDTH / 2, y: 20 },
+					{ x: CELL_WIDTH / 2 + 40, y: 20 },
+					{ x: CELL_WIDTH / 2 + 40, y: -100 },
+					{ x: CELL_WIDTH / 2 + 220, y: -100 },
+					{ x: CELL_WIDTH / 2 + 40, y: -100 },
+					{ x: CELL_WIDTH / 2 + 40, y: -360 },
+					{ x: -CELL_WIDTH / 2 - 40, y: -360 },
+					{ x: -CELL_WIDTH / 2 - 40, y: -540 },
+					{ x: CELL_WIDTH / 2 + 40, y: 20, continuous: false },
+					{ x: CELL_WIDTH / 2 + 40, y: 240 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_16', source: 'net_X', destination: 'T_M0.net_1', enabled: false, pos: { x: 300, y: 60 }, bidirectional: false },
+			{ id: 'pip_17', source: 'net_X', destination: 'T_M1.net_1', enabled: false, pos: { x: 340, y: 60 }, bidirectional: false },
+			{ id: 'pip_20', source: 'net_X', destination: 'N.net_D', enabled: false, pos: { x: CELL_WIDTH / 2, y: -200 }, bidirectional: false },
+			{ id: 'pip_21', source: 'net_X', destination: 'N.net_C', enabled: false, pos: { x: -40, y: -380 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'net_X', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: 60 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'net_X', destination: 'T_IO1.net_O', enabled: false, pos: { x: 240, y: 400 }, bidirectional: false },
+		],
+	},
 
 	/**
 	 *
@@ -676,6 +658,14 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 				pos: { x: 400, y: CELL_HEIGHT / 2 - 40 },
 				bidirectional: false,
 			},
+			{
+				id: 'pip_v2_0',
+				source: 'net_Y',
+				destination: 'global_VR.net_1',
+				enabled: false,
+				pos: { x: 440, y: 260 },
+				bidirectional: false,
+			},
 		],
 	},
 
@@ -686,7 +676,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	 */
 
 	{
-		ids: [...id_range('[A-G][B-G]')],
+		ids: [...id_range('[B-G][A-G]')],
 		nets: [],
 		pips: [
 			{
@@ -695,14 +685,6 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 				destination: 'net_K',
 				enabled: false,
 				pos: { x: -CELL_WIDTH / 2 + 20, y: 240 },
-				bidirectional: false,
-			},
-			{
-				id: 'pip_v2_0',
-				source: 'net_Y',
-				destination: 'global_VR.net_1',
-				enabled: false,
-				pos: { x: 440, y: 260 },
 				bidirectional: false,
 			},
 			{
@@ -800,6 +782,66 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 				pos: { x: 380, y: 440 },
 				bidirectional: true,
 			},
+			{
+				id: 'pip_v2_0',
+				source: 'T.net_rhl',
+				destination: 'N_M0.net_3',
+				enabled: false,
+				pos: { x: 400, y: -140 },
+				bidirectional: true,
+			},
+			{
+				id: 'pip_v2_0',
+				source: 'T.net_rhl',
+				destination: 'N_M1.net_2',
+				enabled: false,
+				pos: { x: 400, y: -120 },
+				bidirectional: true,
+			},
+			{
+				id: 'pip_v2_0',
+				source: 'W.net_rhl',
+				destination: 'net_B',
+				enabled: false,
+				pos: { x: -CELL_WIDTH / 2 - 40, y: 120 },
+				bidirectional: false,
+			},
+			{
+				id: 'pip_v2_0',
+				source: 'W.net_rhl',
+				destination: 'net_C',
+				enabled: false,
+				pos: { x: -CELL_WIDTH / 2 - 40, y: 180 },
+				bidirectional: false,
+			},
+			{
+				id: 'pip_v2_0',
+				source: 'net_Y',
+				destination: 'T.net_rhl',
+				enabled: false,
+				pos: { x: 380, y: 260 },
+				bidirectional: false,
+			},
+		],
+	},
+
+	{
+		// Bottom Rows
+		ids: id_range('H[A-G]'),
+		nets: [
+			{
+				id: 'net_rhl',
+				value: false,
+				points: [
+					{ x: 280, y: -340 },
+					{ x: 300, y: -340 },
+					{ x: 300, y: -200 },
+					{ x: 280, y: -200 },
+					{ x: 280, y: 340 },
+				],
+			},
+		],
+		pips: [
 			{
 				id: 'pip_v2_0',
 				source: 'T.net_rhl',
@@ -1008,6 +1050,17 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_M2.net_2', enabled: false, pos: { x: -200, y: 400 }, bidirectional: true },
 		],
 	},
+	
+	/**
+	 * 
+	 * CORNER CELL HANDLING
+	 * 
+	 */
+	{
+		ids: ["HA"],
+		nets: [],
+		pips: [],
+	}
 ];
 
 const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: number; y: number } }[] }[] = [
@@ -1094,7 +1147,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 
 	{
 		// M2/M3 Matrices for the left edge, since each cell there is responsible for 4, not 2 matrices.
-		ids: id_range('[B-G]A'),
+		ids: id_range('[B-F]A'),
 		matrices: [
 			{
 				pos: { x: CELL_WIDTH / 2 - 490, y: 250 },
@@ -1173,8 +1226,121 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 		],
 	},
 	{
+		// M2/M3 Matrices for the bottom left corner because its unique :(
+		ids: id_range('GA'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 - 490, y: 250 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 520 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 520 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: -10 },
+							{ x: MATRIX_WIDTH / 2 + 540, y: -10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: 10 },
+							{ x: MATRIX_WIDTH / 2 + 540, y: 10 },
+						],
+					},
+					{
+						id: 'net_4',
+						value: false,
+						points: [
+							{ x: 10, y: MATRIX_HEIGHT / 2 },
+							{ x: 10, y: MATRIX_HEIGHT / 2 + 630 },
+						],
+					},
+					{
+						id: 'net_5',
+						value: false,
+						points: [
+							{ x: -10, y: MATRIX_HEIGHT / 2 },
+							{ x: -10, y: MATRIX_HEIGHT / 2 + 670 },
+						],
+					},
+					
+				],
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 - 490 + MATRIX_WIDTH, y: 250 + MATRIX_HEIGHT },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 520 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 520 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: -10 },
+							{ x: MATRIX_WIDTH / 2 + 540, y: -10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: 10 },
+							{ x: MATRIX_WIDTH / 2 + 540, y: 10 },
+						],
+					},
+					{
+						id: 'net_4',
+						value: false,
+						points: [
+							{ x: 10, y: MATRIX_HEIGHT / 2 },
+							{ x: 10, y: MATRIX_HEIGHT / 2 + 550 },
+						],
+					},
+					{
+						id: 'net_5',
+						value: false,
+						points: [
+							{ x: -10, y: MATRIX_HEIGHT / 2 },
+							{ x: -10, y: MATRIX_HEIGHT / 2 + 570 },
+						],
+					},
+				],
+			},
+		],
+	},
+	{
 		// M1/M0 matrices for the bottom of the chip, same purpose as the M1/0 of the middle, but slightly different location.
-		ids: id_range('H[A-H]'),
+		ids: id_range('H[B-H]'),
 		matrices: [
 			{
 				pos: { x: CELL_WIDTH / 2 + 90, y: CELL_HEIGHT / 2 + 190 },
@@ -1200,18 +1366,18 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						value: false,
 						points: [
 							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
-							{ x: 500, y: -MATRIX_HEIGHT / 2+ 10},
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
 						],
 					},
 					{
 						id: 'net_3',
 						value: false,
 						points: [
-							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30},
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30 },
 							{ x: 500, y: -MATRIX_HEIGHT / 2 + 30 },
 						],
 					},
-				]
+				],
 			},
 			{
 				pos: { x: CELL_WIDTH / 2 + 130, y: CELL_HEIGHT / 2 + 150 },
@@ -1237,21 +1403,154 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						value: false,
 						points: [
 							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
-							{ x: 500, y: -MATRIX_HEIGHT / 2+ 10},
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
 						],
 					},
 					{
 						id: 'net_3',
 						value: false,
 						points: [
-							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30},
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30 },
 							{ x: 500, y: -MATRIX_HEIGHT / 2 + 30 },
 						],
 					},
-				]
-			}
-		]
-	}
+				],
+			},
+		],
+	},
+	{
+		// M1/M0 matrices for the bottom left cell as it needs to keep track of its onl left nets, unlike every other switch.
+		ids: id_range('HA'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: CELL_HEIGHT / 2 + 190 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 630 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 630 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 30 },
+						],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_6',
+						value: false,
+						points: [
+							{ x: -20, y: -MATRIX_HEIGHT / 2 + 30 },
+							{ x: -610, y: -MATRIX_HEIGHT / 2 + 30 },
+						],
+					},
+					{
+						id: 'net_7',
+						value: false,
+						points: [
+							{ x: -20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: -570, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					
+				],
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 130, y: CELL_HEIGHT / 2 + 150 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 540 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 630 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 30 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 30 },
+						],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_6',
+						value: false,
+						points: [
+							{ x: -20, y: -MATRIX_HEIGHT / 2 + 30 },
+							{ x: -590, y: -MATRIX_HEIGHT / 2 + 30 },
+						],
+					},
+					{
+						id: 'net_7',
+						value: false,
+						points: [
+							{ x: -20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: -570, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+				],
+			},
+		],
+	},
 ];
 
 const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: number }; size: { width: number; height: number }; pads?: { pos: { x: number; y: number }; size: { width: number; height: number } }[] }[] }[] = [
@@ -1440,9 +1739,12 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				pos: { x: -50 - IO_WIDTH / 2, y: 530 },
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
-					// Right
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
+					// Left
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 10, y: -IO_WIDTH / 2 - 30 },
@@ -1452,7 +1754,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 50, y: -IO_WIDTH / 2 - 30 },
@@ -1467,15 +1769,29 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 						],
 					},
 
-					// Left
+					// Right
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 90, y: -IO_WIDTH / 2 - 30 },
 							{ x: IO_HEIGHT / 2 - 90, y: -IO_WIDTH / 2 - 270 },
 							{ x: IO_HEIGHT / 2 - 290, y: -IO_WIDTH / 2 - 270 },
 						],
+					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: IO_WIDTH/2 - 30},
+							{ x: 30, y:  IO_WIDTH/2 + 150 - 30},
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: IO_HEIGHT/2 - 25, y:  IO_WIDTH/2 + 220 },
+						size: { width: 50, height: 50 },
 					},
 				],
 			},
@@ -1485,9 +1801,12 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				pos: { x: 50 + IO_WIDTH / 2, y: 530 },
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
 					// Right
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: -IO_HEIGHT / 2 + 150, y: -IO_WIDTH / 2 - 30 },
@@ -1497,7 +1816,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: -IO_HEIGHT / 2 + 110, y: -IO_WIDTH / 2 - 30 },
@@ -1508,13 +1827,27 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Left
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: -IO_HEIGHT / 2 + 70, y: -IO_WIDTH / 2 - 30 },
 							{ x: -IO_HEIGHT / 2 + 70, y: -IO_WIDTH / 2 - 250 },
 							{ x: -IO_HEIGHT / 2 + 350, y: -IO_WIDTH / 2 - 250 },
 						],
+					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: IO_WIDTH/2 - 30},
+							{ x: 30, y:  IO_WIDTH/2 + 150 - 30},
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: IO_HEIGHT/2 - 25, y:  IO_WIDTH/2 + 220 },
+						size: { width: 50, height: 50 },
 					},
 				],
 			},
@@ -1530,9 +1863,12 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				pos: { x: -90 - IO_WIDTH / 2, y: 530 },
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
-					// Right
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
+					// Left
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 10, y: -IO_WIDTH / 2 - 30 },
@@ -1542,7 +1878,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 50, y: -IO_WIDTH / 2 - 30 },
@@ -1557,15 +1893,29 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 						],
 					},
 
-					// Left
+					// Right
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 90, y: -IO_WIDTH / 2 - 30 },
 							{ x: IO_HEIGHT / 2 - 90, y: -IO_WIDTH / 2 - 270 },
 							{ x: IO_HEIGHT / 2 - 310, y: -IO_WIDTH / 2 - 270 },
 						],
+					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: IO_WIDTH/2 - 30},
+							{ x: 30, y:  IO_WIDTH/2 + 150 - 30},
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: IO_HEIGHT/2 - 25, y:  IO_WIDTH/2 + 220 },
+						size: { width: 50, height: 50 },
 					},
 				],
 			},
@@ -1575,9 +1925,12 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				pos: { x: 50 + IO_WIDTH / 2, y: 530 },
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
 					// Right
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: -IO_HEIGHT / 2 + 150, y: -IO_WIDTH / 2 - 30 },
@@ -1587,7 +1940,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: -IO_HEIGHT / 2 + 110, y: -IO_WIDTH / 2 - 30 },
@@ -1598,13 +1951,27 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Left
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: -IO_HEIGHT / 2 + 70, y: -IO_WIDTH / 2 - 30 },
 							{ x: -IO_HEIGHT / 2 + 70, y: -IO_WIDTH / 2 - 250 },
 							{ x: -IO_HEIGHT / 2 + 350, y: -IO_WIDTH / 2 - 250 },
 						],
+					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: IO_WIDTH/2 - 30},
+							{ x: 30, y:  IO_WIDTH/2 + 150 - 30},
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: IO_HEIGHT/2 - 25, y:  IO_WIDTH/2 + 220 },
+						size: { width: 50, height: 50 },
 					},
 				],
 			},
@@ -1627,7 +1994,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				nets: [
 					// Top Input
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: -20 },
@@ -1637,7 +2004,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle Output
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: 20 },
@@ -1648,7 +2015,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Bottom Input
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: 60 },
@@ -1668,7 +2035,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				nets: [
 					// Top Input
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: -20 },
@@ -1678,7 +2045,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle Output
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: 20 },
@@ -1689,7 +2056,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Bottom Input
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: 60 },
@@ -1714,7 +2081,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				nets: [
 					// Top Input
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: -20 },
@@ -1724,7 +2091,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle Output
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: 20 },
@@ -1735,7 +2102,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Bottom Input
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: -IO_WIDTH / 2, y: 60 },
@@ -1766,7 +2133,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				nets: [
 					// Left
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
@@ -1777,7 +2144,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle
 					{
-						id: 'net_x',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
@@ -1791,7 +2158,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Right
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 - 30 },
@@ -1808,7 +2175,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				nets: [
 					// Left
 					{
-						id: 'net_x',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 - 30 },
@@ -1819,7 +2186,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Middle
 					{
-						id: 'net_O',
+						id: 'net_I',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
@@ -1830,7 +2197,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Right
 					{
-						id: 'net_x',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },

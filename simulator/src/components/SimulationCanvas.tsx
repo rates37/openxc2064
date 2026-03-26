@@ -172,11 +172,15 @@ function drawMatrixNets(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix, hig
     
     
     // Draw nets
-    for (let i = 0; i < Math.min(4, matrix.nets.length); i++) {
+    for (let i = 0; i < matrix.nets.length; i++) {
         const net = matrix.nets[i];
-        if (net && net.points.length > 0) {
-            const override = net.id === highlightId ? "purple" : undefined;
-            drawLineSegment(ctx, cx, cy, net.points, net.value, "rgb(199, 199, 199)", override);
+        if (!net) continue;
+        const net_location = net.id.split(".")[0];
+        if (net_location === matrix.id) {
+            if (net && net.points.length > 0) {
+                const override = net.id === highlightId ? "purple" : undefined;
+                drawLineSegment(ctx, cx, cy, net.points, net.value, "rgb(199, 199, 199)", override);
+            }
         }
     }
 
