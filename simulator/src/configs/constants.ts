@@ -5,8 +5,8 @@ export const CELL_MARGIN_Y = 240;
 export const CELL_OFFSET_X = 0;
 export const CELL_OFFSET_Y = 0;
 
-export const PIP_WIDTH = 15;
-export const PIP_HEIGHT = 15;
+export const PIP_WIDTH = 14;
+export const PIP_HEIGHT = 14;
 
 export const MATRIX_WIDTH = 40;
 export const MATRIX_HEIGHT = 40;

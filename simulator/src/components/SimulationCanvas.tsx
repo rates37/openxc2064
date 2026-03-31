@@ -88,7 +88,7 @@ function drawCell(ctx: CanvasRenderingContext2D, cell: LogicCell, highlightId?: 
     // Draw cell rectangle
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "#333";
-    ctx.lineWidth = 8;
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.roundRect(x, y, CELL_WIDTH, CELL_HEIGHT, 5);
     ctx.fill();
@@ -121,7 +121,7 @@ function drawMatrixBox(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix, high
     // Draw matrix rectangle
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "#333";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(x, y, MATRIX_WIDTH, MATRIX_HEIGHT, 5);
     ctx.fill();
@@ -149,7 +149,7 @@ function drawMatrixBox(ctx: CanvasRenderingContext2D, matrix: SwitchMatrix, high
     // Draw matrix rectangle
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "#333";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(x, y, MATRIX_WIDTH, MATRIX_HEIGHT, 5);
     ctx.stroke();
