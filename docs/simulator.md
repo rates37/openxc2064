@@ -32,7 +32,7 @@ The CLBs on the XC2064 have 5 input pins, and 2 output pins. The inputs `A`, `B`
 ### Nets
 Every single wire within the LCA is called a `net`. Each net can have a state of either `on` or `off`, and is referenced by its address (`Net.id`). Each net is then rendered based on its list of (X,Y) points, which are positioned relative to the top-left corner of the device that manages the net. 
 
-_The `continuous` flag within the points array is just there to help draw large nets that span out in multiple directions. If `continuous = false`, the there is not line drawn between that point and the previous one_
+_The `continuous` flag within the points array is just there to help draw large nets that span out in multiple directions. If `continuous = false`, the there is no line drawn between that point and the previous one_
 
 ```ts
 interface Net {
@@ -52,8 +52,8 @@ Each net in the simulator is given a distinct "address" which can each primitive
 The net addresses are formatted using `<CLB ID>_<DEVICE ID>.<NET ID>`. For example, the nets associated with `CLB ED` are under `ED_<DEVICE ID>.<NET ID>`. If they belong to the CLB itself (i.e. CLB inputs and outputs) then they are simply addressed as `ED.<NET ID>` (i.e. `ED.net_X`, or `ED.net_K`). If they belong to a sub-device (Matrix, or IOBank), then they would be addressed like `ED_M0.net_0` or `ED_IO0.net_T` for example.
 
 The only exception to this addressing rule is the global lines, which are all prefixed with `global`, but then may have a bundle id (i.e. `global_H0.<NET ID>` for horizontal long line bundle 0). 
-### Simulation Configuration File (`config.ts`)
 ### CLBs
 ### IO Banks
+### Simulation Configuration File (`config.ts`)
 ## Import / Export LCA Configurations
 

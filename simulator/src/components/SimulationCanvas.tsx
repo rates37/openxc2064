@@ -6,9 +6,42 @@ import { LogicCell } from "../models/LogicCell";
 import { SwitchMatrix } from "../models/SwitchMatrix";
 import { IOBank, IOPad } from "../models/IOBank";
 import { Net, Pip } from "../types";
+import OscillatorModal from "./OscillatorModal";
 
 // Initial view position
 const INITIAL_VIEW = { x: -3500, y: -100, w: 7000, h: 5000 };
+
+// Cookie utility functions
+const VIEWPORT_COOKIE_NAME = "xc2064_viewport";
+const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+
+function saveViewportCookie(viewBox: { x: number; y: number; w: number; h: number }) {
+    const value = JSON.stringify(viewBox);
+    const expiryDate = new Date();
+    expiryDate.setSeconds(expiryDate.getSeconds() + COOKIE_MAX_AGE);
+    document.cookie = `${VIEWPORT_COOKIE_NAME}=${encodeURIComponent(value)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+}
+
+function loadViewportCookie(): { x: number; y: number; w: number; h: number } | null {
+    const name = VIEWPORT_COOKIE_NAME + "=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(";");
+    
+    for (const cookie of cookieArray) {
+        const trimmed = cookie.trim();
+        if (trimmed.startsWith(name)) {
+            try {
+                const value = trimmed.substring(name.length);
+                return JSON.parse(decodeURIComponent(value));
+            } catch (e) {
+                console.error("Failed to parse viewport cookie:", e);
+                return null;
+            }
+        }
+    }
+    
+    return null;
+}
 
 // Matrix mini-node offsets
 const R = MATRIX_WIDTH / 2 - 2;
@@ -24,6 +57,29 @@ const miniNodeOffsets = [
 ];
 
 // --- Canvas drawing functions ---
+
+function drawOsc(ctx: CanvasRenderingContext2D) {
+    const x = 3980;
+    const y = 4540;
+    const width = 80;
+    const height = 100;
+
+    // Draw rectangle
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    // Draw label
+    ctx.fillStyle = "#000";
+    ctx.font = "24px Computer Modern, Latin Modern, STIXGeneral, Times New Roman, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("OSC", x + width / 2, y + height / 2);
+}
 
 function drawLineSegment(
     ctx: CanvasRenderingContext2D,
@@ -283,10 +339,26 @@ const SimulationCanvas: React.FC = () => {
     } = useSimulator();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [viewBox, setViewBox] = useState(INITIAL_VIEW);
+    const [viewBox, setViewBox] = useState(() => {
+        const cached = loadViewportCookie();
+        return cached || INITIAL_VIEW;
+    });
     const [isPanning, setIsPanning] = useState(false);
     const panStart = useRef({ x: 0, y: 0 });
     const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600, cssWidth: 800, cssHeight: 600 });
+    const [showOscillatorModal, setShowOscillatorModal] = useState(false);
+
+    // Periodically save viewport to cookie
+    useEffect(() => {
+        saveViewportCookie(viewBox);
+        
+        // Also set up a periodic save in case the user hasn't interacted recently
+        const interval = setInterval(() => {
+            saveViewportCookie(viewBox);
+        }, 5000); // Save every 5 seconds
+        
+        return () => clearInterval(interval);
+    }, [viewBox]);
 
     // Update canvas size on resize
     useEffect(() => {
@@ -481,6 +553,21 @@ const SimulationCanvas: React.FC = () => {
                 }
             }
 
+            // Check oscillator box
+            const oscX = 3980;
+            const oscY = 4540;
+            const oscWidth = 80;
+            const oscHeight = 100;
+            if (
+                world.x >= oscX &&
+                world.x <= oscX + oscWidth &&
+                world.y >= oscY &&
+                world.y <= oscY + oscHeight
+            ) {
+                setShowOscillatorModal(true);
+                return;
+            }
+
             // Check logic cells
             for (const cell of logicCells) {
                 if (
@@ -560,6 +647,9 @@ const SimulationCanvas: React.FC = () => {
             drawPip(ctx, pip);
         }
 
+        // Draw Oscillator box and buffers
+        drawOsc(ctx);
+
 
         ctx.restore();
     }, [viewBox, showGrid, logicCells, switchMatrices, pips, ioBanks, busNets, tick, canvasSize, searchQuery]);
@@ -592,6 +682,7 @@ const SimulationCanvas: React.FC = () => {
                 onPointerLeave={onPointerUp}
                 onClick={onClick}
             />
+            {showOscillatorModal && <OscillatorModal isOpen={showOscillatorModal} onClose={() => setShowOscillatorModal(false)} />}
         </div>
     );
 };

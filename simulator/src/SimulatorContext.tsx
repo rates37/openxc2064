@@ -65,6 +65,10 @@ interface SimulatorContextValue {
 	// Search state: id of net to highlight (e.g. "AA.net_0")
 	searchQuery: string | null;
 	setSearchQuery: (q: string | null) => void;
+
+	// Oscillator state
+	oscillator: { enabled: boolean; frequency: number };
+	setOscillator: (osc: { enabled: boolean; frequency: number }) => void;
 }
 
 const SimulatorContext = createContext<SimulatorContextValue | undefined>(undefined);
@@ -84,6 +88,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const [ioBanks, setIoBanks] = useState<IOBank[]>([]);
 	const [busNets, setBusNets] = useState<Net[]>([]);
 	const [drivers, setDrivers] = useState<{ source: string; destination: string }[]>([]);
+	const [oscillator, setOscillator] = useState({ enabled: false, frequency: 1 });
 
 	const setDriver = useCallback((source: string, destination: string) => {
 		console.log(source, destination);
@@ -300,6 +305,28 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		bumpTick();
 	}, [logicCells, switchMatrices, pips, ioBanks, drivers, getNet, bumpTick]);
 
+	// Oscillator timer effect - runs independently from simulation
+	useEffect(() => {
+		if (!oscillator.enabled) return;
+
+		const halfPeriod = 500 / oscillator.frequency; // milliseconds
+		let lastValue = getNet('global.net_osc_in')?.value ?? false;
+
+		const interval = setInterval(() => {
+			const oscNet = getNet('global.net_osc_in');
+			if (oscNet) {
+				const newValue = !lastValue;
+				if (newValue !== oscNet.value) {
+					oscNet.value = newValue;
+					lastValue = newValue;
+					simulate();
+				}
+			}
+		}, halfPeriod);
+
+		return () => clearInterval(interval);
+	}, [oscillator.enabled, oscillator.frequency, getNet, simulate]);
+
 	useEffect(() => {
 		const { logicCells, switchMatrices, pips, ioBanks, busNets } = initialiseSimulation();
 		setLogicCells(logicCells);
@@ -437,6 +464,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		searchQuery: searchQuery,
 		setSearchQuery: setSearchQuery,
 		updateIOBank: updateIOBank,
+		oscillator: oscillator,
+		setOscillator: setOscillator,
 	};
 
 	return <SimulatorContext.Provider value={value}>{children}</SimulatorContext.Provider>;
