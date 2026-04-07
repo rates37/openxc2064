@@ -75,14 +75,14 @@ interface SimulatorContextValue {
 const SimulatorContext = createContext<SimulatorContextValue | undefined>(undefined);
 
 export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+	/**
+	 *
+	 * State variables for everything that is managed globally across the simulator
+	 *
+	 */
 	const [isRunning, setIsRunning] = useState(false);
 	const [showGrid, setShowGrid] = useState(true);
 	const [tick, setTick] = useState(0);
-
-	const bumpTick = useCallback(() => setTick((t) => t + 1), []);
-
-	const toggleGrid = useCallback(() => setShowGrid((prev) => !prev), []);
-
 	const [logicCells, setLogicCells] = useState<LogicCell[]>([]);
 	const [switchMatrices, setSwitchMatrices] = useState<SwitchMatrix[]>([]);
 	const [pips, setPips] = useState<Pip[]>([]);
@@ -90,11 +90,23 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const [busNets, setBusNets] = useState<Net[]>([]);
 	const [drivers, setDrivers] = useState<{ source: string; destination: string }[]>([]);
 	const [oscillator, setOscillator] = useState({ enabled: false, frequency: 1 });
+	const [selectedMatrix, setSelectedMatrix] = useState<SwitchMatrix | null>(null);
+	const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
+	const [selectedIOBank, setSelectedIOBank] = useState<IOBank | null>(null);
+	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+	const [searchQuery, setSearchQuery] = useState<string | null>(null);
+
+	// Dummy update function to force a re-render of the simulator canvas. This is nice, because it means we can only re-render the display after the simulation is settled, not between each step.
+	const bumpTick = useCallback(() => setTick((t) => t + 1), []);
+
+	// Manage the background grid button
+	const toggleGrid = useCallback(() => setShowGrid((prev) => !prev), []);
 
 	// Import/Export functions
 	const exportState = useCallback(() => createExportStateFunction(logicCells, switchMatrices, pips, ioBanks)(), [logicCells, switchMatrices, pips, ioBanks]);
 	const importState = useCallback(() => createImportStateFunction(logicCells, switchMatrices, ioBanks, setPips, bumpTick)(), [logicCells, switchMatrices, ioBanks, bumpTick]);
 
+	// Driver management functions
 	const setDriver = useCallback((source: string, destination: string) => {
 		console.log(source, destination);
 		setDrivers((prev) => {
@@ -113,10 +125,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		[drivers],
 	);
 
+	// Toggle a PIP on/off by index in the pips array
 	const togglePip = useCallback((index: number) => {
-		const current_pips = pips;
-		const pip = current_pips[index];
-
 		setPips((prev) => prev.map((pip, i) => (i === index ? { ...pip, enabled: !pip.enabled } : pip)));
 	}, []);
 
@@ -124,12 +134,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		setIoBanks((prev) => prev.map((bank, i) => (bank.id === updatedBank.id ? updatedBank : bank)));
 	}, []);
 
-	const [selectedMatrix, setSelectedMatrix] = useState<SwitchMatrix | null>(null);
-	const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
-	const [selectedIOBank, setSelectedIOBank] = useState<IOBank | null>(null);
-	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
-	const [searchQuery, setSearchQuery] = useState<string | null>(null);
-
+	// Manage the selected primative to select which (if any) modal should be shown.
 	const selectCell = useCallback((cell: LogicCell | null) => {
 		setSelectedCell(cell);
 	}, []);
@@ -171,33 +176,33 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
 	const getNet = useCallback(
 		(globalNetId: string): Net | undefined => {
-            // Split the net into [Location].[id], as specified in detail in the decodeRelativeNetName function below
+			// Split the net into [Location].[id], as specified in detail in the decodeRelativeNetName function below
 			const [location, id] = globalNetId.split('.');
-            
+
 			const allCellIds = logicCells.map((cell) => cell.id);
-            
+
 			// If the location is only two chars, then we can assume it is a cell id, and we can look for the net in that cell's nets
 			// If we assumed wrong, it will return undefined and be handled by the caller.
 			if (allCellIds.includes(location[0] + location[1]) && location.length === 2) {
-                const cell = logicCells.find((cell) => cell.id === location);
+				const cell = logicCells.find((cell) => cell.id === location);
 				return cell?.nets.find((net) => net.id === id);
 			}
-            
-            // If location length is 5, we are expecting a matrix with [Logic Cell ID]_M[Matrix Index] format, e.g. AA_M0
-            // If we assumed wrong, it will return undefined and be handled by the caller.
+
+			// If location length is 5, we are expecting a matrix with [Logic Cell ID]_M[Matrix Index] format, e.g. AA_M0
+			// If we assumed wrong, it will return undefined and be handled by the caller.
 			if (allCellIds.includes(location[0] + location[1]) && location.length === 5 && location[3] === 'M') {
-                const matrix = switchMatrices.find((matrix) => matrix.id === location);
+				const matrix = switchMatrices.find((matrix) => matrix.id === location);
 				return matrix?.nets.find((net) => net && net.id === globalNetId);
 			}
-            
-            // If location length is 6, we are expecting an IO Block with [Logic Cell ID]_I[IO Index] format, e.g. AA_I0
-            // If we assumed wrong, it will return undefined and be handled by the caller.
+
+			// If location length is 6, we are expecting an IO Block with [Logic Cell ID]_I[IO Index] format, e.g. AA_I0
+			// If we assumed wrong, it will return undefined and be handled by the caller.
 			if (allCellIds.includes(location[0] + location[1]) && location.length === 6 && location[3] === 'I') {
-                const iobank = ioBanks.find((bank) => bank.id === location);
+				const iobank = ioBanks.find((bank) => bank.id === location);
 				return iobank?.nets.find((net) => net && net.id === globalNetId);
 			}
-            
-            // If we made it this far, search for the net in the global bus list, if not, return undefined and let the caller handle it
+
+			// If we made it this far, search for the net in the global bus list, if not, return undefined and let the caller handle it
 			if (busNets.find((net) => net.id === globalNetId)) {
 				return busNets.find((net) => net.id === globalNetId);
 			}
@@ -341,17 +346,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		setBusNets(busNets);
 	}, []);
 
-	// To add a new function:
-	//   1. Declare it in the SimulatorContextValue interface above.
-	//   2. Implement it here with useCallback.
-	//   3. Include it in the `value` object below.
-
-	// To add a new list:
-	//   1. Add the type to the interface (e.g. items: MyItem[]).
-	//   2. Create state here (e.g. const [items, setItems] = useState<MyItem[]>([])).
-	//   3. (Optional) Create helper functions (addItem, removeItem, etc.).
-	//   4. Include the list and helpers in the `value` object below.
-
+	// Put together all of the possible values and functions that are available to the useSimulator hook.
 	const value: SimulatorContextValue = {
 		isRunning: isRunning,
 		tick: tick,
@@ -391,7 +386,6 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
 	return <SimulatorContext.Provider value={value}>{children}</SimulatorContext.Provider>;
 };
-
 
 export const useSimulator = (): SimulatorContextValue => {
 	const context = useContext(SimulatorContext);
