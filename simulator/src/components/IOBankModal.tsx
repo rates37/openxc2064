@@ -215,6 +215,13 @@ const IOBankModal = React.memo(() => {
 						<MuxGroup onClick={() => handleMuxClick('min', 2)} polygonPoints={`600,440 600,360 570,340, 570,460`} lineBase={{ x: 600, y: 400 }} linePoints={inMuxPoints} value={getNet(selectedIOBank, 'net_in_mux').value} />
 
 						<LineSegment baseX={600} baseY={400} points={[{ x: 0, y: 0 }, { x: 100, y: 0 }]} value={getNet(selectedIOBank, 'net_I').value} strokeWidth={3} />
+					
+						<text x={710} y={104} fontSize={30} fill={BASE_STROKE}>TS_n</text>
+						<text x={710} y={210} fontSize={30} fill={BASE_STROKE}>Out</text>
+						<text x={710} y={410} fontSize={30} fill={BASE_STROKE}>In</text>
+						<text x={710} y={580} fontSize={30} fill={BASE_STROKE}>Clk</text>
+
+
 					</svg>
 				</div>
 			</div>
