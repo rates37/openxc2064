@@ -73,7 +73,6 @@ interface SimulatorContextValue {
 
 	// Simulation stats
 	simStats: { avg_steps: number; avg_time: number; min_time: number; max_time: number } | null;
-
 }
 
 const SimulatorContext = createContext<SimulatorContextValue | undefined>(undefined);
@@ -99,7 +98,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const [selectedIOBank, setSelectedIOBank] = useState<IOBank | null>(null);
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 	const [searchQuery, setSearchQuery] = useState<string | null>(null);
-	const [simStats, setSimStats] = useState<{ avg_steps: string, avg_time: number, min_time: number, max_time: number } | null>(null);
+	const [simStats, setSimStats] = useState<{ avg_steps: string; avg_time: number; min_time: number; max_time: number } | null>(null);
 
 	// Dummy update function to force a re-render of the simulator canvas. This is nice, because it means we can only re-render the display after the simulation is settled, not between each step.
 	const bumpTick = useCallback(() => setTick((t) => t + 1), []);
@@ -218,6 +217,38 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		[logicCells],
 	);
 
+	const propagateDriver = useCallback((source: string) => {
+		drivers
+			.filter((d) => d.source === source)
+			.forEach((driver) => {
+				const sourceNet = getNet(driver.source);
+				const destNet = getNet(driver.destination);
+				if (sourceNet && destNet) {
+					destNet.value = sourceNet.value;
+					propagateDriver(driver.destination); // Recursively propagate the change to any nets driven by the destination net
+				}
+
+				const clb_inputs = ['net_A', 'net_B', 'net_C', 'net_D', 'net_K'];
+				const destSplit = driver.destination.split('.');
+				// console.log(driver.destination, destSplit);
+				if (destSplit[0].length == 2 && clb_inputs.includes(destSplit[1])) {
+					// If the destination is a CLB input, we need to trigger a simulation of that CLB to ensure the new value propagates to the output
+					// console.log(`Triggering simulation of ${destSplit[0]} due to driver change on ${driver.destination}`); // Debug log
+					const cell = logicCells.find((c) => c.id === destSplit[0]);
+
+					// Save a copy of the cells x and y to detect a change
+					const cellX = cell?.nets.find((n) => n.id === 'net_X')?.value;
+					const cellY = cell?.nets.find((n) => n.id === 'net_Y')?.value;
+
+					cell?.simulate();
+
+					if (cell && cell?.nets.find((n) => n.id === 'net_X')?.value !== cellX) propagateDriver(`${cell.id}.net_X`);
+
+					if (cell && cell?.nets.find((n) => n.id === 'net_Y')?.value !== cellY) propagateDriver(`${cell.id}.net_Y`);
+				}
+			});
+	});
+
 	// simulate: your main entry-point for running a simulation step/cycle.
 	// Keeps ticking until all net values have settled (no changes between steps).
 	const simulate = useCallback(() => {
@@ -257,6 +288,10 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		let steps = 0;
 		let settled = false;
 
+		// Get all nets that can possibley trigger a change in the simulation
+		const inputNets = ioBanks.flatMap((bank) => bank.nets).filter((net) => net.id.endsWith('net_I')); // All IO Bank pad nets are potential inputs
+		inputNets.push(getNet('global.net_osc_in')); // Oscillator net is also a potential input
+
 		while (!settled && steps < MAX_ITERATIONS) {
 			const before = snapshotNets();
 
@@ -264,43 +299,16 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 			ioBanks.forEach((bank) => {
 				bank.simulate();
 			});
-
-			drivers.forEach((driver) => {
-				const sourceNet = getNet(driver.source);
-				const destNet = getNet(driver.destination);
-				if (sourceNet && destNet) {
-					destNet.value = sourceNet.value;
-				}
-
-				const clb_inputs = ['net_A', 'net_B', 'net_C', 'net_D', 'net_K'];
-				const destSplit = driver.destination.split('.');
-				// console.log(driver.destination, destSplit);
-				if (destSplit[0].length == 2 && clb_inputs.includes(destSplit[1])) {
-					// If the destination is a CLB input, we need to trigger a simulation of that CLB to ensure the new value propagates to the output
-					// console.log(`Triggering simulation of ${destSplit[0]} due to driver change on ${driver.destination}`); // Debug log
-					const cell = logicCells.find((c) => c.id === destSplit[0]);
-					cell?.simulate();
-				}
+			
+			inputNets.forEach((net) => {
+				propagateDriver(net.id);
 			});
-
-			drivers.forEach((driver) => {
-				const sourceNet = getNet(driver.source);
-				const destNet = getNet(driver.destination);
-				if (sourceNet && destNet) {
-					destNet.value = sourceNet.value;
-				}
-
-				const clb_inputs = ['net_A', 'net_B', 'net_C', 'net_D', 'net_K'];
-				const destSplit = driver.destination.split('.');
-				// console.log(driver.destination, destSplit);
-				if (destSplit[0].length == 2 && clb_inputs.includes(destSplit[1])) {
-					// If the destination is a CLB input, we need to trigger a simulation of that CLB to ensure the new value propagates to the output
-					// console.log(`Triggering simulation of ${destSplit[0]} due to driver change on ${driver.destination}`); // Debug log
-					const cell = logicCells.find((c) => c.id === destSplit[0]);
-					cell?.simulate();
-				}
+			
+			// Simulate IOBanks after PIPs propagate, so they account for any incoming values
+			ioBanks.forEach((bank) => {
+				bank.simulate();
 			});
-
+			
 			steps++;
 
 			const after = snapshotNets();

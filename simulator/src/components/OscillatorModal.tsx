@@ -81,7 +81,7 @@ const OscillatorModal: React.FC<OscillatorModalProps> = ({ isOpen, onClose }) =>
 							<input
 								type="range"
 								min="0"
-								max="10"
+								max="100"
 								step="0.1"
 								value={localFrequency}
 								onChange={handleSliderChange}
