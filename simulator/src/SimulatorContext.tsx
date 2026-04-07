@@ -4,6 +4,7 @@ import { SwitchMatrix } from './models/SwitchMatrix';
 import { Net, Pip } from './types';
 import { initialiseSimulation } from './InitialiseSimulation';
 import { IOBank, IOPad } from './models/IOBank';
+import { createExportStateFunction, createImportStateFunction } from './saveSimulation';
 
 interface SimulatorContextValue {
 	/**
@@ -89,6 +90,10 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const [busNets, setBusNets] = useState<Net[]>([]);
 	const [drivers, setDrivers] = useState<{ source: string; destination: string }[]>([]);
 	const [oscillator, setOscillator] = useState({ enabled: false, frequency: 1 });
+
+	// Import/Export functions
+	const exportState = useCallback(() => createExportStateFunction(logicCells, switchMatrices, pips, ioBanks)(), [logicCells, switchMatrices, pips, ioBanks]);
+	const importState = useCallback(() => createImportStateFunction(logicCells, switchMatrices, ioBanks, setPips, bumpTick)(), [logicCells, switchMatrices, ioBanks, bumpTick]);
 
 	const setDriver = useCallback((source: string, destination: string) => {
 		console.log(source, destination);
@@ -210,7 +215,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		// console.log(pips);
 		const startTime = performance.now();
 
-		const MAX_ITERATIONS = 10;
+		const MAX_ITERATIONS = 25;
 
 		const snapshotNets = (): Map<string, boolean> => {
 			const snap = new Map<string, boolean>();
@@ -347,90 +352,6 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	//   3. (Optional) Create helper functions (addItem, removeItem, etc.).
 	//   4. Include the list and helpers in the `value` object below.
 
-	const exportState = useCallback(() => {
-		const state = {
-			logicCells: logicCells.map((cell) => ({
-				id: cell.id,
-				muxes: cell.muxes.map((m) => ({ id: m.id, select: m.select })),
-				luts: cell.luts.map((l) => ({ id: l.id, truthTable: [...l.truthTable] })),
-			})),
-			switchMatrices: switchMatrices.map((matrix) => ({
-				id: matrix.id,
-				connections: matrix.connections.map((row) => [...row]),
-			})),
-			pips: pips.map((pip) => ({
-				id: pip.id,
-				source: pip.source,
-				destination: pip.destination,
-				enabled: pip.enabled,
-			})),
-		};
-		const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'xc2064-config.json';
-		a.click();
-		URL.revokeObjectURL(url);
-	}, [logicCells, switchMatrices, pips]);
-
-	const importState = useCallback(() => {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = '.json';
-		input.onchange = () => {
-			const file = input.files?.[0];
-			if (!file) return;
-			const reader = new FileReader();
-			reader.onload = () => {
-				try {
-					const state = JSON.parse(reader.result as string);
-					if (state.logicCells) {
-						for (const saved of state.logicCells) {
-							const cell = logicCells.find((c) => c.id === saved.id);
-							if (!cell) continue;
-							if (saved.muxes) {
-								for (const sm of saved.muxes) {
-									const mux = cell.muxes.find((m) => m.id === sm.id);
-									if (mux) mux.select = sm.select;
-								}
-							}
-							if (saved.luts) {
-								for (const sl of saved.luts) {
-									const lut = cell.luts.find((l) => l.id === sl.id);
-									if (lut && Array.isArray(sl.truthTable)) {
-										lut.truthTable = sl.truthTable;
-									}
-								}
-							}
-						}
-					}
-					if (state.switchMatrices) {
-						for (const saved of state.switchMatrices) {
-							const matrix = switchMatrices.find((m) => m.id === saved.id);
-							if (matrix && saved.connections) {
-								matrix.connections = saved.connections;
-							}
-						}
-					}
-					if (state.pips) {
-						setPips((prev) =>
-							prev.map((pip) => {
-								const saved = state.pips.find((s: any) => s.source === pip.source && s.destination === pip.destination);
-								return saved ? { ...pip, enabled: saved.enabled } : pip;
-							}),
-						);
-					}
-					bumpTick();
-				} catch (e) {
-					console.error('Failed to import state:', e);
-				}
-			};
-			reader.readAsText(file);
-		};
-		input.click();
-	}, [logicCells, switchMatrices, bumpTick]);
-
 	const value: SimulatorContextValue = {
 		isRunning: isRunning,
 		tick: tick,
@@ -471,13 +392,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	return <SimulatorContext.Provider value={value}>{children}</SimulatorContext.Provider>;
 };
 
-// =============================================================================
-// 4. Custom hook - use this in any component to access the context.
-//    Throws if used outside of <SimulatorProvider>.
-//
-//    Usage:
-//      const { simulate, logicCells, isRunning } = useSimulator();
-// =============================================================================
+
 export const useSimulator = (): SimulatorContextValue => {
 	const context = useContext(SimulatorContext);
 	if (context === undefined) {
