@@ -7,6 +7,7 @@ import { SwitchMatrix } from "../models/SwitchMatrix";
 import { IOBank, IOPad } from "../models/IOBank";
 import { Net, Pip } from "../types";
 import OscillatorModal from "./OscillatorModal";
+import SimulationStats from "./SimulationStats";
 
 // Initial view position
 const INITIAL_VIEW = { x: -3500, y: -100, w: 7000, h: 5000 };
@@ -683,6 +684,7 @@ const SimulationCanvas: React.FC = () => {
                 onClick={onClick}
             />
             {showOscillatorModal && <OscillatorModal isOpen={showOscillatorModal} onClose={() => setShowOscillatorModal(false)} />}
+            <SimulationStats />
         </div>
     );
 };

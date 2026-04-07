@@ -70,6 +70,10 @@ interface SimulatorContextValue {
 	// Oscillator state
 	oscillator: { enabled: boolean; frequency: number };
 	setOscillator: (osc: { enabled: boolean; frequency: number }) => void;
+
+	// Simulation stats
+	simStats: { avg_steps: number; avg_time: number; min_time: number; max_time: number } | null;
+
 }
 
 const SimulatorContext = createContext<SimulatorContextValue | undefined>(undefined);
@@ -95,6 +99,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const [selectedIOBank, setSelectedIOBank] = useState<IOBank | null>(null);
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
 	const [searchQuery, setSearchQuery] = useState<string | null>(null);
+	const [simStats, setSimStats] = useState<{ avg_steps: string, avg_time: number, min_time: number, max_time: number } | null>(null);
 
 	// Dummy update function to force a re-render of the simulator canvas. This is nice, because it means we can only re-render the display after the simulation is settled, not between each step.
 	const bumpTick = useCallback(() => setTick((t) => t + 1), []);
@@ -255,10 +260,6 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		while (!settled && steps < MAX_ITERATIONS) {
 			const before = snapshotNets();
 
-			logicCells.forEach((cell) => {
-				cell.simulate();
-			});
-
 			// Simulate IOBanks after PIPs propagate, so they account for any incoming values
 			ioBanks.forEach((bank) => {
 				bank.simulate();
@@ -269,6 +270,34 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 				const destNet = getNet(driver.destination);
 				if (sourceNet && destNet) {
 					destNet.value = sourceNet.value;
+				}
+
+				const clb_inputs = ['net_A', 'net_B', 'net_C', 'net_D', 'net_K'];
+				const destSplit = driver.destination.split('.');
+				// console.log(driver.destination, destSplit);
+				if (destSplit[0].length == 2 && clb_inputs.includes(destSplit[1])) {
+					// If the destination is a CLB input, we need to trigger a simulation of that CLB to ensure the new value propagates to the output
+					// console.log(`Triggering simulation of ${destSplit[0]} due to driver change on ${driver.destination}`); // Debug log
+					const cell = logicCells.find((c) => c.id === destSplit[0]);
+					cell?.simulate();
+				}
+			});
+
+			drivers.forEach((driver) => {
+				const sourceNet = getNet(driver.source);
+				const destNet = getNet(driver.destination);
+				if (sourceNet && destNet) {
+					destNet.value = sourceNet.value;
+				}
+
+				const clb_inputs = ['net_A', 'net_B', 'net_C', 'net_D', 'net_K'];
+				const destSplit = driver.destination.split('.');
+				// console.log(driver.destination, destSplit);
+				if (destSplit[0].length == 2 && clb_inputs.includes(destSplit[1])) {
+					// If the destination is a CLB input, we need to trigger a simulation of that CLB to ensure the new value propagates to the output
+					// console.log(`Triggering simulation of ${destSplit[0]} due to driver change on ${driver.destination}`); // Debug log
+					const cell = logicCells.find((c) => c.id === destSplit[0]);
+					cell?.simulate();
 				}
 			});
 
@@ -286,7 +315,20 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 
 		const endTime = performance.now();
 
-		console.log(`Simulation settled after ${steps} step(s) in ${(endTime - startTime).toFixed(1)} ms`);
+		// console.log(`Simulation settled after ${steps} step(s) in ${(endTime - startTime).toFixed(1)} ms`);
+
+		// Update simulation stats
+		setSimStats((prev) => {
+			const newStats = {
+				avg_steps: ((prev?.avg_steps ? parseFloat(prev.avg_steps) : 0) * tick + steps) / (tick + 1),
+				avg_time: ((prev?.avg_time ?? 0) * tick + (endTime - startTime)) / (tick + 1),
+				min_time: prev?.min_time ? Math.min(prev.min_time, endTime - startTime) : endTime - startTime,
+				max_time: prev?.max_time ? Math.max(prev.max_time, endTime - startTime) : endTime - startTime,
+			};
+
+			// console.log(`Simulation stats: \n\tAvg Steps: ${newStats.avg_steps.toFixed(2)}\n\tAvg Time: ${newStats.avg_time.toFixed(1)} ms\n\tMin Time: ${newStats.min_time.toFixed(1)} ms\n\tMax Time: ${newStats.max_time.toFixed(1)} ms`);
+			return newStats;
+		});
 
 		if (steps >= MAX_ITERATIONS) {
 			console.warn(`Simulation did not settle within ${MAX_ITERATIONS} iterations`);
@@ -363,6 +405,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		updateIOBank: updateIOBank,
 		oscillator: oscillator,
 		setOscillator: setOscillator,
+		simStats: simStats,
 	};
 
 	return <SimulatorContext.Provider value={value}>{children}</SimulatorContext.Provider>;
