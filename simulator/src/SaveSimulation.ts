@@ -11,7 +11,8 @@ export const createExportStateFunction = (
 	logicCells: LogicCell[],
 	switchMatrices: SwitchMatrix[],
 	pips: Pip[],
-	ioBanks: IOBank[]
+	ioBanks: IOBank[],
+	drivers: { source: string; destination: string }[]
 ) => {
 	return () => {
 		const state = {
@@ -34,6 +35,7 @@ export const createExportStateFunction = (
 				id: bank.id,
 				muxes: bank.muxes.map((m) => ({ id: m.id, select: m.select })),
 			})),
+			drivers: drivers,
 		};
 		const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
 		const url = URL.createObjectURL(blob);
@@ -53,6 +55,7 @@ export const createImportStateFunction = (
 	switchMatrices: SwitchMatrix[],
 	ioBanks: IOBank[],
 	setPips: React.Dispatch<React.SetStateAction<Pip[]>>,
+	setDrivers: React.Dispatch<React.SetStateAction<{ source: string; destination: string }[]>>,
 	bumpTick: () => void
 ) => {
 	return () => {
@@ -66,6 +69,9 @@ export const createImportStateFunction = (
 			reader.onload = () => {
 				try {
 					const state = JSON.parse(reader.result as string);
+					// Clear all state first
+					setPips((prev) => prev.map((p) => ({ ...p, enabled: false })));
+					setDrivers([]);
 					if (state.logicCells) {
 						for (const saved of state.logicCells) {
 							const cell = logicCells.find((c) => c.id === saved.id);
@@ -112,6 +118,9 @@ export const createImportStateFunction = (
 								}
 							}
 						}
+					}
+					if (state.drivers && Array.isArray(state.drivers)) {
+						setDrivers(state.drivers);
 					}
 					bumpTick();
 				} catch (e) {

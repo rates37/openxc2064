@@ -103,8 +103,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const toggleGrid = useCallback(() => setShowGrid((prev) => !prev), []);
 
 	// Import/Export functions
-	const exportState = useCallback(() => createExportStateFunction(logicCells, switchMatrices, pips, ioBanks)(), [logicCells, switchMatrices, pips, ioBanks]);
-	const importState = useCallback(() => createImportStateFunction(logicCells, switchMatrices, ioBanks, setPips, bumpTick)(), [logicCells, switchMatrices, ioBanks, bumpTick]);
+	const exportState = useCallback(() => createExportStateFunction(logicCells, switchMatrices, pips, ioBanks, drivers)(), [logicCells, switchMatrices, pips, ioBanks, drivers]);
+	const importState = useCallback(() => createImportStateFunction(logicCells, switchMatrices, ioBanks, setPips, setDrivers, bumpTick)(), [logicCells, switchMatrices, ioBanks, bumpTick]);
 
 	// Driver management functions
 	const setDriver = useCallback((source: string, destination: string) => {
@@ -259,36 +259,17 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 				cell.simulate();
 			});
 
-			switchMatrices.forEach((matrix) => {
-				matrix.simulate();
-			});
-
-			pips.forEach((pip) => {
-				if (pip.enabled) {
-					const sourceNet = getNet(pip.source);
-					const destinationNet = getNet(pip.destination);
-
-					if (sourceNet && destinationNet) {
-						if (pip.bidirectional) {
-							// Destination is driven by something else, so it drives back to source
-							const sourceDrivers = drivers.filter((d) => d.destination === pip.source);
-
-							if (sourceDrivers.some((d) => d.source === pip.destination)) {
-								sourceNet.value = destinationNet.value;
-							} else {
-								destinationNet.value = sourceNet.value;
-							}
-						} else {
-							// Unidirectional: source always drives destination
-							destinationNet.value = sourceNet.value;
-						}
-					}
-				}
-			});
-
 			// Simulate IOBanks after PIPs propagate, so they account for any incoming values
 			ioBanks.forEach((bank) => {
 				bank.simulate();
+			});
+
+			drivers.forEach((driver) => {
+				const sourceNet = getNet(driver.source);
+				const destNet = getNet(driver.destination);
+				if (sourceNet && destNet) {
+					destNet.value = sourceNet.value;
+				}
 			});
 
 			steps++;
