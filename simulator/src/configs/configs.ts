@@ -888,7 +888,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	 */
 
 	{
-		ids: [...id_range('[A-G][A-G]')],
+		ids: [...id_range('[B-H][A-G]')],
 		nets: [],
 		pips: [
 			{ id: 'pip_v2_0', source: 'T_M0.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 440, y: 400 }, bidirectional: true },
@@ -897,6 +897,17 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_v2_0', source: 'T_M1.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: 460 }, bidirectional: true },
 			{ id: 'pip_v2_0', source: 'T_M1.net_1', destination: 'global_HU.net_0', enabled: false, pos: { x: 340, y: -60 }, bidirectional: true },
 			{ id: 'pip_v2_0', source: 'T_M0.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: 280, y: -60 }, bidirectional: true },
+		],
+	},
+
+	{
+		ids: [...id_range('A[A-G]')],
+		nets: [],
+		pips: [
+			{ id: 'pip_v2_0', source: 'T_M0.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 440, y: 400 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T_M0.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: 420 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T_M1.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 440, y: 440 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T_M1.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: 460 }, bidirectional: true },
 		],
 	},
 
