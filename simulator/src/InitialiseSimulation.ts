@@ -235,11 +235,22 @@ export const initialiseSimulation = (): {
 
         // If we are on the top edge (i.e. row 0) 
         if (i === 0) {
-            // Top cells should be M2/M3, and will connect to the local M1/M0 cells bellow, and M2/M3 of the cell to the left if it exists
-            if (matrixIndex >= 2) {
-                bottom_index = matrixIndex - 2;
-                bottom_cell_id = cellId;
-            }
+			// Handle the edge case of clb AA because it is the only cell with 6 matrices.
+			if (cellId === 'AA') {
+				if (matrixIndex >= 2) {
+					bottom_index = matrixIndex % 2;
+				}
+
+				if (matrixIndex >= 4) {
+					bottom_cell_id = cellId;
+				}
+			} else {
+            	// Top cells should be M2/M3, and will connect to the local M1/M0 cells bellow, and M2/M3 of the cell to the left if it exists
+            	if (matrixIndex >= 2) {
+            	    bottom_index = matrixIndex % 2; // M2/M3 should connect to M0/M1 of the cell below
+					bottom_cell_id = cellId;
+            	}
+			}
         }
 
         // If we are on the right edge (i.e. col 7)
@@ -250,19 +261,19 @@ export const initialiseSimulation = (): {
 
 
 		if (!left_cell_id) {
-			console.warn(`Matrix ${matrix.id} has invalid neighboring cell on the left`);
+			// console.warn(`Matrix ${matrix.id} has invalid neighboring cell on the left`);
 		} else {
 			// Dont set the bottom and left netss if they already exist, there are some edge cases where it matters.
-			if (matrix.nets[6] == undefined) matrix.nets[6] = localGetNet(`${left_cell_id}_M${left_index}.net_3`) || null;
-			if (matrix.nets[7] == undefined) matrix.nets[7] = localGetNet(`${left_cell_id}_M${left_index}.net_2`) || null;
+			if (matrix.nets[6] == undefined || matrix.nets[6]?.id.split('.')[1] === 'dummy') matrix.nets[6] = localGetNet(`${left_cell_id}_M${left_index}.net_3`) || null;
+			if (matrix.nets[7] == undefined || matrix.nets[7]?.id.split('.')[1] === 'dummy') matrix.nets[7] = localGetNet(`${left_cell_id}_M${left_index}.net_2`) || null;
 		}
 		
 		if (!bottom_cell_id) {
-			console.warn(`Matrix ${matrix.id} has invalid neighboring cell on the bottom`);
+			// console.warn(`Matrix ${matrix.id} has invalid neighboring cell on the bottom`);
 		} else {
-			// Dont set the bottom and left netss if they already exist, there are some edge cases where it matters.
-			if (matrix.nets[4] == undefined) matrix.nets[4] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_1`) || null;
-			if (matrix.nets[5] == undefined) matrix.nets[5] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_0`) || null;
+			// Dont set the bottom and left nets if they already exist, there are some edge cases where it matters.
+			if (matrix.nets[4] == undefined || matrix.nets[4]?.id.split('.')[1] === 'dummy') matrix.nets[4] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_1`) || null;
+			if (matrix.nets[5] == undefined || matrix.nets[5]?.id.split('.')[1] === 'dummy') matrix.nets[5] = localGetNet(`${bottom_cell_id}_M${bottom_index}.net_0`) || null;
 		}
 	});
 

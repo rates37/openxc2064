@@ -1,6 +1,3 @@
-
-
-
 ## Helper function to strip the first X bits from a byte array and return the reamining array and stripped bits
 def strip_bits(data: bytes, num_bits: int) -> tuple[bytes, int]:
     if num_bits == 0:
@@ -56,9 +53,9 @@ def generate_hex_file(input_file: str, output_file: str):
         f.write(":00000001FF\n")  # End of file record
 
 
-FILENAME = './AND_OR.BIT'
+FILENAME = 'AND_OR'
 ## Load in and print the binary data from "SIMPLE.bin"
-with open(FILENAME, "rb") as f:
+with open("./bitstreams/" + FILENAME + ".BIT", "rb") as f:
     data = f.read()
     full_data = data
     # Strip the first 8 bits
@@ -90,7 +87,7 @@ with open(FILENAME, "rb") as f:
     data, stripped_bits = strip_bits(data, 45)
     print(f"{stripped_bits:04b}")
 
-    generate_hex_file(FILENAME, "./SIMPLE.hex")
+    generate_hex_file("./bitstreams/" + FILENAME + ".BIT", "./rom_outputs/" + FILENAME + ".HEX")
     # # print original data byte by byte in binary
     # print("\nOriginal data:")
     # for i, byte in enumerate(full_data):

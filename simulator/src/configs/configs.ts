@@ -1268,7 +1268,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: number; y: number } }[] }[] = [
 	{
 		// Main switch matrices. All cells that have the standard bottom right cells.
-		ids: id_range('[A-G][A-F]'),
+		ids: id_range('[B-G][A-F]'),
 		matrices: [
 			{
 				pos: { x: CELL_WIDTH / 2 + 90, y: 250 },
@@ -1347,8 +1347,88 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 		],
 	},
 	{
+		// Main switch matrices for the top row since their top nets need to be a bit longer
+		ids: id_range('A[A-F]'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: 250 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: -10 },
+							{ x: MATRIX_WIDTH / 2 + 520, y: -10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: 10 },
+							{ x: MATRIX_WIDTH / 2 + 520, y: 10 },
+						],
+					},
+				],
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 90 + MATRIX_WIDTH, y: 250 + MATRIX_HEIGHT },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: -10 },
+							{ x: MATRIX_WIDTH / 2 + 520, y: -10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: 10 },
+							{ x: MATRIX_WIDTH / 2 + 520, y: 10 },
+						],
+					},
+				],
+			},
+		],
+	},
+	{
 		// Main switch matrices for the G column because the nets need to be a little bit longer
-		ids: id_range('[A-G]G'),
+		ids: id_range('[B-G]G'),
 		matrices: [
 			{
 				pos: { x: CELL_WIDTH / 2 + 90, y: 250 },
@@ -1404,6 +1484,86 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						points: [
 							{ x: 10, y: -MATRIX_HEIGHT / 2 },
 							{ x: 10, y: -MATRIX_HEIGHT / 2 - 520 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: -10 },
+							{ x: MATRIX_WIDTH / 2 + 580, y: -10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: 10 },
+							{ x: MATRIX_WIDTH / 2 + 580, y: 10 },
+						],
+					},
+				],
+			},
+		],
+	},
+	{
+		// Main switch matrices for the G column because the nets need to be a little bit longer
+		ids: id_range('AG'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: 250 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: -10 },
+							{ x: MATRIX_WIDTH / 2 + 580, y: -10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: MATRIX_WIDTH / 2, y: 10 },
+							{ x: MATRIX_WIDTH / 2 + 580, y: 10 },
+						],
+					},
+				],
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 90 + MATRIX_WIDTH, y: 250 + MATRIX_HEIGHT },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 560 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 560 },
 						],
 					},
 					{
@@ -2079,6 +2239,347 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 			},
 		],
 	},
+	{
+		// M2/M3 Matrices for the top edge of the chip
+		ids: id_range('A[B-F]'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: -CELL_HEIGHT / 2 - 190 },
+				nets: [
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 500, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 130, y: -CELL_HEIGHT / 2 - 150 },
+				nets: [
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 500, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			}
+		
+		]
+	},
+	{
+		// M2/M3 Matrices AG because they are slightly different
+		ids: ['AG'],
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: -CELL_HEIGHT / 2 - 190 },
+				nets: [
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 690, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 650, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 130, y: -CELL_HEIGHT / 2 - 150 },
+				nets: [
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 590, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 570, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			}
+		
+		]
+	},
+	{
+		// M2/M3 Matrices AA because they are slightly different
+		ids: ['AA'],
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 -490, y: -CELL_HEIGHT / 2 + 410 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 610 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 570 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 560, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 560, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 - 450, y: -CELL_HEIGHT / 2 + 450 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 590 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 570 },
+						],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 560, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 560, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 90, y: -CELL_HEIGHT / 2 - 190 },
+				nets: [
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 500, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_6',
+						value: false,
+						points: [
+							{ x: -20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: -610, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_7',
+						value: false,
+						points: [
+							{ x: -20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: -570, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					
+				]
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 130, y: -CELL_HEIGHT / 2 - 150 },
+				nets: [
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_2',
+						value: false,
+						points: [
+							{ x: 20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: 500, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					{
+						id: 'net_3',
+						value: false,
+						points: [
+							{ x: 20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: 500, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'net_7',
+						value: false,
+						points: [
+							{ x: -20, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: -570, y: MATRIX_HEIGHT / 2 - 10 },
+						],
+					},
+					{
+						id: 'net_6',
+						value: false,
+						points: [
+							{ x: -20, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: -590, y: -MATRIX_HEIGHT / 2 + 10 },
+						],
+					},
+					
+				]
+			}
+		
+		]
+	}
 ];
 
 const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: number }; size: { width: number; height: number }; pads?: { pos: { x: number; y: number }; size: { width: number; height: number } }[] }[] }[] = [

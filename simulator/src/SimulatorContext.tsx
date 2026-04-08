@@ -4,7 +4,7 @@ import { SwitchMatrix } from './models/SwitchMatrix';
 import { Net, Pip } from './types';
 import { initialiseSimulation } from './InitialiseSimulation';
 import { IOBank, IOPad } from './models/IOBank';
-import { createExportStateFunction, createImportStateFunction } from './saveSimulation';
+import { createExportStateFunction, createImportStateFunction } from './SaveSimulation';
 
 interface SimulatorContextValue {
 	/**

@@ -150,7 +150,13 @@ const SwitchMatrixEditor: React.FC = () => {
 
                     {/* Possible-connection hints when a node is selected */}
                     {selectedNode !== null && Array.from({ length: 8 }, (_, j) => j)
-                        .filter(j => j !== selectedNode && possibleConnections[selectedNode][j])
+                        .filter(j => {
+                            if (j === selectedNode) return false;
+                            if (!possibleConnections[selectedNode][j]) return false;
+                            const netJ = selectedMatrix.nets?.[j] ?? null;
+                            const connectedJ = !!netJ && netJ.id.split('.')?.[1] !== 'dummy';
+                            return connectedJ;
+                        })
                         .map(j => (
                             <line
                                 key={`hint-${j}`}
@@ -169,16 +175,33 @@ const SwitchMatrixEditor: React.FC = () => {
                         const hasConnection = localConnections[i]?.some((c, j) => c && j !== i) ||
                             localConnections.some((row, j) => j !== i && row[i]);
 
+                        const net = selectedMatrix.nets?.[i] ?? null;
+                        const isConnected = !!net && net.id.split('.')?.[1] !== 'dummy';
+
+                        // Visual defaults for disconnected nodes
                         let fill = '#fff';
                         let stroke = '#333';
-                        if (isSelected) { fill = '#2196F3'; stroke = '#1565C0'; }
-                        else if (isTarget) { fill = '#BBDEFB'; stroke = '#2196F3'; }
-                        else if (hasConnection) { fill = '#E3F2FD'; stroke = '#333'; }
+                        let cursorStyle: React.CSSProperties['cursor'] = 'pointer';
+                        let labelColor = isSelected ? '#fff' : '#333';
+
+                        if (!isConnected) {
+                            // Grey out and disable selection
+                            fill = '#f3f4f6';
+                            stroke = '#cbd5e1';
+                            cursorStyle = 'not-allowed';
+                            labelColor = '#9ca3af';
+                        } else if (isSelected) {
+                            fill = '#2196F3'; stroke = '#1565C0'; labelColor = '#fff';
+                        } else if (isTarget) {
+                            fill = '#BBDEFB'; stroke = '#2196F3';
+                        } else if (hasConnection) {
+                            fill = '#E3F2FD'; stroke = '#333';
+                        }
 
                         return (
                             <g key={`node-${i}`}
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => handleNodeClick(i)}
+                                style={{ cursor: cursorStyle }}
+                                onClick={() => isConnected && handleNodeClick(i)}
                             >
                                 <circle
                                     cx={pos.x} cy={pos.y} r={NODE_RADIUS}
@@ -188,7 +211,7 @@ const SwitchMatrixEditor: React.FC = () => {
                                     x={pos.x} y={pos.y + 1}
                                     textAnchor="middle" dominantBaseline="central"
                                     fontSize={12} fontFamily="monospace" fontWeight="bold"
-                                    fill={isSelected ? '#fff' : '#333'}
+                                    fill={labelColor}
                                     pointerEvents="none"
                                 >{NET_LABELS[i]}</text>
                             </g>
@@ -204,12 +227,15 @@ const SwitchMatrixEditor: React.FC = () => {
 
                 <div style={{ fontSize: 12, fontFamily: 'monospace', margin: '8px 0', padding: '8px', background: '#f5f5f5', borderRadius: 6 }}>
                     <div style={{ fontWeight: 'bold', marginBottom: 4, fontFamily: 'sans-serif', fontSize: 13 }}>Nets</div>
-                    {selectedMatrix.nets.map((net, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 8, color: net ? '#333' : '#aaa' }}>
-                            <span>{i}:</span>
-                            <span>{net ? net.id : '(empty)'}</span>
-                        </div>
-                    ))}
+                    {Array.from({ length: 8 }).map((_, i) => {
+                        const net = selectedMatrix.nets?.[i] ?? null;
+                        return (
+                            <div key={i} style={{ display: 'flex', gap: 8, color: net  && net.id.split('.')?.[1] !== 'dummy'  ? '#333' : '#aaa' }}>
+                                <span>{i}:</span>
+                                <span>{net && net.id.split('.')?.[1] !== 'dummy' ? net.id : '[ Disconnected ]'}</span>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>

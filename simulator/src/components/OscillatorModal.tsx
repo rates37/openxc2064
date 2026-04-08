@@ -110,27 +110,6 @@ const OscillatorModal: React.FC<OscillatorModalProps> = ({ isOpen, onClose }) =>
 							Range: 0 - 10 Hz
 						</p>
 					</div>
-
-					{/* Info box */}
-					<div
-						style={{
-							backgroundColor: '#f0f7ff',
-							border: '1px solid #b3d9ff',
-							borderRadius: '6px',
-							padding: '12px',
-							fontSize: '13px',
-							color: '#333',
-							marginTop: '24px',
-						}}
-					>
-						<p style={{ margin: '0 0 8px 0', fontWeight: '500' }}>ℹ️ How it works:</p>
-						<ul style={{ margin: '0', paddingLeft: '20px', lineHeight: '1.6' }}>
-							<li>Generates a square wave on the <code style={{ fontFamily: 'monospace', backgroundColor: '#e8f0ff', padding: '2px 4px' }}>global.net_osc_in</code> net</li>
-							<li>Frequency range: 0 - 10 Hz</li>
-							<li>Can be used as a clock or test signal for your design</li>
-							<li>Automatically triggers simulation when frequency changes</li>
-						</ul>
-					</div>
 				</div>
 			</div>
 		</div>
