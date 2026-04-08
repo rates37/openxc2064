@@ -6,7 +6,7 @@ import { LogicCell } from "../models/LogicCell";
 import { SwitchMatrix } from "../models/SwitchMatrix";
 import { IOBank, IOPad } from "../models/IOBank";
 import { Net, Pip } from "../types";
-import OscillatorModal from "./OscillatorModal";
+import OscillatorModal from "./modals/OscillatorModal";
 import SimulationStats from "./SimulationStats";
 
 // Initial view position

@@ -2,9 +2,9 @@ import React from 'react';
 import { SimulatorProvider } from './SimulatorContext';
 import SimulationToolbar from './components/SimulationToolbar';
 import SimulationCanvas from './components/SimulationCanvas';
-import SwitchMatrixEditor from './components/SwitchMatrixEditor';
-import LogicElementModal from './components/LogicElementModal';
-import IOBankModal from './components/IOBankModal';
+import SwitchMatrixEditor from './components/modals/SwitchMatrixEditor';
+import LogicElementModal from './components/modals/LogicElementModal';
+import IOBankModal from './components/modals/IOBankModal';
 
 const App: React.FC = () => {
   return (

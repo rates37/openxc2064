@@ -1,7 +1,7 @@
 import React from 'react';
-import '../styles/Modal.css';
-import { useSimulator } from '../SimulatorContext';
-import { LineSegment } from './LineSegment';
+import '../../styles/Modal.css';
+import { useSimulator } from '../../SimulatorContext';
+import { LineSegment } from '../LineSegment';
 
 // Visual style constants (top-level to avoid recreating each render)
 const BASE_STROKE = '#333';

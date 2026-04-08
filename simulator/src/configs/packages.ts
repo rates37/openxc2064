@@ -1,0 +1,1 @@
+// Contain all of the information regardin the XC2064 package size, and provides which of the pins are connected, and which are unassigned.

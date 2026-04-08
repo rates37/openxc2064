@@ -3,6 +3,8 @@ import { CELL_WIDTH, CELL_HEIGHT, MATRIX_WIDTH, MATRIX_HEIGHT, IO_WIDTH, IO_HEIG
 
 export type ConfigTypes = 'logic_cell' | 'bus' | 'switch_matrix' | 'io';
 
+export const NUM_CELLS = 8;
+
 export default function getConfig(device: ConfigTypes, id: string): any {
 	switch (device) {
 		case 'logic_cell': {
@@ -168,6 +170,25 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_2', source: 'N_M3.net_2', destination: 'net_A', enabled: false, pos: { x: 160, y: -120 }, bidirectional: false },
 			{ id: 'pip_3', source: 'N_M3.net_3', destination: 'net_A', enabled: false, pos: { x: 160, y: -100 }, bidirectional: false },
 			{ id: 'pip_4', source: 'global_HU.net_0', destination: 'net_A', enabled: false, pos: { x: 160, y: -60 }, bidirectional: false },
+		],
+	},
+	{
+		// Port A, for all the top cells
+		ids: id_range('A[A-H]'),
+		nets: [
+			{
+				id: 'net_A',
+				value: false,
+				points: [
+					{ x: 60, y: -CELL_HEIGHT / 2 },
+					{ x: 60, y: -(CELL_HEIGHT / 2 + 20) },
+					{ x: 0, y: -(CELL_HEIGHT / 2 + 20) },
+					{ x: 0, y: -(CELL_HEIGHT / 2 + 20) - 200 },
+				],
+			},
+		],
+		pips: [
+
 		],
 	},
 
@@ -366,7 +387,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	 */
 	{
 		// All standard pin D cells. doesn't include bottom because of the extra length on the wire, and doesnt include left + right sides because they connect to the M2/M3 extra switches.
-		ids: id_range('[A-G][A-H]'),
+		ids: id_range('[A-G][B-H]'),
 		nets: [
 			{
 				id: 'net_D',
@@ -405,6 +426,62 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{
 				id: 'pip_15',
 				source: 'W_M1.net_3',
+				destination: 'net_D',
+				enabled: false,
+				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 },
+				bidirectional: false,
+			},
+			{
+				id: 'pip_v2_0',
+				source: 'global_HD.net_0',
+				destination: 'net_D',
+				enabled: false,
+				pos: { x: 100, y: 500 },
+				bidirectional: false,
+			},
+		],
+	},
+	{
+		// All standard pin D cells. doesn't include bottom because of the extra length on the wire, and doesnt include left + right sides because they connect to the M2/M3 extra switches.
+		ids: id_range('[A-G]A'),
+		nets: [
+			{
+				id: 'net_D',
+				value: false,
+				points: [
+					{ x: 0, y: CELL_HEIGHT / 2 },
+					{ x: 0, y: CELL_HEIGHT / 2 + 180 },
+				],
+			},
+		],
+		pips: [
+			{
+				id: 'pip_12',
+				source: 'T_M2.net_2',
+				destination: 'net_D',
+				enabled: false,
+				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 80 },
+				bidirectional: false,
+			},
+			{
+				id: 'pip_13',
+				source: 'T_M2.net_3',
+				destination: 'net_D',
+				enabled: false,
+				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 100 },
+				bidirectional: false,
+			},
+			{
+				id: 'pip_14',
+				source: 'T_M3.net_2',
+				destination: 'net_D',
+				enabled: false,
+				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 120 },
+				bidirectional: false,
+			},
+			{
+				id: 'pip_15',
+				source: 'T_M3.net_3',
 				destination: 'net_D',
 				enabled: false,
 				pos: { x: CELL_WIDTH / 2, y: CELL_HEIGHT + 140 },
@@ -540,6 +617,38 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 		],
 	},
 	{
+		// Everything but the top and bottom because there are no local cell connections above/below them, as well as the right edge needing custom IO connections
+		ids: id_range('A[A-G]'),
+		nets: [
+			{
+				id: 'net_X',
+				value: false,
+				points: [
+					{ x: CELL_WIDTH / 2, y: 20 },
+					{ x: CELL_WIDTH / 2 + 40, y: 20 },
+					{ x: CELL_WIDTH / 2 + 40, y: -100 },
+					{ x: CELL_WIDTH / 2 + 220, y: -100 },
+					{ x: CELL_WIDTH / 2 + 40, y: -100 },
+					{ x: CELL_WIDTH / 2 + 40, y: -240 },
+					{ x: CELL_WIDTH / 2 + 40, y: 20, continuous: false },
+					{ x: CELL_WIDTH / 2 + 40, y: 180 },
+					{ x: CELL_WIDTH / 2, y: 180 },
+					{ x: CELL_WIDTH / 2, y: 360 },
+					{ x: CELL_WIDTH / 2 - 240, y: 360 },
+					{ x: CELL_WIDTH / 2 - 240, y: 520 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_16', source: 'net_X', destination: 'T_M0.net_1', enabled: false, pos: { x: 300, y: 60 }, bidirectional: false },
+			{ id: 'pip_17', source: 'net_X', destination: 'T_M1.net_1', enabled: false, pos: { x: 340, y: 60 }, bidirectional: false },
+			{ id: 'pip_21', source: 'net_X', destination: 'S.net_A', enabled: false, pos: { x: CELL_HEIGHT / 2 + 0, y: 520 }, bidirectional: false },
+			{ id: 'pip_21', source: 'net_X', destination: 'S.net_B', enabled: false, pos: { x: -40, y: 680 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'net_X', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: 60 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'net_X', destination: 'T_IO1.net_O', enabled: false, pos: { x: 240, y: -80 }, bidirectional: false },
+		],
+	},
+	{
 		// Bottom row of CLBS with that are missing the bottom local CLB interconnect
 		ids: id_range('H[A-G]'),
 		nets: [
@@ -636,11 +745,42 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 		],
 	},
 	{
+		// Right edge except Corners
+		ids: id_range('AH'),
+		nets: [
+			{
+				id: 'net_X',
+				value: false,
+				points: [
+					{ x: CELL_WIDTH / 2, y: 20 },
+					{ x: CELL_WIDTH / 2 + 40, y: 20 },
+					{ x: CELL_WIDTH / 2 + 40, y: -20 },
+					{ x: CELL_WIDTH / 2 + 240, y: -20 },
+					{ x: CELL_WIDTH / 2 + 40, y: -20 },
+					{ x: CELL_WIDTH / 2 + 40, y: -240 },
+					{ x: CELL_WIDTH / 2 + 40, y: 20, continuous: false },
+					{ x: CELL_WIDTH / 2 + 40, y: 180 },
+					{ x: CELL_WIDTH / 2, y: 180 },
+					{ x: CELL_WIDTH / 2, y: 360 },
+					{ x: CELL_WIDTH / 2 - 240, y: 360 },
+					{ x: CELL_WIDTH / 2 - 240, y: 520 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_21', source: 'net_X', destination: 'S.net_A', enabled: false, pos: { x: CELL_HEIGHT / 2 + 0, y: 520 }, bidirectional: false },
+			{ id: 'pip_21', source: 'net_X', destination: 'S.net_B', enabled: false, pos: { x: -40, y: 680 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_X', destination: 'T_IO0.net_O', enabled: false, pos: { x: 280, y: 140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_X', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_X', destination: 'T_M0.net_1', enabled: false, pos: { x: 400, y: 140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_X', destination: 'T_M1.net_1', enabled: false, pos: { x: 440, y: 140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_X', destination: 'T_IO3.net_O', enabled: false, pos: { x: 240, y: -80 }, bidirectional: false },
+		],
+	},
+	{
 		ids: [...id_range('[B-D]H'), ...id_range('[F-G]H')],
 		nets: [],
-		pips: [
-			{ id: 'pip_0', source: 'net_X', destination: 'N_IO1.net_O', enabled: false, pos: { x: 300, y: 140 }, bidirectional: false },
-		]
+		pips: [{ id: 'pip_0', source: 'net_X', destination: 'N_IO1.net_O', enabled: false, pos: { x: 300, y: 140 }, bidirectional: false }],
 	},
 
 	/**
@@ -698,7 +838,6 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			},
 		],
 		pips: [
-			
 			{ id: 'pip_0', source: 'net_Y', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'T_M0.net_0', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'T_M1.net_0', enabled: false, pos: { x: 420, y: 260 }, bidirectional: false },
@@ -706,12 +845,18 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 		],
 	},
 	{
-		ids: [...id_range('[A-D]H'), ...id_range('[F-G]H')],
+		// top right corner
+		ids: id_range('AH'),
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'net_Y', destination: 'T_IO0.net_O', enabled: false, pos: { x: 280, y: 260 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('[B-D]H'), ...id_range('[F-G]H')],
 		nets: [],
 		pips: [
 			{ id: 'pip_0', source: 'net_Y', destination: 'N_IO1.net_O', enabled: false, pos: { x: 300, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'T_IO0.net_O', enabled: false, pos: { x: 280, y: 260 }, bidirectional: false },
-		]
+		],
 	},
 	{
 		// Right edge
@@ -727,7 +872,6 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			},
 		],
 		pips: [
-			
 			{ id: 'pip_0', source: 'net_Y', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'N_M0.net_5', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'N_M1.net_5', enabled: false, pos: { x: 420, y: 260 }, bidirectional: false },
@@ -744,7 +888,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	 */
 
 	{
-		ids: [...id_range('[B-G][A-G]')],
+		ids: [...id_range('[A-G][A-G]')],
 		nets: [],
 		pips: [
 			{ id: 'pip_v2_0', source: 'T_M0.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 440, y: 400 }, bidirectional: true },
@@ -760,7 +904,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	 * BIDIRECTIONAL PARTIAL VERTICAL LONG LINES.
 	 */
 	{
-		ids: id_range('[B-G][A-G]'),
+		ids: id_range('[B-G][B-G]'),
 		nets: [
 			{
 				id: 'net_rhl',
@@ -785,10 +929,77 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
 		],
 	},
-
+	{
+		ids: id_range('[B-G]A'),
+		nets: [
+			{
+				id: 'net_rhl',
+				value: false,
+				points: [
+					{ x: 280, y: -340 },
+					{ x: 300, y: -340 },
+					{ x: 300, y: -200 },
+					{ x: 280, y: -200 },
+					{ x: 280, y: 280 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'S.net_rhl', enabled: false, pos: { x: 380, y: 380 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M0.net_3', enabled: false, pos: { x: 380, y: 420 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M1.net_2', enabled: false, pos: { x: 380, y: 440 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'N_M0.net_3', enabled: false, pos: { x: 400, y: -140 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'N_M1.net_2', enabled: false, pos: { x: 400, y: -120 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+		],
+	},
+	{
+		// Top Rows
+		ids: id_range('A[B-G]'),
+		nets: [
+			{
+				id: 'net_rhl',
+				value: false,
+				points: [
+					{ x: 280, y: -340 },
+					{ x: 280, y: -200 },
+					{ x: 280, y: 280 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'S.net_rhl', enabled: false, pos: { x: 380, y: 380 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M0.net_3', enabled: false, pos: { x: 380, y: 420 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M1.net_2', enabled: false, pos: { x: 380, y: 440 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'W.net_rhl', destination: 'net_B', enabled: false, pos: { x: -CELL_WIDTH / 2 - 40, y: 120 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'W.net_rhl', destination: 'net_C', enabled: false, pos: { x: -CELL_WIDTH / 2 - 40, y: 180 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+		],
+	},
+	{
+		// Top Rows
+		ids: id_range('AA'),
+		nets: [
+			{
+				id: 'net_rhl',
+				value: false,
+				points: [
+					{ x: 280, y: -340 },
+					{ x: 280, y: -200 },
+					{ x: 280, y: 280 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'S.net_rhl', enabled: false, pos: { x: 380, y: 380 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M0.net_3', enabled: false, pos: { x: 380, y: 420 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M1.net_2', enabled: false, pos: { x: 380, y: 440 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+		],
+	},
 	{
 		// Bottom Rows
-		ids: id_range('H[A-G]'),
+		ids: id_range('H[B-G]'),
 		nets: [
 			{
 				id: 'net_rhl',
@@ -807,6 +1018,28 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'N_M1.net_2', enabled: false, pos: { x: 400, y: -120 }, bidirectional: true },
 			{ id: 'pip_v2_0', source: 'W.net_rhl', destination: 'net_B', enabled: false, pos: { x: -CELL_WIDTH / 2 - 40, y: 120 }, bidirectional: false },
 			{ id: 'pip_v2_0', source: 'W.net_rhl', destination: 'net_C', enabled: false, pos: { x: -CELL_WIDTH / 2 - 40, y: 180 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+		],
+	},
+	{
+		// Bottom Rows
+		ids: id_range('HA'),
+		nets: [
+			{
+				id: 'net_rhl',
+				value: false,
+				points: [
+					{ x: 280, y: -340 },
+					{ x: 300, y: -340 },
+					{ x: 300, y: -200 },
+					{ x: 280, y: -200 },
+					{ x: 280, y: 340 },
+				],
+			},
+		],
+		pips: [
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'N_M0.net_3', enabled: false, pos: { x: 400, y: -140 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'N_M1.net_2', enabled: false, pos: { x: 400, y: -120 }, bidirectional: true },
 			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
 		],
 	},
@@ -1166,15 +1399,15 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO0.net_O', enabled: false, pos: { x: 440, y: 360 }, bidirectional: false },
 
 			// Bidirectionals
-			{ id: 'pip_0', source: 'W_M0.net_2', destination: "global_VR.net_1", enabled: false, pos: { x: 360, y: 400 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M0.net_3', destination: "global_VR.net_0", enabled: false, pos: { x: 340, y: 420 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M1.net_2', destination: "global_VR.net_1", enabled: false, pos: { x: 360, y: 440 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M1.net_3', destination: "global_VR.net_0", enabled: false, pos: { x: 340, y: 460 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "global_VR.net_0", enabled: false, pos: { x: 340, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "global_VR.net_1", enabled: false, pos: { x: 360, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "S_M0.net_0", enabled: false, pos: { x: 380, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "S_M1.net_1", enabled: false, pos: { x: 440, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "global_VR.net_2", enabled: false, pos: { x: 460, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 400 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 420 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M1.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 440 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M1.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 460 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'S_M0.net_0', enabled: false, pos: { x: 380, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'S_M1.net_1', enabled: false, pos: { x: 440, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: 500 }, bidirectional: true },
 		],
 	},
 	{
@@ -1187,7 +1420,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'S_M1.net_1', destination: 'T_IO1.net_T', enabled: false, pos: { x: 440, y: 540 }, bidirectional: false },
 			{ id: 'pip_0', source: 'S_M0.net_1', destination: 'T_IO1.net_T', enabled: false, pos: { x: 400, y: 540 }, bidirectional: false },
 			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO1.net_T', enabled: false, pos: { x: 360, y: 540 }, bidirectional: false },
-	
+
 			// NET I
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'S_M1.net_1', enabled: false, pos: { x: 440, y: 580 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'S_M0.net_1', enabled: false, pos: { x: 400, y: 580 }, bidirectional: false },
@@ -1195,7 +1428,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'global_HD.net_0', enabled: false, pos: { x: 320, y: 500 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M1.net_2', enabled: false, pos: { x: 320, y: 440 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M0.net_2', enabled: false, pos: { x: 320, y: 400 }, bidirectional: false },
-	
+
 			// NET O
 			{ id: 'pip_0', source: 'W_M0.net_3', destination: 'T_IO1.net_O', enabled: false, pos: { x: 300, y: 420 }, bidirectional: false },
 			{ id: 'pip_0', source: 'W_M1.net_3', destination: 'T_IO1.net_O', enabled: false, pos: { x: 300, y: 460 }, bidirectional: false },
@@ -1203,7 +1436,6 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'S_M0.net_0', destination: 'T_IO1.net_O', enabled: false, pos: { x: 380, y: 620 }, bidirectional: false },
 			{ id: 'pip_0', source: 'S_M1.net_0', destination: 'T_IO1.net_O', enabled: false, pos: { x: 420, y: 620 }, bidirectional: false },
 			{ id: 'pip_0', source: 'global_VR.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 460, y: 620 }, bidirectional: false },
-	
 		],
 	},
 
@@ -1221,7 +1453,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 440, y: 280 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 400, y: 280 }, bidirectional: false },
 			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 360, y: 280 }, bidirectional: false },
-	
+
 			// NET I
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M1.net_4', enabled: false, pos: { x: 440, y: 580 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M0.net_4', enabled: false, pos: { x: 400, y: 580 }, bidirectional: false },
@@ -1235,7 +1467,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T_M0.net_0', enabled: false, pos: { x: 380, y: 320 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T_M1.net_0', enabled: false, pos: { x: 420, y: 320 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: 320 }, bidirectional: false },
-	
+
 			// NET O
 			{ id: 'pip_0', source: 'W_M0.net_3', destination: 'T_IO1.net_O', enabled: false, pos: { x: 300, y: 420 }, bidirectional: false },
 			{ id: 'pip_0', source: 'W_M1.net_3', destination: 'T_IO1.net_O', enabled: false, pos: { x: 300, y: 460 }, bidirectional: false },
@@ -1251,18 +1483,17 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO0.net_O', enabled: false, pos: { x: 440, y: 360 }, bidirectional: false },
 
 			// Bidirectionals
-			{ id: 'pip_0', source: 'W_M0.net_2', destination: "global_VR.net_1", enabled: false, pos: { x: 360, y: 400 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M0.net_3', destination: "global_VR.net_0", enabled: false, pos: { x: 340, y: 420 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M1.net_2', destination: "global_VR.net_1", enabled: false, pos: { x: 360, y: 440 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M1.net_3', destination: "global_VR.net_0", enabled: false, pos: { x: 340, y: 460 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "global_VR.net_0", enabled: false, pos: { x: 340, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "global_VR.net_1", enabled: false, pos: { x: 360, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "T_M0.net_5", enabled: false, pos: { x: 380, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "T_M1.net_4", enabled: false, pos: { x: 440, y: 500 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_HD.net_0', destination: "global_VR.net_2", enabled: false, pos: { x: 460, y: 500 }, bidirectional: true },
-	
+			{ id: 'pip_0', source: 'W_M0.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 400 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 420 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M1.net_2', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 440 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M1.net_3', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 460 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'T_M0.net_5', enabled: false, pos: { x: 380, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'T_M1.net_4', enabled: false, pos: { x: 440, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: 500 }, bidirectional: true },
 		],
-	}
+	},
 ];
 
 const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: number; y: number } }[] }[] = [
@@ -2073,7 +2304,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 	},
 	{
 		// M1/M0 matrices for the right edge of the chip
-		ids: id_range('[A-F]H'),
+		ids: id_range('[B-F]H'),
 		matrices: [
 			{
 				pos: { x: CELL_WIDTH / 2 + 190, y: CELL_HEIGHT / 2 + 90 },
@@ -2123,6 +2354,74 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						points: [
 							{ x: 10, y: -MATRIX_HEIGHT / 2 },
 							{ x: 10, y: -MATRIX_HEIGHT / 2 - 520 },
+						],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+				],
+			},
+		],
+	},
+	{
+		// M1/M0 matrices for the right edge of the chip
+		ids: id_range('AH'),
+		matrices: [
+			{
+				pos: { x: CELL_WIDTH / 2 + 190, y: CELL_HEIGHT / 2 + 90 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 530 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 550 },
+						],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+					{
+						id: 'dummy',
+						value: false,
+						points: [],
+					},
+				],
+			},
+			{
+				pos: { x: CELL_WIDTH / 2 + 230, y: CELL_HEIGHT / 2 + 130 },
+				nets: [
+					{
+						id: 'net_0',
+						value: false,
+						points: [
+							{ x: -10, y: -MATRIX_HEIGHT / 2 },
+							{ x: -10, y: -MATRIX_HEIGHT / 2 - 610 },
+						],
+					},
+					{
+						id: 'net_1',
+						value: false,
+						points: [
+							{ x: 10, y: -MATRIX_HEIGHT / 2 },
+							{ x: 10, y: -MATRIX_HEIGHT / 2 - 650 },
 						],
 					},
 					{
@@ -2272,8 +2571,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: 500, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
+				],
 			},
 			{
 				pos: { x: CELL_WIDTH / 2 + 130, y: -CELL_HEIGHT / 2 - 150 },
@@ -2304,11 +2602,9 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: 500, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
-			}
-		
-		]
+				],
+			},
+		],
 	},
 	{
 		// M2/M3 Matrices AG because they are slightly different
@@ -2343,8 +2639,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: 650, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
+				],
 			},
 			{
 				pos: { x: CELL_WIDTH / 2 + 130, y: -CELL_HEIGHT / 2 - 150 },
@@ -2375,18 +2670,16 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: 570, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
-			}
-		
-		]
+				],
+			},
+		],
 	},
 	{
 		// M2/M3 Matrices AA because they are slightly different
 		ids: ['AA'],
 		matrices: [
 			{
-				pos: { x: CELL_WIDTH / 2 -490, y: -CELL_HEIGHT / 2 + 410 },
+				pos: { x: CELL_WIDTH / 2 - 490, y: -CELL_HEIGHT / 2 + 410 },
 				nets: [
 					{
 						id: 'net_0',
@@ -2420,8 +2713,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: 560, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
+				],
 			},
 			{
 				pos: { x: CELL_WIDTH / 2 - 450, y: -CELL_HEIGHT / 2 + 450 },
@@ -2458,8 +2750,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: 560, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
+				],
 			},
 			{
 				pos: { x: CELL_WIDTH / 2 + 90, y: -CELL_HEIGHT / 2 - 190 },
@@ -2516,8 +2807,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: -570, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
-					
-				]
+				],
 			},
 			{
 				pos: { x: CELL_WIDTH / 2 + 130, y: -CELL_HEIGHT / 2 - 150 },
@@ -2574,12 +2864,10 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 							{ x: -590, y: -MATRIX_HEIGHT / 2 + 10 },
 						],
 					},
-					
-				]
-			}
-		
-		]
-	}
+				],
+			},
+		],
+	},
 ];
 
 const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: number }; size: { width: number; height: number }; pads?: { pos: { x: number; y: number }; size: { width: number; height: number } }[] }[] }[] = [
@@ -3330,8 +3618,8 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 	 *
 	 */
 	{
-		// All bottom IO except AA, which is slightly different (sigh)
-		ids: id_range('A[B-H]'),
+		// All bottom IO except AA and AH, which is slightly different (sigh)
+		ids: id_range('A[B-G]'),
 		io_bank: [
 			// Left IO BANK
 			{
@@ -3343,7 +3631,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
-						id: 'net_T',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
@@ -3359,6 +3647,9 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 						points: [
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 210 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 370 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210, continuous: false },
 							{ x: IO_HEIGHT / 2 - 270, y: IO_WIDTH / 2 + 210 },
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210, continuous: false },
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 170 },
@@ -3368,7 +3659,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Right
 					{
-						id: 'net_O',
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 - 30 },
@@ -3388,7 +3679,7 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
-						id: 'net_T',
+						id: 'net_O',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 - 30 },
@@ -3410,7 +3701,195 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 
 					// Right
 					{
+						id: 'net_T',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 130 },
+						],
+					},
+				],
+			},
+		],
+	},
+	{
+		// All bottom IO except AA and AH, which is slightly different (sigh)
+		ids: id_range('AH'),
+		io_bank: [
+			// Left IO BANK
+			{
+				pos: { x: -50 - IO_WIDTH / 2, y: -510 },
+				size: { width: IO_HEIGHT, height: IO_WIDTH },
+				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
+					// Left
+					{
 						id: 'net_O',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 190 },
+							{ x: IO_HEIGHT / 2 - 290, y: IO_WIDTH / 2 + 190 },
+						],
+					},
+
+					// Middle
+					{
+						id: 'net_I',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 210 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 370 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210, continuous: false },
+							{ x: IO_HEIGHT / 2 - 270, y: IO_WIDTH / 2 + 210 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 210, continuous: false },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 + 50, y: IO_WIDTH / 2 + 170 },
+						],
+					},
+
+					// Right
+					{
+						id: 'net_T',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 + 130 },
+						],
+					},
+				],
+			},
+
+			// Right IO BANK
+			{
+				pos: { x: 50 + IO_WIDTH / 2, y: -510 },
+				size: { width: IO_HEIGHT, height: IO_WIDTH },
+				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
+					// Left
+					{
+						id: 'net_O',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 170 },
+						],
+					},
+
+					// Middle
+					{
+						id: 'net_I',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 150 },
+							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 150 },
+						],
+					},
+
+					// Right
+					{
+						id: 'net_T',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 130 },
+						],
+					},
+				],
+			},
+		],
+	},
+	{
+		// Top left corner IO Banks
+		ids: id_range('AA'),
+		io_bank: [
+			// Left IO BANK
+			{
+				pos: { x: -50 - IO_WIDTH / 2 - 40, y: -510 },
+				size: { width: IO_HEIGHT, height: IO_WIDTH },
+				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
+					// Left
+					{
+						id: 'net_O',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 150 },
+							{ x: IO_HEIGHT / 2 - 330, y: IO_WIDTH / 2 + 150 },
+						],
+					},
+
+					// Middle
+					{
+						id: 'net_I',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 + 90, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 170, continuous: false },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 370 },
+							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 250, continuous: false },
+							{ x: IO_HEIGHT / 2 - 330, y: IO_WIDTH / 2 + 250 },
+						],
+					},
+
+					// Right
+					{
+						id: 'net_T',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 + 130 },
+						],
+					},
+				],
+			},
+
+			// Right IO BANK
+			{
+				pos: { x: 50 + IO_WIDTH / 2, y: -510 },
+				size: { width: IO_HEIGHT, height: IO_WIDTH },
+				nets: [
+					{ id: `net_ts_mux`, value: false, points: [] },
+					{ id: `net_io_clk`, value: false, points: [] },
+					{ id: `net_in_q`, value: false, points: [] },
+					// Left
+					{
+						id: 'net_O',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 170 },
+						],
+					},
+
+					// Middle
+					{
+						id: 'net_I',
+						value: false,
+						points: [
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 150 },
+							{ x: IO_HEIGHT / 2 + 150, y: IO_WIDTH / 2 + 150 },
+						],
+					},
+
+					// Right
+					{
+						id: 'net_T',
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
@@ -3430,7 +3909,7 @@ const bus_config: Net[] = [
 		points: [
 			{ x: -160, y: 4160 },
 			{ x: -160, y: CLK_TOP },
-			{ x: 3600, y: CLK_TOP },
+			{ x: 4020, y: CLK_TOP },
 			{ x: 460, y: CLK_TOP, continuous: false },
 			{ x: 460, y: 4160 },
 			{ x: 980, y: CLK_TOP, continuous: false },
@@ -3459,7 +3938,7 @@ const bus_config: Net[] = [
 		id: 'global_V0.net_0',
 		value: false,
 		points: [
-			{ x: -200, y: 0 },
+			{ x: -200, y: -120 },
 			{ x: -200, y: 4460 },
 		],
 	},
@@ -3467,7 +3946,7 @@ const bus_config: Net[] = [
 		id: 'global_V0.net_1',
 		value: false,
 		points: [
-			{ x: -180, y: 0 },
+			{ x: -180, y: -120 },
 			{ x: -180, y: 4500 },
 		],
 	},
@@ -3475,7 +3954,7 @@ const bus_config: Net[] = [
 		id: 'global_V0.net_2',
 		value: false,
 		points: [
-			{ x: -320, y: 0 },
+			{ x: -320, y: -220 },
 			{ x: -320, y: 4460 },
 		],
 	},
@@ -3485,7 +3964,7 @@ const bus_config: Net[] = [
 		id: 'global_V1.net_0',
 		value: false,
 		points: [
-			{ x: 420, y: 0 },
+			{ x: 420, y: -220 },
 			{ x: 420, y: 4460 },
 		],
 	},
@@ -3493,7 +3972,7 @@ const bus_config: Net[] = [
 		id: 'global_V1.net_1',
 		value: false,
 		points: [
-			{ x: 440, y: 0 },
+			{ x: 440, y: -200 },
 			{ x: 440, y: 4500 },
 		],
 	},
@@ -3503,7 +3982,7 @@ const bus_config: Net[] = [
 		id: 'global_V2.net_0',
 		value: false,
 		points: [
-			{ x: 940, y: 0 },
+			{ x: 940, y: -220 },
 			{ x: 940, y: 4460 },
 		],
 	},
@@ -3511,7 +3990,7 @@ const bus_config: Net[] = [
 		id: 'global_V2.net_1',
 		value: false,
 		points: [
-			{ x: 960, y: 0 },
+			{ x: 960, y: -200 },
 			{ x: 960, y: 4500 },
 		],
 	},
@@ -3521,7 +4000,7 @@ const bus_config: Net[] = [
 		id: 'global_V3.net_0',
 		value: false,
 		points: [
-			{ x: 1460, y: 0 },
+			{ x: 1460, y: -220 },
 			{ x: 1460, y: 4460 },
 		],
 	},
@@ -3529,7 +4008,7 @@ const bus_config: Net[] = [
 		id: 'global_V3.net_1',
 		value: false,
 		points: [
-			{ x: 1480, y: 0 },
+			{ x: 1480, y: -200 },
 			{ x: 1480, y: 4500 },
 		],
 	},
@@ -3539,7 +4018,7 @@ const bus_config: Net[] = [
 		id: 'global_V4.net_0',
 		value: false,
 		points: [
-			{ x: 1980, y: 0 },
+			{ x: 1980, y: -220 },
 			{ x: 1980, y: 4460 },
 		],
 	},
@@ -3547,7 +4026,7 @@ const bus_config: Net[] = [
 		id: 'global_V4.net_1',
 		value: false,
 		points: [
-			{ x: 2000, y: 0 },
+			{ x: 2000, y: -200 },
 			{ x: 2000, y: 4500 },
 		],
 	},
@@ -3557,7 +4036,7 @@ const bus_config: Net[] = [
 		id: 'global_V5.net_0',
 		value: false,
 		points: [
-			{ x: 2500, y: 0 },
+			{ x: 2500, y: -220 },
 			{ x: 2500, y: 4460 },
 		],
 	},
@@ -3565,7 +4044,7 @@ const bus_config: Net[] = [
 		id: 'global_V5.net_1',
 		value: false,
 		points: [
-			{ x: 2520, y: 0 },
+			{ x: 2520, y: -200 },
 			{ x: 2520, y: 4500 },
 		],
 	},
@@ -3575,7 +4054,7 @@ const bus_config: Net[] = [
 		id: 'global_V6.net_0',
 		value: false,
 		points: [
-			{ x: 3020, y: 0 },
+			{ x: 3020, y: -220 },
 			{ x: 3020, y: 4460 },
 		],
 	},
@@ -3583,7 +4062,7 @@ const bus_config: Net[] = [
 		id: 'global_V6.net_1',
 		value: false,
 		points: [
-			{ x: 3040, y: 0 },
+			{ x: 3040, y: -200 },
 			{ x: 3040, y: 4500 },
 		],
 	},
@@ -3593,7 +4072,7 @@ const bus_config: Net[] = [
 		id: 'global_V7.net_0',
 		value: false,
 		points: [
-			{ x: 3540, y: 0 },
+			{ x: 3540, y: -220 },
 			{ x: 3540, y: 4460 },
 		],
 	},
@@ -3601,7 +4080,7 @@ const bus_config: Net[] = [
 		id: 'global_V7.net_1',
 		value: false,
 		points: [
-			{ x: 3560, y: 0 },
+			{ x: 3560, y: -200 },
 			{ x: 3560, y: 4500 },
 		],
 	},
@@ -3611,7 +4090,7 @@ const bus_config: Net[] = [
 		id: 'global_V8.net_0',
 		value: false,
 		points: [
-			{ x: 3980, y: 0 },
+			{ x: 3980, y: -120 },
 			{ x: 3980, y: 4360 },
 		],
 	},
@@ -3619,7 +4098,7 @@ const bus_config: Net[] = [
 		id: 'global_V8.net_1',
 		value: false,
 		points: [
-			{ x: 4000, y: 0 },
+			{ x: 4000, y: -120 },
 			{ x: 4000, y: 4360 },
 		],
 	},
@@ -3627,7 +4106,7 @@ const bus_config: Net[] = [
 		id: 'global_V8.net_2',
 		value: false,
 		points: [
-			{ x: 4100, y: 0 },
+			{ x: 4100, y: -220 },
 			{ x: 4100, y: 4460 },
 		],
 	},
@@ -3641,6 +4120,14 @@ const bus_config: Net[] = [
 	// Top most horizontal long lines (IDX 0)
 	{
 		id: 'global_H0.net_0',
+		value: false,
+		points: [
+			{ x: -320, y: -220 },
+			{ x: 4100, y: -220 },
+		],
+	},
+	{
+		id: 'global_H0.net_1',
 		value: false,
 		points: [
 			{ x: -240, y: -120 },

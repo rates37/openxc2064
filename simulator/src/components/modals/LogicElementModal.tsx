@@ -1,8 +1,8 @@
 import React from "react";
-import "../styles/Modal.css";
-import { LogicCell } from "../models/LogicCell";
+import "../../styles/Modal.css";
+import { LogicCell } from "../../models/LogicCell";
 import { Mux, Wire, Lut, Label, FlipFlop, ConnectionDot, EllipseNode, InputButton } from "./LogicElementPrimitives";
-import { useSimulator } from "../SimulatorContext";
+import { useSimulator } from "../../SimulatorContext";
 
 const LogicElementModal: React.FC = () => {
     const { selectedCell, selectCell, logicCells, setLogicCells } = useSimulator();

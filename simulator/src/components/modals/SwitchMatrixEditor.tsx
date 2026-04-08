@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSimulator } from '../SimulatorContext';
+import { useSimulator } from '../../SimulatorContext';
 
 const SVG_SIZE = 360;
 const CX = SVG_SIZE / 2;
@@ -73,14 +73,11 @@ const SwitchMatrixEditor: React.FC = () => {
                     }
                 } else {
                     if (localConnections[index][selectedNode]) {
-                        console.log(`Removing Connection - driver = ${n2.id}`)
                         removeDriver(n1.id);
                         localDriver = n2.id;
                     }
 
                     if (localConnections[selectedNode][index]) {
-                        console.log(`Removing Connection - driver = ${n1.id}`)
-                        console.log("Removing Connection")
                         removeDriver(n2.id);
                         localDriver = n1.id;
                     }

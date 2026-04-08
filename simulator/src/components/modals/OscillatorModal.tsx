@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import '../styles/Modal.css';
-import { useSimulator } from '../SimulatorContext';
+import '../../styles/Modal.css';
+import { useSimulator } from '../../SimulatorContext';
 
 interface OscillatorModalProps {
 	isOpen: boolean;
