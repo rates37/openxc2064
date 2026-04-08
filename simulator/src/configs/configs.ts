@@ -686,7 +686,36 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	},
 	{
 		// Right edge
-		ids: id_range('[A-H]H'),
+		ids: id_range('[A-G]H'),
+		nets: [
+			{
+				id: 'net_Y',
+				value: false,
+				points: [
+					{ x: CELL_WIDTH / 2, y: 100 },
+					{ x: CELL_WIDTH / 2 + 260, y: 100 },
+				],
+			},
+		],
+		pips: [
+			
+			{ id: 'pip_0', source: 'net_Y', destination: 'global_VR.net_0', enabled: false, pos: { x: 340, y: 260 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_Y', destination: 'T_M0.net_0', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_Y', destination: 'T_M1.net_0', enabled: false, pos: { x: 420, y: 260 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_Y', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: 260 }, bidirectional: false },
+		],
+	},
+	{
+		ids: [...id_range('[A-D]H'), ...id_range('[F-G]H')],
+		nets: [],
+		pips: [
+			{ id: 'pip_0', source: 'net_Y', destination: 'N_IO1.net_O', enabled: false, pos: { x: 300, y: 260 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_Y', destination: 'T_IO0.net_O', enabled: false, pos: { x: 280, y: 260 }, bidirectional: false },
+		]
+	},
+	{
+		// Right edge
+		ids: ['HH'],
 		nets: [
 			{
 				id: 'net_Y',
@@ -703,15 +732,9 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'net_Y', destination: 'N_M0.net_5', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'N_M1.net_5', enabled: false, pos: { x: 420, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: 260 }, bidirectional: false },
-		],
-	},
-	{
-		ids: [...id_range('[A-D]H'), ...id_range('[F-H]H')],
-		nets: [],
-		pips: [
 			{ id: 'pip_0', source: 'net_Y', destination: 'N_IO1.net_O', enabled: false, pos: { x: 300, y: 260 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_Y', destination: 'T_IO0.net_O', enabled: false, pos: { x: 280, y: 260 }, bidirectional: false },
-		]
+		],
 	},
 
 	/**

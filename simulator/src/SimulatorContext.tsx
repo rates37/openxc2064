@@ -289,8 +289,18 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		let settled = false;
 
 		// Get all nets that can possibley trigger a change in the simulation
-		const inputNets = ioBanks.flatMap((bank) => bank.nets).filter((net) => net.id.endsWith('net_I')); // All IO Bank pad nets are potential inputs
-		inputNets.push(getNet('global.net_osc_in')); // Oscillator net is also a potential input
+		const inputNets = ioBanks.flatMap((bank) => bank.nets).filter((net) => net.id.endsWith('net_I')).map((net) => net.id); // All IO Bank pad nets are potential inputs
+		inputNets.push('global.net_osc_in'); // Oscillator net is also a potential input
+
+        for (const clb of logicCells) {
+            if (!clb) continue;
+
+            if (clb.isConstant()) {
+                const xnet = `${clb.id}.${clb.nets.find((n) => n.id === 'net_X')?.id}`;
+                const ynet = `${clb.id}.${clb.nets.find((n) => n.id === 'net_Y')?.id}`;
+                inputNets.push(xnet, ynet);
+            }
+        }
 
 		while (!settled && steps < MAX_ITERATIONS) {
 			const before = snapshotNets();
@@ -300,8 +310,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 				bank.simulate();
 			});
 			
-			inputNets.forEach((net) => {
-				propagateDriver(net.id);
+			inputNets.forEach((net_id) => {
+				propagateDriver(net_id);
 			});
 			
 			// Simulate IOBanks after PIPs propagate, so they account for any incoming values

@@ -33,9 +33,32 @@ def strip_bits(data: bytes, num_bits: int) -> tuple[bytes, int]:
 
     return remaining_bytes, stripped_bits
 
+## Generate an intel format hex file from the binary data in "SIMPLE.bin"
+def generate_hex_file(input_file: str, output_file: str):
+    with open(input_file, "rb") as f:
+        data = f.read()
 
+    with open(output_file, "w") as f:
+        for i in range(0, len(data), 16):
+            chunk = data[i:i+16]
+            hex_chunk = chunk.hex().upper()
+            # Intel HEX format: :<byte count><address><record type><data><checksum>
+            byte_count = len(chunk)
+            address = i
+            record_type = 0
+            # Sum of byte count, address hi, address lo, record type and data bytes
+            checksum = byte_count + (address >> 8) + (address & 0xFF) + record_type
+            for j in range(0, len(hex_chunk), 2):
+                checksum += int(hex_chunk[j:j+2], 16)
+            # Intel HEX checksum is two's complement of LSB of sum
+            checksum = ((~checksum + 1) & 0xFF)
+            f.write(f":{byte_count:02X}{address:04X}{record_type:02X}{hex_chunk}{checksum:02X}\n")
+        f.write(":00000001FF\n")  # End of file record
+
+
+FILENAME = './AND_OR.BIT'
 ## Load in and print the binary data from "SIMPLE.bin"
-with open("./SIMPLE.bin", "rb") as f:
+with open(FILENAME, "rb") as f:
     data = f.read()
     full_data = data
     # Strip the first 8 bits
@@ -64,10 +87,10 @@ with open("./SIMPLE.bin", "rb") as f:
         print(f"Frame {i:03d}: {header:01b} {frame:071b} {footer:03b}")
         
     print(f"Total bits processed: {accumulator}")
-    data, stripped_bits = strip_bits(data, 4)
+    data, stripped_bits = strip_bits(data, 45)
     print(f"{stripped_bits:04b}")
 
-
+    generate_hex_file(FILENAME, "./SIMPLE.hex")
     # # print original data byte by byte in binary
     # print("\nOriginal data:")
     # for i, byte in enumerate(full_data):

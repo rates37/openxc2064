@@ -7,6 +7,7 @@ interface OscillatorModalProps {
 	onClose: () => void;
 }
 
+const OSC_MAX = 250;
 const OscillatorModal: React.FC<OscillatorModalProps> = ({ isOpen, onClose }) => {
 	const { oscillator, setOscillator, simulate } = useSimulator();
 	const [localFrequency, setLocalFrequency] = useState(oscillator.frequency);
@@ -22,7 +23,7 @@ const OscillatorModal: React.FC<OscillatorModalProps> = ({ isOpen, onClose }) =>
 	const handleFrequencyChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
 			const value = parseFloat(e.target.value);
-			if (!isNaN(value) && value >= 0 && value <= 10) {
+			if (!isNaN(value) && value >= 0 && value <= OSC_MAX) {
 				setLocalFrequency(value);
 				setOscillator({ ...oscillator, frequency: value });
 				simulate();
@@ -81,7 +82,7 @@ const OscillatorModal: React.FC<OscillatorModalProps> = ({ isOpen, onClose }) =>
 							<input
 								type="range"
 								min="0"
-								max="100"
+								max={OSC_MAX}
 								step="0.1"
 								value={localFrequency}
 								onChange={handleSliderChange}
@@ -91,7 +92,7 @@ const OscillatorModal: React.FC<OscillatorModalProps> = ({ isOpen, onClose }) =>
 							<input
 								type="number"
 								min="0"
-								max="10"
+								max={OSC_MAX}
 								step="0.1"
 								value={localFrequency}
 								onChange={handleFrequencyChange}

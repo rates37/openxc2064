@@ -50,6 +50,19 @@ export class LogicCell {
         this.luts.forEach(lut => lut.truthTable.fill(false));
     }
 
+    /**
+     * Tracks if any of the LUTs in the CLB are always true
+     */
+    public isConstant(): boolean {
+        // LUT 0
+        const lut0 = this.luts[0].truthTable.every(output => output === true);
+
+        // LUT 1
+        const lut1 = this.luts[1].truthTable.every(output => output === true);
+
+        return lut0 || lut1;
+    }
+
     private getNet(id: string): boolean {
         return this.nets.find(n => n.id === id)?.value ?? false;
     }
