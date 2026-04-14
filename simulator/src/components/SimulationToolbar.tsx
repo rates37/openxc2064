@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSimulator } from '../SimulatorContext';
 import ExamplesModal from './ExamplesModal';
+import { downloadConfigsAsJSON } from '../configs/configs';
 
 const SimulationToolbar: React.FC = () => {
   const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState, searchQuery, setSearchQuery, drivers } = useSimulator();
@@ -54,6 +55,15 @@ const SimulationToolbar: React.FC = () => {
           }}
         >
           Import Config
+        </button>
+        <button
+          onClick={downloadConfigsAsJSON}
+          style={{
+            padding: '6px 16px',
+            cursor: 'pointer',
+          }}
+        >
+          Export All Configs
         </button>
         <button
           onClick={() => setShowExamplesModal(true)}

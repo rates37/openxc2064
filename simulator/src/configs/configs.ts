@@ -78,13 +78,29 @@ function id_range(expr: string): string[] {
 	return parts.reduce<string[]>((acc, set) => acc.flatMap((a) => set.map((b) => a + b)), ['']);
 }
 
-const range = (start: number, end: number): number[] => {
-	const arr: number[] = [];
-	for (let i = start; i <= end; i++) {
-		arr.push(i);
-	}
-	return arr;
-};
+
+export function exportAllConfigs(): string {
+	const allConfigs = {
+		logic_cell: logic_cell_config,
+		switch_matrix: switch_matrix_config,
+		io: io_config,
+		bus: bus_config,
+	};
+	return JSON.stringify(allConfigs, null, 2);
+}
+
+export function downloadConfigsAsJSON(): void {
+	const jsonString = exportAllConfigs();
+	const blob = new Blob([jsonString], { type: 'application/json' });
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = `configs_${new Date().toISOString().split('T')[0]}.json`;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	URL.revokeObjectURL(url);
+}
 
 const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	{
