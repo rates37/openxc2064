@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSimulator } from '../SimulatorContext';
+import ExamplesModal from './ExamplesModal';
 
 const SimulationToolbar: React.FC = () => {
   const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState, searchQuery, setSearchQuery, drivers } = useSimulator();
+  const [showExamplesModal, setShowExamplesModal] = useState(false);
 
   // Find the driver for the searched net (if any)
   const searchedNetDriver = searchQuery ? drivers.find((d) => d.destination === searchQuery)?.source : null;
@@ -53,6 +55,15 @@ const SimulationToolbar: React.FC = () => {
         >
           Import Config
         </button>
+        <button
+          onClick={() => setShowExamplesModal(true)}
+          style={{
+            padding: '6px 16px',
+            cursor: 'pointer',
+          }}
+        >
+          Load Examples
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input
             aria-label="Search net"
@@ -76,6 +87,7 @@ const SimulationToolbar: React.FC = () => {
       <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#555' }}>
         {cursorPos ? `X: ${cursorPos.x}  Y: ${cursorPos.y}` : ''}
       </span>
+      <ExamplesModal isOpen={showExamplesModal} onClose={() => setShowExamplesModal(false)} />
     </div>
   );
 };

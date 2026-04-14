@@ -191,6 +191,48 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 
 		],
 	},
+	{
+		// Main top cell A pips
+		ids: id_range('A[C-H]'),
+		nets: [],
+		pips: [
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 20 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 20 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_O', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 80 }, bidirectional: false },
+		],
+	},
+	{
+		// Main top cell A pips
+		ids: id_range('AB'),
+		nets: [],
+		pips: [
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_3', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 20 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M6.net_3', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 20 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_O', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 80 }, bidirectional: false },
+		],
+	},
+	{
+		// Main top cell A pips
+		ids: id_range('AA'),
+		nets: [],
+		pips: [
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_6', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 20 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 - 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_6', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 20 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_O', destination: 'net_A', enabled: false, pos: { x: 100, y: -CELL_HEIGHT / 2 + 80 }, bidirectional: false },
+		],
+	},
 
 	/**
 	 *
@@ -985,6 +1027,8 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_v2_0', source: 'W.net_rhl', destination: 'net_B', enabled: false, pos: { x: -CELL_WIDTH / 2 - 40, y: 120 }, bidirectional: false },
 			{ id: 'pip_v2_0', source: 'W.net_rhl', destination: 'net_C', enabled: false, pos: { x: -CELL_WIDTH / 2 - 40, y: 180 }, bidirectional: false },
 			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M2.net_3', enabled: false, pos: { x: 380, y: -180 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M3.net_2', enabled: false, pos: { x: 380, y: -160 }, bidirectional: true },
 		],
 	},
 	{
@@ -1006,6 +1050,8 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M0.net_3', enabled: false, pos: { x: 380, y: 420 }, bidirectional: true },
 			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M1.net_2', enabled: false, pos: { x: 380, y: 440 }, bidirectional: true },
 			{ id: 'pip_v2_0', source: 'net_Y', destination: 'T.net_rhl', enabled: false, pos: { x: 380, y: 260 }, bidirectional: false },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M4.net_3', enabled: false, pos: { x: 380, y: -180 }, bidirectional: true },
+			{ id: 'pip_v2_0', source: 'T.net_rhl', destination: 'T_M5.net_2', enabled: false, pos: { x: 380, y: -160 }, bidirectional: true },
 		],
 	},
 	{
@@ -1514,7 +1560,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 
 	{
 		// Right of the two IO Banks, all are the same
-		ids: id_range('A[A-H]'),
+		ids: id_range('A[B-G]'),
 		nets: [],
 		pips: [
 			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-120 }, bidirectional: false },
@@ -1543,6 +1589,44 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M2.net_3', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M3.net_3', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+
+
+			// Left of the two Top io banks
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M2.net_2', enabled: false, pos: { x: 0, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M3.net_2', enabled: false, pos: { x: 0, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y:-40 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-120 }, bidirectional: false },
+			
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -100, y:-60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -200, y:-60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -240, y:-60 }, bidirectional: false },
+
+
+			// Bidirectionals
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y:-220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M2.net_2', enabled: false, pos: { x: -100, y:-180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M3.net_2', enabled: false, pos: { x: -100, y:-140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y:-120 }, bidirectional: true },
+			
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M2.net_2', enabled: false, pos: { x: -80, y:-200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M3.net_2', enabled: false, pos: { x: -80, y:-160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y:-120 }, bidirectional: true },
+			
+			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y:-120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y:-120 }, bidirectional: true },
+
+
 		]
 	},
 	{
@@ -1555,8 +1639,21 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y:-160 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y:-200 }, bidirectional: false },
 			
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M5.net_6', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M4.net_6', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M5.net_6', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M4.net_6', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 300, y:-80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 340, y:-80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T.net_rhl', destination: 'T_IO3.net_O', enabled: false, pos: { x: 380, y:-80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 440, y:-80 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_HU.net_0', enabled: false, pos: { x: 200, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M0.net_0', enabled: false, pos: { x: 280, y:-100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M1.net_0', enabled: false, pos: { x: 320, y:-100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y:-100 }, bidirectional: false },
 		]
 	},
 	{
@@ -1569,9 +1666,96 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-160 }, bidirectional: false },
 			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-200 }, bidirectional: false },
 			
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M5.net_3', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M4.net_3', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M4.net_3', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M5.net_3', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+
+			// Left of the two Top io banks
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M4.net_2', enabled: false, pos: { x: 0, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M5.net_2', enabled: false, pos: { x: 0, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y:-40 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-120 }, bidirectional: false },
+			
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -100, y:-60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -200, y:-60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -240, y:-60 }, bidirectional: false },
+		
+			// Bidirectionals
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y:-220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M4.net_2', enabled: false, pos: { x: -100, y:-180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M5.net_2', enabled: false, pos: { x: -100, y:-140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y:-120 }, bidirectional: true },
+			
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M4.net_2', enabled: false, pos: { x: -80, y:-200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M5.net_2', enabled: false, pos: { x: -80, y:-160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y:-120 }, bidirectional: true },
+			
+			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y:-120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y:-120 }, bidirectional: true },
+		
 		]
+	},
+	{
+		// Top left corner
+		ids: ['AA'],
+		nets: [],
+		pips: [
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M4.net_7', enabled: false, pos: { x: -40, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M5.net_7', enabled: false, pos: { x: -40, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: -40, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: -40, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_VL.net_1', enabled: false, pos: { x: -180, y: 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M1.net_1', enabled: false, pos: { x: -240, y: 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M0.net_1', enabled: false, pos: { x: -280, y: 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_VL.net_2', enabled: false, pos: { x: -320, y: 0 }, bidirectional: false },
+	
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-120 }, bidirectional: false },
+		
+			{ id: 'pip_0', source: 'global.net_clk', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-240 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_6', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_6', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -200, y:-100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -260, y:-100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M2.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -300, y:-100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_2', destination: 'T_IO2.net_O', enabled: false, pos: { x: -320, y:-100 }, bidirectional: false },
+		
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:-160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:320 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global.net_clk', enabled: false, pos: { x: -180, y:-60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'global.net_clk', enabled: false, pos: { x: -260, y:-60 }, bidirectional: false },
+			
+			// Bidirectionals
+			{ id : 'pip_0', source: 'global_VL.net_2', destination: 'global_HU.net_0', enabled: false, pos: { x: -320, y:-220 }, bidirectional: true },
+			{ id : 'pip_0', source: 'global_VL.net_2', destination: 'T_M4.net_7', enabled: false, pos: { x: -320, y:-200 }, bidirectional: true },
+			{ id : 'pip_0', source: 'T_M2.net_0', destination: 'T_M4.net_7', enabled: false, pos: { x: -300, y:-200 }, bidirectional: true },
+			{ id : 'pip_0', source: 'T_M2.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -300, y:-220 }, bidirectional: true },
+			{ id : 'pip_0', source: 'T_M2.net_1', destination: 'T_M4.net_6', enabled: false, pos: { x: -280, y:-180 }, bidirectional: true },
+			{ id : 'pip_0', source: 'T_M3.net_0', destination: 'T_M5.net_7', enabled: false, pos: { x: -260, y:-160 }, bidirectional: true },
+			{ id : 'pip_0', source: 'T_M3.net_1', destination: 'T_M5.net_6', enabled: false, pos: { x: -240, y:-140 }, bidirectional: true },
+			{ id : 'pip_0', source: 'T_M3.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y:-120 }, bidirectional: true },
+			{ id : 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -200, y:-120 }, bidirectional: true },
+			{ id : 'pip_0', source: 'global_VL.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y:-120 }, bidirectional: true },
+			{ id : 'pip_0', source: 'global_VL.net_1', destination: 'T_M5.net_7', enabled: false, pos: { x: -180, y:-160 }, bidirectional: true },
+			{ id : 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -200, y:-220 }, bidirectional: true },
+			
+		
+		]	
 	}
 ];
 
@@ -2875,7 +3059,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						value: false,
 						points: [
 							{ x: -20, y: MATRIX_HEIGHT / 2 - 10 },
-							{ x: -610, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: -570, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
 					{
@@ -2883,7 +3067,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						value: false,
 						points: [
 							{ x: -20, y: -MATRIX_HEIGHT / 2 + 10 },
-							{ x: -570, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: -610, y: -MATRIX_HEIGHT / 2 + 10 },
 						],
 					},
 				],
@@ -2932,7 +3116,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						value: false,
 						points: [
 							{ x: -20, y: MATRIX_HEIGHT / 2 - 10 },
-							{ x: -590, y: MATRIX_HEIGHT / 2 - 10 },
+							{ x: -570, y: MATRIX_HEIGHT / 2 - 10 },
 						],
 					},
 					{
@@ -2940,7 +3124,7 @@ const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: 
 						value: false,
 						points: [
 							{ x: -20, y: -MATRIX_HEIGHT / 2 + 10 },
-							{ x: -570, y: -MATRIX_HEIGHT / 2 + 10 },
+							{ x: -590, y: -MATRIX_HEIGHT / 2 + 10 },
 						],
 					},
 				],
@@ -3745,6 +3929,21 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 + 130 },
 						],
 					},
+
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: -100 },
+							{ x: 30, y: -250 },
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: 75, y: -200 },
+						size: { width: 50, height: 50 },
+					},
 				],
 			},
 
@@ -3786,6 +3985,20 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 130 },
 						],
+					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: -100 },
+							{ x: 30, y: -250 },
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: 75, y: -200 },
+						size: { width: 50, height: 50 },
 					},
 				],
 			},
@@ -3840,6 +4053,20 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 + 130 },
 						],
 					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: -100 },
+							{ x: 30, y: -250 },
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: 75, y: -200 },
+						size: { width: 50, height: 50 },
+					},
 				],
 			},
 
@@ -3881,6 +4108,20 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 - 30 },
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 130 },
 						],
+					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: -100 },
+							{ x: 30, y: -250 },
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: 75, y: -200 },
+						size: { width: 50, height: 50 },
 					},
 				],
 			},
@@ -3933,6 +4174,20 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: IO_HEIGHT / 2 - 10, y: IO_WIDTH / 2 + 130 },
 						],
 					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: -100 },
+							{ x: 30, y: -250 },
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: 75, y: -200 },
+						size: { width: 50, height: 50 },
+					},
 				],
 			},
 
@@ -3975,6 +4230,20 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 							{ x: IO_HEIGHT / 2 - 50, y: IO_WIDTH / 2 + 130 },
 						],
 					},
+					{
+						id: 'net_pad',
+						value: false,
+						points: [
+							{ x: 30, y: -100 },
+							{ x: 30, y: -250 },
+						],
+					},
+				],
+				pads: [
+					{
+						pos: { x: 75, y: -200 },
+						size: { width: 50, height: 50 },
+					},
 				],
 			},
 		],
@@ -4003,21 +4272,27 @@ const bus_config: Net[] = [
 			{ x: 3060, y: 4160 },
 			{ x: 3580, y: CLK_TOP, continuous: false },
 			{ x: 3580, y: 4160 },
+			{ x: -120, y: CLK_TOP, continuous: false},
+			{ x: -120, y: -60},
+			{ x: -260, y: -60},
+			{ x: -100, y: -60},
+			{ x: -100, y: -160},
+			{ x: -100, y: 320}
 		],
 	},
-
+	
 	/**
 	 *
 	 *  VERTICAL GLOBAL BUSSES, 0 = Left, 8 = Right
-	 *
-	 */
+	*
+	*/
 
 	// Left most verilog long lines (IDX 0)
 	{
 		id: 'global_V0.net_0',
 		value: false,
 		points: [
-			{ x: -200, y: -120 },
+			{ x: -200, y: -220 },
 			{ x: -200, y: 4460 },
 		],
 	},
@@ -4025,12 +4300,12 @@ const bus_config: Net[] = [
 		id: 'global_V0.net_1',
 		value: false,
 		points: [
-			{ x: -180, y: -120 },
+			{ x: -180, y: -160 },
 			{ x: -180, y: 4500 },
 		],
 	},
 	{
-		id: 'global_V0.net_2',
+		id: 'global_V0.net_2', // Left most, goes against convention but was too hard to change.
 		value: false,
 		points: [
 			{ x: -320, y: -220 },

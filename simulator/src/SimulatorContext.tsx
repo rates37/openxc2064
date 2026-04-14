@@ -62,6 +62,7 @@ interface SimulatorContextValue {
 	setCursorPos: (pos: { x: number; y: number } | null) => void;
 	exportState: () => void;
 	importState: () => void;
+	importExample: (state: any) => void;
 
 	// Search state: id of net to highlight (e.g. "AA.net_0")
 	searchQuery: string | null;
@@ -109,6 +110,69 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	// Import/Export functions
 	const exportState = useCallback(() => createExportStateFunction(logicCells, switchMatrices, pips, ioBanks, drivers)(), [logicCells, switchMatrices, pips, ioBanks, drivers]);
 	const importState = useCallback(() => createImportStateFunction(logicCells, switchMatrices, ioBanks, setPips, setDrivers, bumpTick)(), [logicCells, switchMatrices, ioBanks, bumpTick]);
+
+	// Import an example state directly (used by ExamplesModal)
+	const importExample = useCallback((state: any) => {
+		try {
+			// Clear all state first
+			setPips((prev) => prev.map((p) => ({ ...p, enabled: false })));
+			setDrivers([]);
+
+			if (state.logicCells) {
+				for (const saved of state.logicCells) {
+					const cell = logicCells.find((c) => c.id === saved.id);
+					if (!cell) continue;
+					if (saved.muxes) {
+						for (const sm of saved.muxes) {
+							const mux = cell.muxes.find((m) => m.id === sm.id);
+							if (mux) mux.select = sm.select;
+						}
+					}
+					if (saved.luts) {
+						for (const sl of saved.luts) {
+							const lut = cell.luts.find((l) => l.id === sl.id);
+							if (lut && Array.isArray(sl.truthTable)) {
+								lut.truthTable = sl.truthTable;
+							}
+						}
+					}
+				}
+			}
+			if (state.switchMatrices) {
+				for (const saved of state.switchMatrices) {
+					const matrix = switchMatrices.find((m) => m.id === saved.id);
+					if (matrix && saved.connections) {
+						matrix.connections = saved.connections;
+					}
+				}
+			}
+			if (state.pips) {
+				setPips((prev) =>
+					prev.map((pip) => {
+						const saved = state.pips.find((s: any) => s.source === pip.source && s.destination === pip.destination);
+						return saved ? { ...pip, enabled: saved.enabled } : pip;
+					}),
+				);
+			}
+			if (state.ioBanks) {
+				for (const saved of state.ioBanks) {
+					const bank = ioBanks.find((b) => b.id === saved.id);
+					if (bank && saved.muxes) {
+						for (const sm of saved.muxes) {
+							const mux = bank.muxes.find((m) => m.id === sm.id);
+							if (mux) mux.select = sm.select;
+						}
+					}
+				}
+			}
+			if (state.drivers && Array.isArray(state.drivers)) {
+				setDrivers(state.drivers);
+			}
+			bumpTick();
+		} catch (e) {
+			console.error('Failed to import example:', e);
+		}
+	}, [logicCells, switchMatrices, ioBanks, setPips, setDrivers, bumpTick]);
 
 	// Driver management functions
 	const setDriver = useCallback((source: string, destination: string) => {
@@ -414,6 +478,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		setCursorPos: setCursorPos,
 		exportState: exportState,
 		importState: importState,
+		importExample: importExample,
 		drivers: drivers,
 		setDriver: setDriver,
 		removeDriver: removeDriver,
