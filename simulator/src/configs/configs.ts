@@ -36,12 +36,19 @@ export default function getConfig(device: ConfigTypes, id: string): any {
 			const matches = io_config.filter((config) => config.ids.includes(id));
 			if (matches.length === 0) return undefined;
 			const allIoBanks = matches.flatMap((m) => m.io_bank);
-			return allIoBanks.map((io_bank) => ({
-				nets: io_bank?.nets.map((net) => ({ ...net, points: net.points.map((p) => ({ ...p })) })),
-				pos: io_bank?.pos ? { ...io_bank.pos } : undefined,
-				size: io_bank?.size ? { ...io_bank.size } : undefined,
-				pads: io_bank?.pads ? io_bank.pads.map((pad) => ({ pos: { ...pad.pos }, size: { ...pad.size } })) : undefined,
-			}));
+			return allIoBanks.map((io_bank) => {
+				const netMap = new Map<string, Net>();
+				for (const net of io_bank?.nets ?? []) {
+					netMap.set(net.id, net);
+				}
+				const nets = Array.from(netMap.values());
+				return {
+					nets: nets.map((net) => ({ ...net, points: net.points.map((p) => ({ ...p })) })),
+					pos: io_bank?.pos ? { ...io_bank.pos } : undefined,
+					size: io_bank?.size ? { ...io_bank.size } : undefined,
+					pads: io_bank?.pads ? io_bank.pads.map((pad) => ({ pos: { ...pad.pos }, size: { ...pad.size } })) : undefined,
+				};
+			});
 		}
 		default:
 			throw new Error(`Unknown device type: ${device}`);
@@ -4273,7 +4280,8 @@ const bus_config: Net[] = [
 		points: [
 			{ x: -160, y: 4160 },
 			{ x: -160, y: CLK_TOP },
-			{ x: 4020, y: CLK_TOP },
+			{ x: 3960, y: CLK_TOP },
+			{ x: 3960, y: CLK_TOP + 200 },
 			{ x: 460, y: CLK_TOP, continuous: false },
 			{ x: 460, y: 4160 },
 			{ x: 980, y: CLK_TOP, continuous: false },
@@ -4599,4 +4607,50 @@ const bus_config: Net[] = [
 			{ x: 4020, y: 4540 },
 		],
 	},
+
+
+	/**
+	 * Global IO Bank Clocks
+	 */
+	{
+		id: 'global_io.net_top',
+		value: false,
+		points: [
+			{ x: 0, y: -440},
+			{ x: 3980, y: -440},
+			{ x: 3980, y: -260},
+			{ x: 3940, y: -260},
+			{ x: 3940, y: -120},
+		]
+	},
+	{
+		id: 'global_io.net_bot',
+		value: false,
+		points: [
+			{ x: -120, y: 4320 },
+			{ x: -120, y: 4520 },
+			{ x: -180, y: 4520 },
+			{ x: -180, y: 4700 },
+			{ x: 3920, y: 4700 },
+		]
+	},
+	{
+		id: 'global_io.net_left',
+		value: false,
+		points: [
+			{ x: -500, y: 360 },
+			{ x: -500, y: 4240 },
+			{ x: -160, y: 4240 },
+		]
+	},
+	{
+		id: 'global_io.net_right',
+		value: false,
+		points: [
+			{ x: 3960, y: -40 },
+			{ x: 4300, y: -40 },
+			{ x: 4300, y: 3860 },
+
+		]
+	}
 ];
