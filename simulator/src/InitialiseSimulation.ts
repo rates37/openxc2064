@@ -5,8 +5,8 @@ import { Net, Pip, Mux, LUT } from './types';
 import { SwitchMatrix } from './models/SwitchMatrix';
 import { CELL_WIDTH, CELL_HEIGHT, CELL_MARGIN_X, CELL_MARGIN_Y, CELL_OFFSET_X, CELL_OFFSET_Y, MATRIX_WIDTH, MATRIX_HEIGHT } from './configs/constants';
 
-const ROWS = 8;
-const COLS = 8;
+const ROWS = 3;
+const COLS = 3;
 
 export const initialiseSimulation = (): {
 	logicCells: LogicCell[];
