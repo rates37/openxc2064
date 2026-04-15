@@ -53,7 +53,7 @@ def generate_hex_file(input_file: str, output_file: str):
         f.write(":00000001FF\n")  # End of file record
 
 
-FILENAME = 'AND_OR'
+FILENAME = 'COUNTER'
 ## Load in and print the binary data from "SIMPLE.bin"
 with open("./bitstreams/" + FILENAME + ".BIT", "rb") as f:
     data = f.read()

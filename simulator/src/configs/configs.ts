@@ -85,7 +85,6 @@ function id_range(expr: string): string[] {
 	return parts.reduce<string[]>((acc, set) => acc.flatMap((a) => set.map((b) => a + b)), ['']);
 }
 
-
 export function exportAllConfigs(): string {
 	const allConfigs = {
 		logic_cell: logic_cell_config,
@@ -210,9 +209,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 				],
 			},
 		],
-		pips: [
-
-		],
+		pips: [],
 	},
 	{
 		// Main top cell A pips
@@ -355,6 +352,18 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_12', source: 'global.net_clk', destination: 'net_B', enabled: false, pos: { x: -100 - 60, y: 120 }, bidirectional: false },
 			{ id: 'pip_8', source: 'global_VL.net_2', destination: 'net_B', enabled: false, pos: { x: -260 - 60, y: 120 }, bidirectional: false },
 		],
+	},
+	{
+		// All the top row
+		ids: id_range('A[B-G]'),
+		nets: [],
+		pips: [{ id: 'pip_4', source: 'T_IO0.net_I', destination: 'net_B', enabled: false, pos: { x: -40, y: 120 }, bidirectional: false }],
+	},
+	{
+		// All the top row
+		ids: ['AA', 'AH'],
+		nets: [],
+		pips: [{ id: 'pip_4', source: 'T_IO2.net_I', destination: 'net_B', enabled: false, pos: { x: -40, y: 120 }, bidirectional: false }],
 	},
 
 	/**
@@ -822,7 +831,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 					{ x: CELL_WIDTH / 2 + 40, y: -20 },
 					{ x: CELL_WIDTH / 2 + 240, y: -20 },
 					{ x: CELL_WIDTH / 2 + 40, y: -20 },
-					{ x: CELL_WIDTH / 2 + 40, y: -240 },
+					{ x: CELL_WIDTH / 2 + 40, y: -220 },
 					{ x: CELL_WIDTH / 2 + 40, y: 20, continuous: false },
 					{ x: CELL_WIDTH / 2 + 40, y: 180 },
 					{ x: CELL_WIDTH / 2, y: 180 },
@@ -839,7 +848,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'net_X', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: 140 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_X', destination: 'T_M0.net_1', enabled: false, pos: { x: 400, y: 140 }, bidirectional: false },
 			{ id: 'pip_0', source: 'net_X', destination: 'T_M1.net_1', enabled: false, pos: { x: 440, y: 140 }, bidirectional: false },
-			{ id: 'pip_0', source: 'net_X', destination: 'T_IO3.net_O', enabled: false, pos: { x: 240, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'net_X', destination: 'T_IO3.net_O', enabled: false, pos: { x: 240, y: -60 }, bidirectional: false },
 		],
 	},
 	{
@@ -1401,6 +1410,20 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_M0.net_3', enabled: false, pos: { x: 440, y: 520 }, bidirectional: true },
 			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_M1.net_3', enabled: false, pos: { x: 440, y: 480 }, bidirectional: true },
 			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_HD.net_0', enabled: false, pos: { x: 440, y: 440 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'N_M2.net_5', destination: 'global_io.net_left', enabled: false, pos: { x: -300, y: 320 }, bidirectional: true },
+			{ id: 'pip_0', source: 'N_M3.net_4', destination: 'global_io.net_left', enabled: false, pos: { x: -280, y: 320 }, bidirectional: true },
+			{ id: 'pip_0', source: 'N_M2.net_5', destination: 'global_io.net_left', enabled: false, pos: { x: -260, y: 320 }, bidirectional: true },
+			{ id: 'pip_0', source: 'N_M3.net_4', destination: 'global_io.net_left', enabled: false, pos: { x: -240, y: 320 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_io.net_left', enabled: false, pos: { x: -200, y: 320 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global.net_clk', destination: 'global_io.net_left', enabled: false, pos: { x: -160, y: 320 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global.net_clk', destination: 'global_io.net_bottom', enabled: false, pos: { x: -120, y: 420 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HD.net_0', destination: 'global_io.net_bottom', enabled: false, pos: { x: -120, y: 440 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M0.net_7', destination: 'global_io.net_bottom', enabled: false, pos: { x: -120, y: 460 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M0.net_6', destination: 'global_io.net_bottom', enabled: false, pos: { x: -120, y: 480 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M1.net_7', destination: 'global_io.net_bottom', enabled: false, pos: { x: -120, y: 500 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M1.net_6', destination: 'global_io.net_bottom', enabled: false, pos: { x: -120, y: 520 }, bidirectional: true },
 		],
 	},
 
@@ -1453,7 +1476,7 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 
 	{
 		// Right edge (Except for DH). This means it is for the top bank out of the two. (IO0)
-		ids: [...id_range('[A-G]H')],
+		ids: [...id_range('[A-F]H')],
 		nets: [],
 		pips: [
 			// NET T
@@ -1576,9 +1599,9 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 	},
 
 	/**
-	 * 
-	 * TOP EDGE 
-	 * 
+	 *
+	 * TOP EDGE
+	 *
 	 */
 
 	{
@@ -1586,200 +1609,339 @@ const logic_cell_config: { ids: string[]; nets: Net[]; pips: Pip[] }[] = [
 		ids: id_range('A[B-G]'),
 		nets: [],
 		pips: [
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 300, y:-80 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 340, y:-80 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T.net_rhl', destination: 'T_IO1.net_O', enabled: false, pos: { x: 380, y:-80 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 440, y:-80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 300, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 340, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T.net_rhl', destination: 'T_IO1.net_O', enabled: false, pos: { x: 380, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO1.net_O', enabled: false, pos: { x: 440, y: -80 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'global_HU.net_0', enabled: false, pos: { x: 200, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M0.net_0', enabled: false, pos: { x: 280, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M1.net_0', enabled: false, pos: { x: 320, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y:-100 }, bidirectional: false },
-		]
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'global_HU.net_0', enabled: false, pos: { x: 200, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M0.net_0', enabled: false, pos: { x: 280, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'T_M1.net_0', enabled: false, pos: { x: 320, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: -100 }, bidirectional: false },
+		],
 	},
 	{
-		ids: id_range('A[C-H]'),
+		ids: id_range('A[C-G]'),
 		nets: [],
 		pips: [
-			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y: -200 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y: -200 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M2.net_3', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M3.net_3', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
-
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M2.net_3', enabled: false, pos: { x: 200, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M3.net_3', enabled: false, pos: { x: 200, y: -140 }, bidirectional: false },
 
 			// Left of the two Top io banks
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M2.net_2', enabled: false, pos: { x: 0, y:-200 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M3.net_2', enabled: false, pos: { x: 0, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y:-40 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y:-40 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y:-40 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M2.net_2', enabled: false, pos: { x: 0, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M3.net_2', enabled: false, pos: { x: 0, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y: -40 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-200 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-120 }, bidirectional: false },
-			
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-140 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -100, y:-60 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -200, y:-60 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -240, y:-60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -120 }, bidirectional: false },
 
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y: -140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -100, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -200, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -240, y: -60 }, bidirectional: false },
 
 			// Bidirectionals
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y:-220 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M2.net_2', enabled: false, pos: { x: -100, y:-180 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M3.net_2', enabled: false, pos: { x: -100, y:-140 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y:-120 }, bidirectional: true },
-			
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M2.net_2', enabled: false, pos: { x: -80, y:-200 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M3.net_2', enabled: false, pos: { x: -80, y:-160 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y:-120 }, bidirectional: true },
-			
-			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y:-120 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y:-120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'W_M2.net_3', enabled: false, pos: { x: -100, y: -180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'W_M3.net_3', enabled: false, pos: { x: -100, y: -140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y: -120 }, bidirectional: true },
 
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'W_M2.net_2', enabled: false, pos: { x: -80, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'W_M3.net_2', enabled: false, pos: { x: -80, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y: -120 }, bidirectional: true },
 
-		]
+			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y: -120 }, bidirectional: true },
+		],
 	},
 	{
 		ids: ['AA'],
 		nets: [],
 		pips: [
-			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -200 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y:-200 }, bidirectional: false },
-			
-			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M5.net_6', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M4.net_6', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y: -200 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 300, y:-80 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 340, y:-80 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T.net_rhl', destination: 'T_IO3.net_O', enabled: false, pos: { x: 380, y:-80 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 440, y:-80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M5.net_6', enabled: false, pos: { x: 200, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M4.net_6', enabled: false, pos: { x: 200, y: -140 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_HU.net_0', enabled: false, pos: { x: 200, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M0.net_0', enabled: false, pos: { x: 280, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M1.net_0', enabled: false, pos: { x: 320, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y:-100 }, bidirectional: false },
-		]
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 300, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 340, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T.net_rhl', destination: 'T_IO3.net_O', enabled: false, pos: { x: 380, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 440, y: -80 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_HU.net_0', enabled: false, pos: { x: 200, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M0.net_0', enabled: false, pos: { x: 280, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M1.net_0', enabled: false, pos: { x: 320, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_VR.net_0', enabled: false, pos: { x: 420, y: -100 }, bidirectional: false },
+		],
 	},
 	{
 		ids: ['AB'],
 		nets: [],
 		pips: [
-			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y:-200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO1.net_T', enabled: false, pos: { x: 240, y: -200 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y:-200 }, bidirectional: false },
-			
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M4.net_3', enabled: false, pos: { x: 200, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M5.net_3', enabled: false, pos: { x: 200, y:-140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO1.net_O', enabled: false, pos: { x: 160, y: -200 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M4.net_3', enabled: false, pos: { x: 200, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO1.net_I', destination: 'W_M5.net_3', enabled: false, pos: { x: 200, y: -140 }, bidirectional: false },
 
 			// Left of the two Top io banks
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M4.net_2', enabled: false, pos: { x: 0, y:-200 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M5.net_2', enabled: false, pos: { x: 0, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y:-40 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y:-40 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y:-40 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y:-40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M4.net_2', enabled: false, pos: { x: 0, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M5.net_2', enabled: false, pos: { x: 0, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y: -40 }, bidirectional: false },
 
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-200 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y:-120 }, bidirectional: false },
-			
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M4.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M5.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y:-140 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -100, y:-60 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -200, y:-60 }, bidirectional: false },
-			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -240, y:-60 }, bidirectional: false },
-		
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_2', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO0.net_T', enabled: false, pos: { x: 40, y: -120 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M4.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M5.net_3', destination: 'T_IO0.net_O', enabled: false, pos: { x: -40, y: -140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -100, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -200, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO0.net_O', enabled: false, pos: { x: -240, y: -60 }, bidirectional: false },
+
 			// Bidirectionals
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y:-220 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M4.net_2', enabled: false, pos: { x: -100, y:-180 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'W_M5.net_2', enabled: false, pos: { x: -100, y:-140 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y:-120 }, bidirectional: true },
-			
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M4.net_2', enabled: false, pos: { x: -80, y:-200 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'W_M5.net_2', enabled: false, pos: { x: -80, y:-160 }, bidirectional: true },
-			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y:-120 }, bidirectional: true },
-			
-			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y:-120 }, bidirectional: true },
-			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y:-120 }, bidirectional: true },
-		
-		]
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'W_M4.net_3', enabled: false, pos: { x: -100, y: -180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'W_M5.net_3', enabled: false, pos: { x: -100, y: -140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y: -120 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'W_M4.net_2', enabled: false, pos: { x: -80, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'W_M5.net_2', enabled: false, pos: { x: -80, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y: -120 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y: -120 }, bidirectional: true },
+		],
 	},
 	{
 		// Top left corner
 		ids: ['AA'],
 		nets: [],
 		pips: [
-			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M4.net_7', enabled: false, pos: { x: -40, y:-200 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M5.net_7', enabled: false, pos: { x: -40, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: -40, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: -40, y:-120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M4.net_7', enabled: false, pos: { x: -40, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M5.net_7', enabled: false, pos: { x: -40, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: -40, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: -40, y: -120 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_VL.net_1', enabled: false, pos: { x: -180, y: 0 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M1.net_1', enabled: false, pos: { x: -240, y: 0 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T_M0.net_1', enabled: false, pos: { x: -280, y: 0 }, bidirectional: false },
 			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_VL.net_2', enabled: false, pos: { x: -320, y: 0 }, bidirectional: false },
-	
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-200 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y:-120 }, bidirectional: false },
-		
-			{ id: 'pip_0', source: 'global.net_clk', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-240 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-220 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M4.net_6', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-180 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M5.net_6', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y:-140 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -200, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -260, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M2.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -300, y:-100 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VL.net_2', destination: 'T_IO2.net_O', enabled: false, pos: { x: -320, y:-100 }, bidirectional: false },
-		
-			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:-160 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:-120 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:0 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global.net_clk', enabled: false, pos: { x: -100, y:320 }, bidirectional: false },
-			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global.net_clk', enabled: false, pos: { x: -180, y:-60 }, bidirectional: false },
-			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'global.net_clk', enabled: false, pos: { x: -260, y:-60 }, bidirectional: false },
-			
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_7', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO2.net_T', enabled: false, pos: { x: 0, y: -120 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global.net_clk', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y: -240 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M4.net_6', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M5.net_6', destination: 'T_IO2.net_O', enabled: false, pos: { x: -80, y: -140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -200, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -260, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M2.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -300, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_2', destination: 'T_IO2.net_O', enabled: false, pos: { x: -320, y: -100 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'T_M4.net_7', destination: 'global.net_clk', enabled: false, pos: { x: -100, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'global.net_clk', enabled: false, pos: { x: -100, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global.net_clk', enabled: false, pos: { x: -100, y: 0 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO0.net_I', destination: 'global.net_clk', enabled: false, pos: { x: -100, y: 320 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global.net_clk', enabled: false, pos: { x: -180, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'global.net_clk', enabled: false, pos: { x: -260, y: -60 }, bidirectional: false },
+
 			// Bidirectionals
-			{ id : 'pip_0', source: 'global_VL.net_2', destination: 'global_HU.net_0', enabled: false, pos: { x: -320, y:-220 }, bidirectional: true },
-			{ id : 'pip_0', source: 'global_VL.net_2', destination: 'T_M4.net_7', enabled: false, pos: { x: -320, y:-200 }, bidirectional: true },
-			{ id : 'pip_0', source: 'T_M2.net_0', destination: 'T_M4.net_7', enabled: false, pos: { x: -300, y:-200 }, bidirectional: true },
-			{ id : 'pip_0', source: 'T_M2.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -300, y:-220 }, bidirectional: true },
-			{ id : 'pip_0', source: 'T_M2.net_1', destination: 'T_M4.net_6', enabled: false, pos: { x: -280, y:-180 }, bidirectional: true },
-			{ id : 'pip_0', source: 'T_M3.net_0', destination: 'T_M5.net_7', enabled: false, pos: { x: -260, y:-160 }, bidirectional: true },
-			{ id : 'pip_0', source: 'T_M3.net_1', destination: 'T_M5.net_6', enabled: false, pos: { x: -240, y:-140 }, bidirectional: true },
-			{ id : 'pip_0', source: 'T_M3.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y:-120 }, bidirectional: true },
-			{ id : 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -200, y:-120 }, bidirectional: true },
-			{ id : 'pip_0', source: 'global_VL.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y:-120 }, bidirectional: true },
-			{ id : 'pip_0', source: 'global_VL.net_1', destination: 'T_M5.net_7', enabled: false, pos: { x: -180, y:-160 }, bidirectional: true },
-			{ id : 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -200, y:-220 }, bidirectional: true },
-			
-		
-		]	
-	}
+			{ id: 'pip_0', source: 'global_VL.net_2', destination: 'global_HU.net_0', enabled: false, pos: { x: -320, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_2', destination: 'T_M4.net_7', enabled: false, pos: { x: -320, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M2.net_0', destination: 'T_M4.net_7', enabled: false, pos: { x: -300, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M2.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -300, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M2.net_1', destination: 'T_M4.net_6', enabled: false, pos: { x: -280, y: -180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M3.net_0', destination: 'T_M5.net_7', enabled: false, pos: { x: -260, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M3.net_1', destination: 'T_M5.net_6', enabled: false, pos: { x: -240, y: -140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M3.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -200, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'T_M5.net_7', enabled: false, pos: { x: -180, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -200, y: -220 }, bidirectional: true },
+		],
+	},
+
+	{
+		// Top right corner (LAST ONE WOOOOT)
+		ids: ['AH'],
+		nets: [],
+		pips: [
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -200 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y: -200 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'W_M2.net_3', enabled: false, pos: { x: 200, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'W_M3.net_3', enabled: false, pos: { x: 200, y: -140 }, bidirectional: false },
+
+			// Left of the two Top io banks
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'W_M2.net_2', enabled: false, pos: { x: 0, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'W_M3.net_2', enabled: false, pos: { x: 0, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_HU.net_1', enabled: false, pos: { x: 0, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: -80, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'T.net_rhl', enabled: false, pos: { x: -140, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'W_M1.net_1', enabled: false, pos: { x: -180, y: -40 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO2.net_I', destination: 'W_M0.net_1', enabled: false, pos: { x: -220, y: -40 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_T', enabled: false, pos: { x: 40, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_IO2.net_T', enabled: false, pos: { x: 40, y: -200 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_IO2.net_T', enabled: false, pos: { x: 40, y: -160 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO2.net_T', enabled: false, pos: { x: 40, y: -120 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -40, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'T_IO2.net_O', enabled: false, pos: { x: -40, y: -180 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'T_IO2.net_O', enabled: false, pos: { x: -40, y: -140 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -100, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -200, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'W_M1.net_0', destination: 'T_IO2.net_O', enabled: false, pos: { x: -240, y: -60 }, bidirectional: false },
+
+			// Bidirectionals
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_0', enabled: false, pos: { x: -100, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'W_M2.net_3', enabled: false, pos: { x: -100, y: -180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'W_M3.net_3', enabled: false, pos: { x: -100, y: -140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -100, y: -120 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'W_M2.net_2', enabled: false, pos: { x: -80, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'W_M3.net_2', enabled: false, pos: { x: -80, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VL.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -80, y: -120 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'W_M1.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: -180, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M0.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: -240, y: -120 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_O', enabled: false, pos: { x: 160, y: -120 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_HU.net_0', enabled: false, pos: { x: 200, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -220 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'T_IO3.net_T', enabled: false, pos: { x: 240, y: -120 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'T_M1.net_1', enabled: false, pos: { x: 440, y: -200 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_HU.net_0', destination: 'T_M1.net_1', enabled: false, pos: { x: 440, y: -220 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'T_M1.net_0', enabled: false, pos: { x: 420, y: -180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'T_M0.net_1', enabled: false, pos: { x: 400, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'T_M0.net_0', enabled: false, pos: { x: 380, y: -140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_HU.net_1', enabled: false, pos: { x: 360, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'global_HU.net_1', enabled: false, pos: { x: 340, y: -120 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'global.net_clk', destination: 'global_io.net_right', enabled: false, pos: { x: 320, y: -100 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global.net_clk', destination: 'global_io.net_top', enabled: false, pos: { x: 300, y: -240 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_VR.net_1', destination: 'global_io.net_right', enabled: false, pos: { x: 360, y: -100 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M0.net_0', destination: 'global_io.net_right', enabled: false, pos: { x: 380, y: -100 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M0.net_1', destination: 'global_io.net_right', enabled: false, pos: { x: 400, y: -100 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M1.net_0', destination: 'global_io.net_right', enabled: false, pos: { x: 420, y: -100 }, bidirectional: true },
+			{ id: 'pip_0', source: 'T_M1.net_1', destination: 'global_io.net_right', enabled: false, pos: { x: 440, y: -100 }, bidirectional: true },
+
+			{ id: 'pip_0', source: 'global_VR.net_0', destination: 'T_IO3.net_O', enabled: false, pos: { x: 340, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M0.net_0', destination: 'T_IO3.net_O', enabled: false, pos: { x: 380, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_M1.net_0', destination: 'T_IO3.net_O', enabled: false, pos: { x: 420, y: -60 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_VR.net_2', destination: 'T_IO3.net_O', enabled: false, pos: { x: 460, y: -60 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_VR.net_2', enabled: false, pos: { x: 460, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M1.net_1', enabled: false, pos: { x: 440, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'T_M0.net_1', enabled: false, pos: { x: 400, y: -80 }, bidirectional: false },
+			{ id: 'pip_0', source: 'T_IO3.net_I', destination: 'global_VR.net_1', enabled: false, pos: { x: 360, y: -80 }, bidirectional: false },
+
+			{ id: 'pip_0', source: 'global_HU.net_1', destination: 'global_io.net_top', enabled: false, pos: { x: 300, y: -120 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M3.net_3', destination: 'global_io.net_top', enabled: false, pos: { x: 300, y: -140 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M3.net_2', destination: 'global_io.net_top', enabled: false, pos: { x: 300, y: -160 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M2.net_3', destination: 'global_io.net_top', enabled: false, pos: { x: 300, y: -180 }, bidirectional: true },
+			{ id: 'pip_0', source: 'W_M2.net_2', destination: 'global_io.net_top', enabled: false, pos: { x: 300, y: -200 }, bidirectional: true },
+		],
+	},
+	/**
+	 * IO Clock pips
+	 */
+	{
+		ids: id_range('[A-G]A'),
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_left', destination: 'T_IO0.net_io_clk', enabled: false, pos: { x: -500, y: 360 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('[A-C]A'), ...id_range('[E-G]A')],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_left', destination: 'T_IO1.net_io_clk', enabled: false, pos: { x: -500, y: 620 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('H[A-H]')],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_bottom', destination: 'T_IO1.net_io_clk', enabled: false, pos: { x: 280, y: 780 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('H[B-H]')],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_bottom', destination: 'T_IO0.net_io_clk', enabled: false, pos: { x: 40, y: 780 }, bidirectional: false }],
+	},
+	{
+		ids: ['HA'],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_bottom', destination: 'T_IO0.net_io_clk', enabled: false, pos: { x: 0, y: 780 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('[A-G]H')],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_right', destination: 'T_IO0.net_io_clk', enabled: false, pos: { x: 660, y: 240 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('[A-C]H'), ...id_range('[E-G]H')],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_right', destination: 'T_IO0.net_io_clk', enabled: false, pos: { x: 660, y: 500 }, bidirectional: false }],
+	},
+	{
+		ids: [...id_range('A[B-G]')],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_top', destination: 'T_IO0.net_io_clk', enabled: false, pos: { x: 40, y: -440 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_io.net_top', destination: 'T_IO1.net_io_clk', enabled: false, pos: { x: 280, y: -440 }, bidirectional: false }],
+	},
+	{
+		ids: ['AH'],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_top', destination: 'T_IO2.net_io_clk', enabled: false, pos: { x: 40, y: -440 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_io.net_top', destination: 'T_IO3.net_io_clk', enabled: false, pos: { x: 280, y: -440 }, bidirectional: false }],
+	},
+	{
+		ids: ['AA'],
+		nets: [],
+		pips: [{ id: 'pip_0', source: 'global_io.net_top', destination: 'T_IO2.net_io_clk', enabled: false, pos: { x: 0, y: -440 }, bidirectional: false },
+			{ id: 'pip_0', source: 'global_io.net_top', destination: 'T_IO3.net_io_clk', enabled: false, pos: { x: 280, y: -440 }, bidirectional: false }],
+	},
 ];
 
 const switch_matrix_config: { ids: string[]; matrices: { nets: Net[]; pos: { x: number; y: number } }[] }[] = [
@@ -3172,7 +3334,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 - 140, y: 60 },
+							{ x: IO_WIDTH / 2 - 160, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					{
 						id: 'net_O',
@@ -3223,7 +3392,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 - 140, y: 60 },
+							{ x: IO_WIDTH / 2 - 160, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					{
 						id: 'net_O',
@@ -3278,7 +3454,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 - 140, y: 60 },
+							{ x: IO_WIDTH / 2 - 160, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					{
 						id: 'net_O',
@@ -3343,7 +3526,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 + 20, y: 40 },
+							{ x: IO_WIDTH / 2 + 20, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -3405,7 +3595,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 + 20, y: 40 },
+							{ x: IO_WIDTH / 2 + 20, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Right
 					{
@@ -3467,7 +3664,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 + 20, y: 40 },
+							{ x: IO_WIDTH / 2 + 20, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Right
 					{
@@ -3529,7 +3733,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 + 20, y: 40 },
+							{ x: IO_WIDTH / 2 + 20, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Right
 					{
@@ -3591,7 +3802,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 + 20, y: 40 },
+							{ x: IO_WIDTH / 2 + 20, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -3653,7 +3871,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: IO_WIDTH / 2 + 20, y: 40 },
+							{ x: IO_WIDTH / 2 + 20, y: 60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Right
 					{
@@ -3720,7 +3945,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 140, y: -60 },
+							{ x: -IO_WIDTH / 2 + 160, y: -60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Top Input
 					{
@@ -3779,7 +4011,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 140, y: -60 },
+							{ x: -IO_WIDTH / 2 + 160, y: -60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Top Input
 					{
@@ -3843,7 +4082,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_WIDTH, height: IO_HEIGHT },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 140, y: -60 },
+							{ x: -IO_WIDTH / 2 + 160, y: -60 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Top Input
 					{
@@ -3913,7 +4159,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 160, y: -100 },
+							{ x: -IO_WIDTH / 2 + 160, y: -120 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -3976,7 +4229,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 160, y: -100 },
+							{ x: -IO_WIDTH / 2 + 160, y: -120 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -4037,7 +4297,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 160, y: -100 },
+							{ x: -IO_WIDTH / 2 + 160, y: -120 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -4099,7 +4366,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 160, y: -100 },
+							{ x: -IO_WIDTH / 2 + 160, y: -120 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -4107,8 +4381,8 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 - 30 },
-							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 + 170 },
-							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 - 130, y: IO_WIDTH / 2 + 190 },
+							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 190 },
 						],
 					},
 
@@ -4118,8 +4392,8 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 						value: false,
 						points: [
 							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 - 30 },
-							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 150 },
-							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 150 },
+							{ x: IO_HEIGHT / 2 - 90, y: IO_WIDTH / 2 + 170 },
+							{ x: IO_HEIGHT / 2 + 170, y: IO_WIDTH / 2 + 170 },
 						],
 					},
 
@@ -4160,7 +4434,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 160, y: -100 },
+							{ x: -IO_WIDTH / 2 + 160, y: -120 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -4220,7 +4501,14 @@ const io_config: { ids: string[]; io_bank: { nets: Net[]; pos: { x: number; y: n
 				size: { width: IO_HEIGHT, height: IO_WIDTH },
 				nets: [
 					{ id: `net_ts_mux`, value: false, points: [] },
-					{ id: `net_io_clk`, value: false, points: [] },
+					{
+						id: `net_io_clk`,
+						value: false,
+						points: [
+							{ x: -IO_WIDTH / 2 + 160, y: -100 },
+							{ x: -IO_WIDTH / 2 + 160, y: -120 },
+						],
+					},
 					{ id: `net_in_q`, value: false, points: [] },
 					// Left
 					{
@@ -4278,10 +4566,11 @@ const bus_config: Net[] = [
 		id: 'global.net_clk',
 		value: false,
 		points: [
-			{ x: -160, y: 4160 },
+			{ x: -120, y: 4340 },
+			{ x: -160, y: 4340 },
 			{ x: -160, y: CLK_TOP },
 			{ x: 3960, y: CLK_TOP },
-			{ x: 3960, y: CLK_TOP + 200 },
+			{ x: 3960, y: CLK_TOP + 140 },
 			{ x: 460, y: CLK_TOP, continuous: false },
 			{ x: 460, y: 4160 },
 			{ x: 980, y: CLK_TOP, continuous: false },
@@ -4296,20 +4585,20 @@ const bus_config: Net[] = [
 			{ x: 3060, y: 4160 },
 			{ x: 3580, y: CLK_TOP, continuous: false },
 			{ x: 3580, y: 4160 },
-			{ x: -120, y: CLK_TOP, continuous: false},
-			{ x: -120, y: -60},
-			{ x: -260, y: -60},
-			{ x: -100, y: -60},
-			{ x: -100, y: -160},
-			{ x: -100, y: 320}
+			{ x: -120, y: CLK_TOP, continuous: false },
+			{ x: -120, y: -60 },
+			{ x: -260, y: -60 },
+			{ x: -100, y: -60 },
+			{ x: -100, y: -160 },
+			{ x: -100, y: 320 },
 		],
 	},
-	
+
 	/**
 	 *
 	 *  VERTICAL GLOBAL BUSSES, 0 = Left, 8 = Right
-	*
-	*/
+	 *
+	 */
 
 	// Left most verilog long lines (IDX 0)
 	{
@@ -4509,7 +4798,7 @@ const bus_config: Net[] = [
 		value: false,
 		points: [
 			{ x: -240, y: -120 },
-			{ x: 3980, y: -120 },
+			{ x: 4000, y: -120 },
 		],
 	},
 	{
@@ -4608,7 +4897,6 @@ const bus_config: Net[] = [
 		],
 	},
 
-
 	/**
 	 * Global IO Bank Clocks
 	 */
@@ -4616,23 +4904,23 @@ const bus_config: Net[] = [
 		id: 'global_io.net_top',
 		value: false,
 		points: [
-			{ x: 0, y: -440},
-			{ x: 3980, y: -440},
-			{ x: 3980, y: -260},
-			{ x: 3940, y: -260},
-			{ x: 3940, y: -120},
-		]
+			{ x: 0, y: -440 },
+			{ x: 3980, y: -440 },
+			{ x: 3980, y: -260 },
+			{ x: 3940, y: -260 },
+			{ x: 3940, y: -120 },
+		],
 	},
 	{
-		id: 'global_io.net_bot',
+		id: 'global_io.net_bottom',
 		value: false,
 		points: [
-			{ x: -120, y: 4320 },
+			{ x: -120, y: 4340 },
 			{ x: -120, y: 4520 },
 			{ x: -180, y: 4520 },
 			{ x: -180, y: 4700 },
 			{ x: 3920, y: 4700 },
-		]
+		],
 	},
 	{
 		id: 'global_io.net_left',
@@ -4641,16 +4929,15 @@ const bus_config: Net[] = [
 			{ x: -500, y: 360 },
 			{ x: -500, y: 4240 },
 			{ x: -160, y: 4240 },
-		]
+		],
 	},
 	{
 		id: 'global_io.net_right',
 		value: false,
 		points: [
-			{ x: 3960, y: -40 },
-			{ x: 4300, y: -40 },
+			{ x: 3960, y: -100 },
+			{ x: 4300, y: -100 },
 			{ x: 4300, y: 3860 },
-
-		]
-	}
+		],
+	},
 ];
