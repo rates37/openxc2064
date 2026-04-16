@@ -1,8 +1,20 @@
 import json
 import openpyxl
 import tqdm
+import matplotlib.pyplot as plt
 
 DEBUG = False
+
+possible_connections = [
+        [0, 0, 1, 0, 1, 1, 1, 1],
+        [0, 0, 1, 1, 1, 1, 0, 1],
+        [1, 1, 0, 0, 1, 0, 1, 1],
+        [0, 1, 0, 0, 1, 1, 1, 1],
+        [1, 1, 1, 1, 0, 0, 1, 0],
+        [1, 1, 0, 1, 0, 0, 1, 1],
+        [1, 0, 1, 1, 1, 1, 0, 0],
+        [1, 1, 1, 1, 0, 1, 0, 0]
+    ]
 
 def parse_clb(data) -> dict[str, int]:
     bitstream = {}
@@ -55,7 +67,55 @@ def parse_clb(data) -> dict[str, int]:
         
     return bitstream
 
-def generate_bitstream(data) -> dict[str, int]:
+def parse_switches(data) -> dict[str, int]:
+    bitstream = {}
+
+    ## Load in the CSV from XC2064-spreadsheet
+    bitstream_csv = open("XC2064-spreadsheet.csv", "r").readlines()
+    
+    magics = []
+    magic_strs = []
+    for line in bitstream_csv:
+        for part in line.split(","):
+            if part.startswith("Magic"):
+                magic_strs.append(part.strip())
+                magics.append(part.strip()[:-4])
+        
+    ## Reduce magics to only unique values
+    magics = list(set(magics))
+    
+    magic_objs = []
+    for magic in magics:
+        _temp = {}
+        parts = magic.split(" ")
+        parts = parts[2].split("G")
+        _temp["id"] = magic
+        _temp["x"] = int(parts[0])
+        _temp["y"] = int(parts[1])
+        magic_objs.append(_temp)
+        
+    ## Sort magics by x, then y
+    magic_objs.sort(key=lambda m: (m["x"], m["y"]))
+    
+    switches = data["switchMatrices"]
+    switches.sort(key=lambda m: (m["pos"]["x"], m["pos"]["y"]))
+    
+    ## Rotate switches by 180 degrees
+    min_x = min(switch["pos"]["x"] for switch in switches)
+    max_y = max(switch["pos"]["y"] for switch in switches)
+    for switch in switches:
+        switch["pos"]["x"] = -min_x + switch["pos"]["x"]
+        switch["pos"]["y"] = max_y - switch["pos"]["y"]
+        
+    for switch, magic in zip(switches, magic_objs):
+        for i, row in enumerate(switch["connections"]):
+            for j, connected in enumerate(row):
+                magic_str = f"{magic['id']} {i+1} {j+1}"
+                if magic_str in magic_strs:
+                    bitstream[magic_str] = 1 if connected else 0
+    return bitstream
+
+def generate_bitstream(data) -> dict[str, int] :
     logic_cells = data["logicCells"]
     bitstream = {}
 
@@ -66,9 +126,9 @@ def generate_bitstream(data) -> dict[str, int]:
     for clb in tqdm.tqdm(logic_cells):
         clb_bitstream = parse_clb(clb)
         bitstream.update(clb_bitstream)
-
-
-
+    
+    switch_bitstream = parse_switches(data)
+    bitstream.update(switch_bitstream)
 
     return bitstream
     

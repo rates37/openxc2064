@@ -24,6 +24,7 @@ export const createExportStateFunction = (
 			switchMatrices: switchMatrices.map((matrix) => ({
 				id: matrix.id,
 				connections: matrix.connections.map((row) => [...row]),
+				pos: matrix.pos,
 			})),
 			pips: pips.map((pip) => ({
 				id: pip.id,
