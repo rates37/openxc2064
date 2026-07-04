@@ -94,6 +94,7 @@ class DeviceConfig:
             bid: {"mts": 0, "min": 0} for bid in fabric.io_banks
         }
         self.drivers: list[tuple[str, str]] = []
+        self._driver_set: set[tuple[str, str]] = set()
 
     #! configuration:
     def configure_clb(self, cell_id: str, clb) -> None:
@@ -131,7 +132,11 @@ class DeviceConfig:
                 raise ValueError(f"edge {ref} does not connect {src} -> {dst}")
         else:
             raise ValueError(f"Unknown edge kind '{kind}'")
-        self.drivers.append((src, dst))
+        # idempotent: shared route prefixes (e.g. a clock trunk) enable the
+        # same hop repeatedly but must record one driver
+        if (src, dst) not in self._driver_set:
+            self._driver_set.add((src, dst))
+            self.drivers.append((src, dst))
 
     def enable_path(self, hops: list[tuple[str, str, tuple]]) -> None:
         for src, dst, ref in hops:
