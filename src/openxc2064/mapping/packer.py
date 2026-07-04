@@ -100,6 +100,18 @@ def route_lut(
     return None
 
 
+def pin_assignments(input_names: set[str]):
+    """Yield each distinct (A, B, C, D) pin assignment of the given nets once.
+    """
+    padded = sorted(input_names) + [None] * (4 - len(input_names))
+    seen = set()
+    for assignment in permutations(padded):
+        if assignment in seen:
+            continue
+        seen.add(assignment)
+        yield assignment
+
+
 def find_clb_orientation(
     lut_f_node: LUT | None, lut_g_node: LUT | None
 ) -> dict[str, Any] | None:
@@ -126,11 +138,7 @@ def find_clb_orientation(
     if len(all_inputs) > 4:
         return None
 
-    inputs_list = list(all_inputs)
-    while len(inputs_list) < 4:  # pad input list to always be length 4
-        inputs_list.append(None)
-
-    for A, B, C, D in permutations(inputs_list):
+    for A, B, C, D in pin_assignments(all_inputs):
         opts_f = route_lut(lut_f_node, A, B, C, D)
         if opts_f is None:
             continue
