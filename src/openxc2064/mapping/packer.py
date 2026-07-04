@@ -236,7 +236,12 @@ class GreedyPacker(Packer):
                 # use 0xAA (10101010) because we want the output to exactly mirror in0
                 driving_lut = LUT(f"dummy_{dff.id}", inputs=[data_net], outputs=[data_net], truth_table=0xAA)
 
-            clb_configs.append({"lut_f": driving_lut, "lut_g": None, "dff": dff})
+            orient = find_clb_orientation(driving_lut, None)
+            if orient is None:
+                raise CapacityError(f"MUX routing failure for DFF '{dff.id}' F-LUT.")
+            clb_configs.append(
+                {"lut_f": driving_lut, "lut_g": None, "dff": dff, "orientation": orient}
+            )
             unpacked_dffs.remove(dff)
 
         ## ! Try to pack rest of remaining LUTs into unused G-lut slots
@@ -244,55 +249,65 @@ class GreedyPacker(Packer):
         # into the un-used G-luts, taking the (slot, LUT) pairing with the most
         # shared input nets each round
         while True:
-            best = None  # (score, clb, lut)
+            best = None  # (score, clb, lut, orientation)
             for clb in clb_configs:
                 if clb["lut_g"] is not None:
                     continue
                 for lut in unpacked_luts:
                     # check if there exists a routable orientation for this pair
-                    if find_clb_orientation(clb["lut_f"], lut) is None:
+                    orient = find_clb_orientation(clb["lut_f"], lut)
+                    if orient is None:
                         continue
                     score = shared_input_count(clb["lut_f"], lut)
                     if best is None or score > best[0]:
-                        best = (score, clb, lut)
+                        best = (score, clb, lut, orient)
             if best is None:
                 break
-            _, clb, lut = best
+            _, clb, lut, orient = best
             clb["lut_g"] = lut
+            clb["orientation"] = orient
             unpacked_luts.remove(lut)
 
         ##! Pack isolated LUT pairs
         # any LUTs that didn't get paired into DFF luts: repeatedly take the legal
         # pair with the most shared input nets
         while unpacked_luts:
-            best = None  # (score, lut_a, lut_b)
+            best = None  # (score, lut_a, lut_b, orientation)
             for i, lut_a in enumerate(unpacked_luts):
                 for lut_b in unpacked_luts[i + 1:]:
-                    if find_clb_orientation(lut_a, lut_b) is None:
+                    orient = find_clb_orientation(lut_a, lut_b)
+                    if orient is None:
                         continue
                     score = shared_input_count(lut_a, lut_b)
                     if best is None or score > best[0]:
-                        best = (score, lut_a, lut_b)
+                        best = (score, lut_a, lut_b, orient)
 
             if best is None:
                 # no legal pairs remain; the rest each get their own CLB
                 for lut in unpacked_luts:
-                    clb_configs.append({"lut_f": lut, "lut_g": None, "dff": None})
+                    orient = find_clb_orientation(lut, None)
+                    if orient is None:
+                        raise CapacityError(f"MUX routing failure for LUT '{lut.id}'.")
+                    clb_configs.append(
+                        {"lut_f": lut, "lut_g": None, "dff": None, "orientation": orient}
+                    )
                 unpacked_luts = []
             else:
-                _, lut_a, lut_b = best
+                _, lut_a, lut_b, orient = best
                 unpacked_luts.remove(lut_a)
                 unpacked_luts.remove(lut_b)
-                clb_configs.append({"lut_f": lut_a, "lut_g": lut_b, "dff": None})
+                clb_configs.append(
+                    {"lut_f": lut_a, "lut_g": lut_b, "dff": None, "orientation": orient}
+                )
 
         if len(clb_configs) > self.max_clbs:
             raise CapacityError(f"Design uses {len(clb_configs)} CLBs.")
 
         ##! Create design physical structure:
         for idx, config in enumerate(clb_configs):
-            orient = find_clb_orientation(config["lut_f"], config["lut_g"])
-            if not orient:
-                raise CapacityError("MUX routing failure.")
+            # the orientation accepted when this pairing was made; never
+            # re-derived here, so build and search cannot disagree
+            orient = config["orientation"]
 
             new_clb = CLB(
                 id=f"clb{idx}",
