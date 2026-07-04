@@ -25,7 +25,7 @@ class GreedyMapper(TechnologyMapper):
         # copy over top level inputs:
         for node in netlist.nodes:
             if isinstance(node, Input):
-                new_node = Input(f"in{len(new_nl.nodes)}", inputs=[], outputs=[], port_name=node.port_name)
+                new_node = Input(new_nl.next_node_id("in"), inputs=[], outputs=[], port_name=node.port_name)
                 new_nl.nodes.append(new_node)
 
                 for old_out_net in node.outputs:
@@ -72,7 +72,9 @@ class GreedyMapper(TechnologyMapper):
 
 
         elif isinstance(driver, Constant):
-            new_const = Constant(id=driver.id, inputs=[], outputs=[], value=driver.value)
+            # minted (not cloned) id: a cloned "constN" could collide with the
+            # "constN" ids minted for constant-folded LUTs below
+            new_const = Constant(id=new_nl.next_node_id("const"), inputs=[], outputs=[], value=driver.value)
             new_nl.nodes.append(new_const)
             const_out_net = new_nl.create_net(target_net.name, target_net.width)
             new_const.outputs.append(const_out_net)
@@ -164,12 +166,12 @@ class GreedyMapper(TechnologyMapper):
             lut_out_net = new_nl.create_net(target_net.name, target_net.width)
 
             if k == 0:
-                lut_node = Constant(f"const{len(new_nl.nodes)}", inputs=[], outputs=[], value=truth_table&1)
+                lut_node = Constant(new_nl.next_node_id("const"), inputs=[], outputs=[], value=truth_table&1)
                 new_nl.nodes.append(lut_node)
                 lut_node.outputs.append(lut_out_net)
                 lut_out_net.drivers.append(lut_node)
             else:
-                lut_node = LUT(id=f"lut{len(new_nl.nodes)}", inputs=[], outputs=[], truth_table=truth_table, k=k)
+                lut_node = LUT(id=new_nl.next_node_id("lut"), inputs=[], outputs=[], truth_table=truth_table, k=k)
                 new_nl.nodes.append(lut_node)
                 lut_node.outputs.append(lut_out_net)
                 lut_out_net.drivers.append(lut_node)

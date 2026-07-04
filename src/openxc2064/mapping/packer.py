@@ -166,7 +166,7 @@ class GreedyPacker(Packer):
         inputs = [n for n in netlist.nodes if isinstance(n, Input)]
         for inp in inputs:
             iob = IOB(
-                f"iob_in_{len(new_nl.nodes)}", inputs=[], outputs=[], ts_mux_sel=0
+                new_nl.next_node_id("iob_in_"), inputs=[], outputs=[], ts_mux_sel=0
             )
             iob.inputs = [None, None, None, None]
             iob.outputs = [None, None]
@@ -191,7 +191,7 @@ class GreedyPacker(Packer):
         constants = [n for n in netlist.nodes if isinstance(n, Constant)]
         for c in constants:
             new_c = Constant(
-                f"const{len(new_nl.nodes)}", inputs=[], outputs=[], value=c.value
+                new_nl.next_node_id("const"), inputs=[], outputs=[], value=c.value
             )
             new_nl.nodes.append(new_c)
             for old_out_net in c.outputs:
@@ -355,7 +355,7 @@ class GreedyPacker(Packer):
         ##! Map top outputs:
         for out_net in netlist.outputs:
             iob = IOB(
-                f"iob_out_{len(new_nl.nodes)}", inputs=[], outputs=[], ts_mux_sel=2
+                new_nl.next_node_id("iob_out_"), inputs=[], outputs=[], ts_mux_sel=2
             )
             iob.inputs = [None, None, None, None]
             iob.outputs = [None, None]

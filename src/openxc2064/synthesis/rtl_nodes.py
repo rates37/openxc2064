@@ -83,6 +83,15 @@ class Netlist:
     nets: list[Net] = field(default_factory=list)
     nets_by_name: dict[str, Net] = field(default_factory=dict, repr=False)
 
+    # monotonic, never decremented: node IDs must stay unique even after
+    # passes remove nodes, so IDs cannot be derived from len(nodes)
+    _node_counter: int = field(default=0, init=False, repr=False)
+
+    def next_node_id(self, prefix: str) -> str:
+        node_id = f"{prefix}{self._node_counter}"
+        self._node_counter += 1
+        return node_id
+
     def create_net(self, name: str, width: int = 1) -> Net:
         if name in self.nets_by_name:
             raise ValueError(f"Duplicate net name '{name}' in netlist '{self.module_name}'")
@@ -95,21 +104,21 @@ class Netlist:
         return self.nets_by_name.get(name)
 
     def add_logic(self, op: str, inputs: list[Net], outputs: list[Net]) -> LogicGate:
-        g = LogicGate(f"g{len(self.nodes)}", inputs, outputs, op)
+        g = LogicGate(self.next_node_id("g"), inputs, outputs, op)
         self.nodes.append(g)
         return g
 
     def add_dff(self, inputs: list[Net], outputs: list[Net], edge: str = "posedge") -> DFF:
-        d = DFF(f"dff{len(self.nodes)}", inputs, outputs, edge=edge)
+        d = DFF(self.next_node_id("dff"), inputs, outputs, edge=edge)
         self.nodes.append(d)
         return d
 
     def add_input(self, port_name: str, net: Net) -> Input:
-        i = Input(f"in{len(self.nodes)}", inputs=[], outputs=[net], port_name=port_name)
+        i = Input(self.next_node_id("in"), inputs=[], outputs=[net], port_name=port_name)
         self.nodes.append(i)
         return i
 
     def add_const(self, value: int, net: Net) -> Constant:
-        c = Constant(f"const{len(self.nodes)}", inputs=[], outputs=[net], value=value)
+        c = Constant(self.next_node_id("const"), inputs=[], outputs=[net], value=value)
         self.nodes.append(c)
         return c
