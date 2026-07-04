@@ -161,7 +161,6 @@ class GreedyPacker(Packer):
     def run(self, netlist: Netlist) -> Netlist | None:
         # create blank netlist:
         new_nl = Netlist(netlist.module_name)
-        net_map = {}
 
         ## ! Map inputs to IOBs:
         inputs = [n for n in netlist.nodes if isinstance(n, Input)]
@@ -186,7 +185,6 @@ class GreedyPacker(Packer):
                 new_net = new_nl.create_net(old_out_net.name, old_out_net.width)
                 iob.outputs[1] = new_net
                 new_net.drivers.append(iob)
-                net_map[old_out_net.name] = new_net
                 # Top down inputs are no longer internal logic nets, they are the PINs
 
         ## ! Map constants:
@@ -200,7 +198,6 @@ class GreedyPacker(Packer):
                 new_net = new_nl.create_net(old_out_net.name, old_out_net.width)
                 new_c.outputs.append(new_net)
                 new_net.drivers.append(new_c)
-                net_map[old_out_net.name] = new_net
 
         ## ! Extract actual logic:
         unpacked_luts = list(n for n in netlist.nodes if isinstance(n, LUT))
@@ -290,9 +287,9 @@ class GreedyPacker(Packer):
 
             for pin_name in ordered_pins:
                 if pin_name:
-                    if pin_name not in net_map:
-                        net_map[pin_name] = new_nl.create_net(pin_name, 1)
-                    mapped_in = net_map[pin_name]
+                    mapped_in = new_nl.get_net(pin_name)
+                    if mapped_in is None:
+                        mapped_in = new_nl.create_net(pin_name, 1)
                     new_clb.inputs.append(mapped_in)
                     mapped_in.sinks.append(new_clb)
                 else:
@@ -333,9 +330,9 @@ class GreedyPacker(Packer):
                     new_clb.sel_x = 0
 
                 out_net_name = node.outputs[0].name
-                if out_net_name not in net_map:
-                    net_map[out_net_name] = new_nl.create_net(out_net_name, 1)
-                mapped_out = net_map[out_net_name]
+                mapped_out = new_nl.get_net(out_net_name)
+                if mapped_out is None:
+                    mapped_out = new_nl.create_net(out_net_name, 1)
                 new_clb.outputs.append(mapped_out)
                 mapped_out.drivers.append(new_clb)
 
@@ -349,9 +346,9 @@ class GreedyPacker(Packer):
                     new_clb.sel_y = 0
 
                 out_net_name = node.outputs[0].name
-                if out_net_name not in net_map:
-                    net_map[out_net_name] = new_nl.create_net(out_net_name, 1)
-                mapped_out = net_map[out_net_name]
+                mapped_out = new_nl.get_net(out_net_name)
+                if mapped_out is None:
+                    mapped_out = new_nl.create_net(out_net_name, 1)
                 new_clb.outputs.append(mapped_out)
                 mapped_out.drivers.append(new_clb)
 
@@ -365,7 +362,7 @@ class GreedyPacker(Packer):
             new_nl.nodes.append(iob)
 
             # The OUT net from internal logic
-            mapped_in = net_map[out_net.name]
+            mapped_in = new_nl.nets_by_name[out_net.name]
             iob.inputs[1] = mapped_in
             mapped_in.sinks.append(iob)
 

@@ -81,11 +81,18 @@ class Netlist:
     # for the internal circuit:
     nodes: list[Node] = field(default_factory=list)
     nets: list[Net] = field(default_factory=list)
+    nets_by_name: dict[str, Net] = field(default_factory=dict, repr=False)
 
     def create_net(self, name: str, width: int = 1) -> Net:
+        if name in self.nets_by_name:
+            raise ValueError(f"Duplicate net name '{name}' in netlist '{self.module_name}'")
         n = Net(name, width)
         self.nets.append(n)
+        self.nets_by_name[name] = n
         return n
+
+    def get_net(self, name: str) -> Net | None:
+        return self.nets_by_name.get(name)
 
     def add_logic(self, op: str, inputs: list[Net], outputs: list[Net]) -> LogicGate:
         g = LogicGate(f"g{len(self.nodes)}", inputs, outputs, op)

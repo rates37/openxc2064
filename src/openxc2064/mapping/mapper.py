@@ -21,66 +21,63 @@ class GreedyMapper(TechnologyMapper):
     """
     def run(self, netlist: Netlist) -> Netlist:
         new_nl = Netlist(netlist.module_name)
-        net_map = {}
-
 
         # copy over top level inputs:
         for node in netlist.nodes:
             if isinstance(node, Input):
                 new_node = Input(f"in{len(new_nl.nodes)}", inputs=[], outputs=[], port_name=node.port_name)
                 new_nl.nodes.append(new_node)
-                
+
                 for old_out_net in node.outputs:
                     new_net = new_nl.create_net(old_out_net.name, old_out_net.width)
                     new_node.outputs.append(new_net)
                     new_net.drivers.append(new_node)
-                    net_map[old_out_net.name] = new_net
                     new_nl.inputs.append(new_net)
-        
+
         # add outputs and traverse computational graph backwards
         for out_net in netlist.outputs:
-            new_out_net = self._map_cone(out_net, new_nl, net_map)
+            new_out_net = self._map_cone(out_net, new_nl)
             new_nl.outputs.append(new_out_net)
-        
+
         return new_nl
 
 
-    def _map_cone(self, target_net: Net, new_nl: Netlist, net_map: dict) -> Net:
-        if target_net.name in net_map:
-            return net_map[target_net.name]
-        
+    def _map_cone(self, target_net: Net, new_nl: Netlist) -> Net:
+        already_mapped = new_nl.get_net(target_net.name)
+        if already_mapped is not None:
+            return already_mapped
+
         assert len(target_net.drivers) >= 1
         driver = target_net.drivers[0]
-        
+
         if isinstance(driver, Input):
-            raise AssertionError(f"Input nets should have been pre-populated in net_map: {target_net.name}")
-        
+            raise AssertionError(f"Input nets should have been pre-populated in the new netlist: {target_net.name}")
+
         # handle DFFs and constants separately (don't waste LUTs on them yet)
         elif isinstance(driver, DFF):
             new_dff = DFF(id=driver.id, inputs=[], outputs=[], edge=driver.edge)
             new_nl.nodes.append(new_dff)
+            # created (and registered by name) before recursing, so feedback
+            # paths through this DFF resolve to it instead of recursing forever
             dff_out_net = new_nl.create_net(target_net.name, target_net.width)
             new_dff.outputs.append(dff_out_net)
             dff_out_net.drivers.append(new_dff)
-            
-            net_map[target_net.name] = dff_out_net
-            
+
             for in_net in driver.inputs:
-                new_in_net = self._map_cone(in_net, new_nl, net_map)
+                new_in_net = self._map_cone(in_net, new_nl)
                 new_dff.inputs.append(new_in_net)
                 new_in_net.sinks.append(new_dff)
 
             return dff_out_net
-        
-        
+
+
         elif isinstance(driver, Constant):
             new_const = Constant(id=driver.id, inputs=[], outputs=[], value=driver.value)
             new_nl.nodes.append(new_const)
             const_out_net = new_nl.create_net(target_net.name, target_net.width)
             new_const.outputs.append(const_out_net)
             const_out_net.drivers.append(new_const)
-            
-            net_map[target_net.name] = const_out_net
+
             return const_out_net
             
         
@@ -121,7 +118,7 @@ class GreedyMapper(TechnologyMapper):
             # map dynamic inputs nets as pre-reqs:
             new_in_nets = []
             for n in cut_inputs:
-                new_in_nets.append(self._map_cone(n, new_nl, net_map))
+                new_in_nets.append(self._map_cone(n, new_nl))
             
             # pre-evaluate the literal numeric 2^K bit mask Truth table
             truth_table = 0
@@ -165,8 +162,7 @@ class GreedyMapper(TechnologyMapper):
                     truth_table |= (1 << state)
 
             lut_out_net = new_nl.create_net(target_net.name, target_net.width)
-            net_map[target_net.name] = lut_out_net
-            
+
             if k == 0:
                 lut_node = Constant(f"const{len(new_nl.nodes)}", inputs=[], outputs=[], value=truth_table&1)
                 new_nl.nodes.append(lut_node)

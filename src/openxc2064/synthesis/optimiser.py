@@ -97,6 +97,7 @@ class Optimiser:
                 live_nets_dict[id(n)] = n
 
         netlist.nets = list(live_nets_dict.values())
+        netlist.nets_by_name = {n.name: n for n in netlist.nets}
 
         # clean up sinks/sources on live nodes to remove dangling/dead references:
         for net in netlist.nets:
