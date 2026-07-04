@@ -23,6 +23,7 @@ net IDs, edges are PIPs (directed) and legal switch-matrix connections
 from __future__ import annotations
 
 import json
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -107,12 +108,16 @@ def decode_relative_net_name(
 
 @dataclass
 class Pip:
-    """A programmable interconnect point: a directed, switchable connection."""
+    """A programmable interconnect point: a directed, switchable connection.
+
+    (source, destination) is the canonical identity; pip_id is the config's
+    cosmetic id string, kept only for save-file compatibility."""
 
     source: str
     destination: str
     owner_cell: str
     bidirectional: bool = False
+    pip_id: str = ""
 
 
 @dataclass
@@ -386,6 +391,7 @@ class Fabric:
                             destination=destination,
                             owner_cell=cid,
                             bidirectional=bool(pconf.get("bidirectional")),
+                            pip_id=pconf.get("id", ""),
                         )
                     )
 
@@ -441,6 +447,43 @@ class Fabric:
                     seen.add(src)
                     frontier.append(src)
         return seen
+
+    def find_path(
+        self, source: str, target: str, blocked: set[str] | None = None
+    ) -> list[tuple[str, str, tuple]] | None:
+        """BFS shortest route from source net to target net.
+
+        Returns the hops as (from_net, to_net, edge_ref) triples, [] if
+        source == target, or None if no route exists. Nets in `blocked`
+        (already claimed by other signals) are not entered.
+        """
+        if source == target:
+            return []
+        blocked = blocked or set()
+        if target in blocked or source in blocked:
+            return None
+
+        parent: dict[str, tuple[str, tuple]] = {}
+        queue = deque([source])
+        seen = {source}
+        while queue:
+            current = queue.popleft()
+            for nxt, ref in self.neighbors(current):
+                if nxt in seen or nxt in blocked:
+                    continue
+                seen.add(nxt)
+                parent[nxt] = (current, ref)
+                if nxt == target:
+                    hops: list[tuple[str, str, tuple]] = []
+                    node = target
+                    while node != source:
+                        prev, edge = parent[node]
+                        hops.append((prev, node, edge))
+                        node = prev
+                    hops.reverse()
+                    return hops
+                queue.append(nxt)
+        return None
 
     def validate(self) -> list[str]:
         """Structural sanity report (empty list = clean)."""
