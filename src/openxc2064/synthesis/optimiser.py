@@ -109,18 +109,41 @@ class Optimiser:
     def _replace_with_const(self, netlist: Netlist, node: LogicGate, val: int) -> None:
         out_net = node.outputs[0]
         # Netlist.add_const internally pushes to out_net.drivers.
-        new_const = netlist.add_const(val, out_net)
-        if node in out_net.drivers:
-            out_net.drivers.remove(node)
-        # we can rely on trim_dead_code to eliminate the 'node' on next optimiser iteration
+        netlist.add_const(val, out_net)
+        self._detach_node(netlist, node)
+
+    def _detach_node(self, netlist: Netlist, node: LogicGate) -> None:
+        # fully disconnect the replaced gate and drop it from the netlist, so
+        # the graph is consistent at the point of rewrite instead of carrying
+        # stale sink/driver references until the next dead-code trim
+        for in_net in node.inputs:
+            if node in in_net.sinks:
+                in_net.sinks.remove(node)  # one occurrence per input entry
+        for out_net in node.outputs:
+            if node in out_net.drivers:
+                out_net.drivers.remove(node)
+        node.inputs = []
+        node.outputs = []
+        if node in netlist.nodes:
+            netlist.nodes.remove(node)
+
+    def _rewire_inputs(self, node: LogicGate, new_inputs: list[Net]) -> None:
+        # keep net.sinks consistent with node.inputs, including multiplicity
+        # (a net appearing twice as an input holds two sink entries)
+        for in_net in node.inputs:
+            if node in in_net.sinks:
+                in_net.sinks.remove(node)  # one occurrence per input entry
+        for in_net in new_inputs:
+            in_net.sinks.append(node)
+        node.inputs = list(new_inputs)
 
     def _replace_with_buf(self, node: LogicGate, net_to_pass: Net) -> None:
         node.op = "BUF"
-        node.inputs = [net_to_pass]
+        self._rewire_inputs(node, [net_to_pass])
 
     def _replace_with_not(self, node: LogicGate, net_to_invert: Net) -> None:
         node.op = "NOT"
-        node.inputs = [net_to_invert]
+        self._rewire_inputs(node, [net_to_invert])
 
     def _get_inverted_source(self, n: Net) -> Net | None:
         # if the net is driven by a NOT gate, return the 

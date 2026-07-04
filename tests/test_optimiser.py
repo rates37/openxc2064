@@ -476,3 +476,88 @@ def test_nested_full_adder_optimised() -> None:
             sim.set("y", y)
             sim.step()
             assert sim.get("z") == x + y
+
+
+def test_fold_to_buf_detaches_from_constant_net():
+    # a & 1 rewrites to BUF(a): the gate must stop being a sink of the const net
+    nl = Netlist(module_name="test_mod")
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    one = nl.create_net("one")
+    nl.add_const(1, one)
+    y = nl.create_net("y")
+    gate = nl.add_logic("AND", [a, one], [y])
+    nl.outputs.append(y)
+
+    changed = Optimiser()._fold_constants(nl)
+
+    assert changed
+    assert gate.op == "BUF"
+    assert gate.inputs == [a]
+    assert gate not in one.sinks
+    assert gate in a.sinks
+
+
+def test_fold_to_const_fully_detaches_dead_gate():
+    # a & 0 rewrites to a constant: the dead gate must be disconnected from its
+    # input nets and removed from the netlist immediately
+    nl = Netlist(module_name="test_mod")
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    zero = nl.create_net("zero")
+    nl.add_const(0, zero)
+    y = nl.create_net("y")
+    gate = nl.add_logic("AND", [a, zero], [y])
+    nl.outputs.append(y)
+
+    changed = Optimiser()._fold_constants(nl)
+
+    assert changed
+    assert gate not in nl.nodes
+    assert gate not in a.sinks
+    assert gate not in zero.sinks
+    # y is now driven only by the folded constant
+    assert len(y.drivers) == 1
+    assert isinstance(y.drivers[0], Constant)
+
+
+def test_simplify_mux_same_inputs_detaches_from_select_net():
+    # mux(sel, a, a) rewrites to BUF(a): sel keeps its own driver/uses, but the
+    # rewritten gate must no longer appear among sel's sinks, even after a full
+    # optimise() run (sel stays live, so dead-code trimming never cleans it)
+    nl = Netlist(module_name="test_mod")
+    sel = nl.create_net("sel")
+    nl.add_input("sel", sel)
+    nl.inputs.append(sel)
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    y = nl.create_net("y")
+    mux = nl.add_logic("MUX", [sel, a, a], [y])
+    nl.outputs.append(y)
+
+    Optimiser().optimise(nl)
+
+    assert mux.op == "BUF"
+    assert mux not in sel.sinks
+    assert mux in a.sinks
+
+
+def test_simplify_identical_inputs_normalises_sink_multiplicity():
+    # a & a rewrites to BUF(a): 'a' listed the gate as a sink twice (once per
+    # input entry); after the rewrite it must appear exactly once
+    nl = Netlist(module_name="test_mod")
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    y = nl.create_net("y")
+    gate = nl.add_logic("AND", [a, a], [y])
+    nl.outputs.append(y)
+
+    changed = Optimiser()._simplify_logic(nl)
+
+    assert changed
+    assert gate.op == "BUF"
+    assert a.sinks.count(gate) == 1
