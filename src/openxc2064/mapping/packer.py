@@ -184,7 +184,7 @@ class GreedyPacker(Packer):
     the most shared input nets is taken, rather than the first legal one.
     """
 
-    def run(self, netlist: Netlist) -> Netlist | None:
+    def run(self, netlist: Netlist) -> Netlist:
         # create blank netlist:
         new_nl = Netlist(netlist.module_name)
 
@@ -242,7 +242,10 @@ class GreedyPacker(Packer):
             if not driving_lut:
                 # Standalone DFF -> Buffer LUT F
                 # use 0xAA (10101010) because we want the output to exactly mirror in0
-                driving_lut = LUT(f"dummy_{dff.id}", inputs=[data_net], outputs=[data_net], truth_table=0xAA)
+                driving_lut = LUT(f"dummy_{dff.id}", inputs=[], outputs=[], truth_table=0xAA)
+                # assign the input after construction so __post_init__ does not register
+                # dummy as a sink/driver on the source netlist's data net.
+                driving_lut.inputs = [data_net]
 
             orient = find_clb_orientation(driving_lut, None)
             if orient is None:
@@ -357,7 +360,7 @@ class GreedyPacker(Packer):
             if config["dff"]:
                 outputs_needed.append(("Q", config["dff"]))
                 
-            if config["lut_f"]:
+            if config["lut_f"] and config["lut_f"].outputs:
                 f_net = config["lut_f"].outputs[0]
                 is_f_exported = f_net in netlist.outputs
                 for sink in f_net.sinks:
