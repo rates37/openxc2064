@@ -478,3 +478,107 @@ def test_mapper_can_keep_multi_sink_gates_shared():
     assert isinstance(g_net.drivers[0], LUT)
     assert len(g_net.sinks) == 2
     _check_shared_gate_behaviour(mapped)
+
+
+#  connectivity-driven packing:
+# Pairing is scored by shared input nets: two LUTs sharing all their inputs
+# in one CLB eliminate whole nets from the routing problem. (Producer/consumer
+# copacking deliberately earns nothing: the XC2064 input muxes only see
+# A/B/C/D/Q, so a paired LUT's output still has to leave via X/Y and re-enter
+# through a pin.)
+
+
+def _lut(nl: Netlist, in_nets, out_name: str, truth_table: int) -> "LUT":
+    out = nl.create_net(out_name, 1)
+    lut = LUT(
+        id=nl.next_node_id("lut"),
+        inputs=list(in_nets),
+        outputs=[out],
+        truth_table=truth_table,
+        k=3,
+    )
+    nl.nodes.append(lut)
+    return lut
+
+
+def test_packer_pairs_luts_by_shared_inputs():
+    nl = Netlist("pairing")
+    a = nl.create_net("a", 1)
+    b = nl.create_net("b", 1)
+    c = nl.create_net("c", 1)
+    d = nl.create_net("d", 1)
+    for name, net in (("a", a), ("b", b), ("c", c), ("d", d)):
+        nl.add_input(name, net)
+
+    _lut(nl, [a, b, c], "y1", 0x80)  # y1 = a & b & c
+    _lut(nl, [a, d], "y2", 0x8)     # y2 = a & d
+    _lut(nl, [a, b, c], "y3", 0xFE) # y3 = a | b | c
+    y1, y2, y3 = nl.get_net("y1"), nl.get_net("y2"), nl.get_net("y3")
+    nl.outputs.extend([y1, y2, y3])
+
+    packed = GreedyPacker(max_clbs=64).run(nl)
+
+    # y1 and y3 share all three inputs, a first fit packer pairs y1 with y2
+    # (1 shared net) instead
+    py1, py2, py3 = packed.get_net("y1"), packed.get_net("y2"), packed.get_net("y3")
+    assert py1.drivers[0] is py3.drivers[0], "LUTs sharing all inputs should share a CLB"
+    assert py2.drivers[0] is not py1.drivers[0]
+
+    # behaviour preserved
+    sim = RTLSimulator(packed)
+    for a_v, b_v, c_v, d_v in itertools.product([0, 1], repeat=4):
+        sim.set("a", a_v)
+        sim.set("b", b_v)
+        sim.set("c", c_v)
+        sim.set("d", d_v)
+        sim.step()
+        assert sim.get("y1") == (a_v & b_v & c_v)
+        assert sim.get("y2") == (a_v & d_v)
+        assert sim.get("y3") == (a_v | b_v | c_v)
+
+
+def test_packer_fills_g_slots_by_shared_inputs():
+    from openxc2064.synthesis.rtl_nodes import DFF
+
+    nl = Netlist("gslot")
+    a = nl.create_net("a", 1)
+    b = nl.create_net("b", 1)
+    c = nl.create_net("c", 1)
+    d = nl.create_net("d", 1)
+    clk = nl.create_net("clk", 1)
+    for name, net in (("a", a), ("b", b), ("c", c), ("d", d), ("clk", clk)):
+        nl.add_input(name, net)
+
+    # DFF driven by LUT_F(a, b, c) -> occupies a CLB with a free G slot
+    f_lut = _lut(nl, [a, b, c], "f_out", 0x80)
+    q = nl.create_net("q", 1)
+    dff = DFF(id=nl.next_node_id("dff"), inputs=[f_lut.outputs[0], clk], outputs=[q])
+    nl.nodes.append(dff)
+
+    # candidates for the G slot: y_x shares 1 input with F, y_y shares all 3
+    _lut(nl, [a, d], "y_x", 0x8)      # y_x = a & d
+    _lut(nl, [a, b, c], "y_y", 0xFE)  # y_y = a | b | c
+    y_x, y_y = nl.get_net("y_x"), nl.get_net("y_y")
+    nl.outputs.extend([q, y_x, y_y])
+
+    packed = GreedyPacker(max_clbs=64).run(nl)
+
+    # the G slot of the DFF's CLB should hold y_y (3 shared inputs), not the
+    # first-scanned y_x (1 shared input)
+    pq, py_y = packed.get_net("q"), packed.get_net("y_y")
+    assert pq.drivers[0] is py_y.drivers[0], "G slot should go to the max-shared-input LUT"
+
+    # behaviour preserved (q latches a&b&c on the rising clock edge)
+    sim = RTLSimulator(packed)
+    for a_v, b_v, c_v, d_v in itertools.product([0, 1], repeat=4):
+        sim.set("a", a_v)
+        sim.set("b", b_v)
+        sim.set("c", c_v)
+        sim.set("d", d_v)
+        sim.set("clk", 0)
+        sim.step()
+        sim.set("clk", 1)
+        sim.step()
+        assert sim.get("y_x") == (a_v & d_v)
+        assert sim.get("y_y") == (a_v | b_v | c_v)
+        assert sim.get("q") == (a_v & b_v & c_v)

@@ -155,8 +155,26 @@ def find_clb_orientation(
     return None
 
 
+def shared_input_count(lut_a: LUT | None, lut_b: LUT | None) -> int:
+    """Number of input nets two LUTs have in common.
+
+    This is the packing affinity metric: LUTs sharing inputs packed into one
+    CLB remove whole nets from the routing problem and leave A/B/C/D pins
+    free. (Producer/consumer co-packing deliberately scores nothing. The
+    XC2064 input muxes only select from A/B/C/D/Q, so a paired LUT's output
+    still has to leave via X/Y and re-enter through a pin.)
+    """
+    if lut_a is None or lut_b is None:
+        return 0
+    return len({n.name for n in lut_a.inputs} & {n.name for n in lut_b.inputs})
+
+
 class GreedyPacker(Packer):
-    """Greedy implementation of a CLB packer algorithm."""
+    """Greedy implementation of a CLB packer algorithm.
+
+    Clustering is connectivity-driven: at each step the legal pairing with
+    the most shared input nets is taken, rather than the first legal one.
+    """
 
     def run(self, netlist: Netlist) -> Netlist | None:
         # create blank netlist:
@@ -222,36 +240,50 @@ class GreedyPacker(Packer):
             unpacked_dffs.remove(dff)
 
         ## ! Try to pack rest of remaining LUTs into unused G-lut slots
-        # all existing LUTs only have their F-lut in use, so pack as much as possible into the un-used G-luts
-        for lut in list(unpacked_luts):
-            best_target = None
+        # all existing LUTs only have their F-lut in use, so pack as much as possible
+        # into the un-used G-luts, taking the (slot, LUT) pairing with the most
+        # shared input nets each round
+        while True:
+            best = None  # (score, clb, lut)
             for clb in clb_configs:
-                if clb["lut_g"] is None:
+                if clb["lut_g"] is not None:
+                    continue
+                for lut in unpacked_luts:
                     # check if there exists a routable orientation for this pair
-                    orient = find_clb_orientation(clb["lut_f"], lut)
-                    if orient is not None:
-                        best_target = clb
-                        break
-            if best_target:
-                best_target["lut_g"] = lut
-                unpacked_luts.remove(lut)
+                    if find_clb_orientation(clb["lut_f"], lut) is None:
+                        continue
+                    score = shared_input_count(clb["lut_f"], lut)
+                    if best is None or score > best[0]:
+                        best = (score, clb, lut)
+            if best is None:
+                break
+            _, clb, lut = best
+            clb["lut_g"] = lut
+            unpacked_luts.remove(lut)
 
         ##! Pack isolated LUT pairs
-        # any LUTs that didn't get paired into DFF luts
+        # any LUTs that didn't get paired into DFF luts: repeatedly take the legal
+        # pair with the most shared input nets
         while unpacked_luts:
-            base_lut = unpacked_luts.pop(0)
-            best_partner = None
-            for i, partner in enumerate(unpacked_luts):
-                orient = find_clb_orientation(base_lut, partner)
-                if orient is not None:
-                    best_partner = i
-                    break
+            best = None  # (score, lut_a, lut_b)
+            for i, lut_a in enumerate(unpacked_luts):
+                for lut_b in unpacked_luts[i + 1:]:
+                    if find_clb_orientation(lut_a, lut_b) is None:
+                        continue
+                    score = shared_input_count(lut_a, lut_b)
+                    if best is None or score > best[0]:
+                        best = (score, lut_a, lut_b)
 
-            if best_partner is not None:
-                partner = unpacked_luts.pop(best_partner)
-                clb_configs.append({"lut_f": base_lut, "lut_g": partner, "dff": None})
+            if best is None:
+                # no legal pairs remain; the rest each get their own CLB
+                for lut in unpacked_luts:
+                    clb_configs.append({"lut_f": lut, "lut_g": None, "dff": None})
+                unpacked_luts = []
             else:
-                clb_configs.append({"lut_f": base_lut, "lut_g": None, "dff": None})
+                _, lut_a, lut_b = best
+                unpacked_luts.remove(lut_a)
+                unpacked_luts.remove(lut_b)
+                clb_configs.append({"lut_f": lut_a, "lut_g": lut_b, "dff": None})
 
         if len(clb_configs) > self.max_clbs:
             raise CapacityError(f"Design uses {len(clb_configs)} CLBs.")
