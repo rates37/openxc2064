@@ -106,14 +106,15 @@ def test_constant_folding_or_identity():
 
 
 def test_constant_folding_mux():
+    # MUX inputs are [cond, else, then]: sel=1 selects the 'then' input
     nl = Netlist(module_name="test_mod")
 
     sel_net = nl.create_net("sel")
-    true_net = nl.create_net("t")
-    false_net = nl.create_net("f")
+    else_net = nl.create_net("e")
+    then_net = nl.create_net("t")
     nl.add_input("sel", sel_net)
-    nl.add_input("t", true_net)
-    nl.add_input("f", false_net)
+    nl.add_input("e", else_net)
+    nl.add_input("t", then_net)
 
     out_net = nl.create_net("out")
     nl.outputs.append(out_net)
@@ -122,7 +123,7 @@ def test_constant_folding_mux():
     sel_const_net = nl.create_net("sel_c")
     nl.add_const(1, sel_const_net)
 
-    nl.add_logic("MUX", [sel_const_net, true_net, false_net], [out_net])
+    nl.add_logic("MUX", [sel_const_net, else_net, then_net], [out_net])
 
     opt = Optimiser()
     opt.optimise(nl)
@@ -131,9 +132,9 @@ def test_constant_folding_mux():
     assert len(muxes) == 0
     bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
     assert len(bufs) == 1
-    # Check that output is driven by BUF which is driven by true_net
+    # Check that output is driven by BUF which is driven by then_net
     buf_node = out_net.drivers[0]
-    assert buf_node is not None and buf_node.inputs[0] == true_net
+    assert buf_node is not None and buf_node.inputs[0] == then_net
 
 
 def test_constant_folding_gates_exhaustive():
@@ -234,15 +235,15 @@ def test_constant_folding_mux_advanced():
     nl.add_const(0, c0)
     nl.add_const(1, c1)
 
-    # MUX with sel=0 -> f
+    # MUX inputs are [cond, else, then]: sel=0 selects the 'else' input (t here)
     out_m0 = nl.create_net("out_m0")
     nl.add_logic("MUX", [c0, t, f], [out_m0])
 
-    # MUX with t=1, f=0 -> sel
+    # MUX with else=1, then=0 -> ~sel
     out_m_bool1 = nl.create_net("out_m_bool1")
     nl.add_logic("MUX", [sel, c1, c0], [out_m_bool1])
 
-    # MUX with t=0, f=1 -> ~sel
+    # MUX with else=0, then=1 -> sel
     out_m_bool2 = nl.create_net("out_m_bool2")
     nl.add_logic("MUX", [sel, c0, c1], [out_m_bool2])
 
@@ -252,9 +253,9 @@ def test_constant_folding_mux_advanced():
     opt.optimise(nl)
 
     # Checks:
-    assert out_m0.drivers[0].op == "BUF" and out_m0.drivers[0].inputs[0] == f
-    assert out_m_bool1.drivers[0].op == "BUF" and out_m_bool1.drivers[0].inputs[0] == sel
-    assert out_m_bool2.drivers[0].op == "NOT" and out_m_bool2.drivers[0].inputs[0] == sel
+    assert out_m0.drivers[0].op == "BUF" and out_m0.drivers[0].inputs[0] == t
+    assert out_m_bool1.drivers[0].op == "NOT" and out_m_bool1.drivers[0].inputs[0] == sel
+    assert out_m_bool2.drivers[0].op == "BUF" and out_m_bool2.drivers[0].inputs[0] == sel
 
 
 def test_simplify_identical_inputs():

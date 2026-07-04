@@ -243,23 +243,28 @@ class Optimiser:
 
             elif node.op == "MUX":
                 if len(node.inputs) == 3:
+                    # MUX inputs are [cond, else, then]: sel=0 selects inputs[1],
+                    # sel=1 selects inputs[2] (the convention shared by the
+                    # synthesiser, lowering, mapper and RTL simulator)
                     sel_net = node.inputs[0]
-                    true_net = node.inputs[1]
-                    false_net = node.inputs[2]
+                    else_net = node.inputs[1]
+                    then_net = node.inputs[2]
 
                     if sel_net in const_inputs:
                         if sel_net.drivers[0].value == 1:
-                            self._replace_with_buf(node, true_net)
+                            self._replace_with_buf(node, then_net)
                         else:
-                            self._replace_with_buf(node, false_net)
+                            self._replace_with_buf(node, else_net)
                         changed = True
-                    elif true_net in const_inputs and false_net in const_inputs:
-                        t_val = true_net.drivers[0].value
-                        f_val = false_net.drivers[0].value
-                        if t_val == 1 and f_val == 0:
+                    elif else_net in const_inputs and then_net in const_inputs:
+                        e_val = else_net.drivers[0].value
+                        t_val = then_net.drivers[0].value
+                        # mux(sel, 0, 1) = sel
+                        if e_val == 0 and t_val == 1:
                             self._replace_with_buf(node, sel_net)
                             changed = True
-                        elif t_val == 0 and f_val == 1:
+                        # mux(sel, 1, 0) = ~sel
+                        elif e_val == 1 and t_val == 0:
                             self._replace_with_not(node, sel_net)
                             changed = True
         
