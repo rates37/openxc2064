@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 from lark import Lark, Transformer, Token
 from .ast_nodes import *
@@ -246,7 +247,10 @@ class ASTBuilder(Transformer):
         return items[0]
 
 
+@lru_cache(maxsize=1)
 def create_parser():
+    # building the LALR tables is expensive; the parser itself is stateless
+    # across parse() calls, so one shared instance is safe to reuse
     return Lark(hdl_grammar, start="start", parser="lalr")
 
 
