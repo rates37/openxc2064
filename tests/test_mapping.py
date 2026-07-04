@@ -398,3 +398,83 @@ def test_packer_capacity_error():
     # 70 LUTs -> 70 CLBs. This should trigger CapacityError.
     with pytest.raises(CapacityError):
         GreedyPacker(max_clbs=64).run(mapped_nl)
+
+
+def test_mapper_handles_deep_gate_chains():
+    # a long single-input chain is absorbed into one cone; both the cone
+    # traversal and the truth-table evaluation must survive depths beyond
+    # default recursion limit (~1000)
+    nl = Netlist("deep")
+    a = nl.create_net("a", 1)
+    nl.add_input("a", a)
+
+    prev = a
+    for i in range(1500):
+        nxt = nl.create_net(f"n{i}", 1)
+        nl.add_logic("BUF", [prev], [nxt])
+        prev = nxt
+    nl.outputs.append(prev)
+
+    mapped = GreedyMapper(k_max=3).run(nl)
+
+    luts = [n for n in mapped.nodes if isinstance(n, LUT)]
+    assert len(luts) == 1
+    assert luts[0].truth_table == 0b10  # identity of the single input
+
+
+def _shared_gate_netlist() -> Netlist:
+    # g = a & b feeds two cones: y1 = g ^ c and y2 = g | d
+    nl = Netlist("shared")
+    a = nl.create_net("a", 1)
+    b = nl.create_net("b", 1)
+    c = nl.create_net("c", 1)
+    d = nl.create_net("d", 1)
+    for name, net in (("a", a), ("b", b), ("c", c), ("d", d)):
+        nl.add_input(name, net)
+
+    g = nl.create_net("g", 1)
+    y1 = nl.create_net("y1", 1)
+    y2 = nl.create_net("y2", 1)
+    nl.add_logic("AND", [a, b], [g])
+    nl.add_logic("XOR", [g, c], [y1])
+    nl.add_logic("OR", [g, d], [y2])
+    nl.outputs.extend([y1, y2])
+    return nl
+
+
+def _check_shared_gate_behaviour(mapped: Netlist) -> None:
+    sim = RTLSimulator(mapped)
+    for a_val, b_val, c_val, d_val in itertools.product([0, 1], repeat=4):
+        sim.set("a", a_val)
+        sim.set("b", b_val)
+        sim.set("c", c_val)
+        sim.set("d", d_val)
+        sim.step()
+        g_val = a_val & b_val
+        assert sim.get("y1") == (g_val ^ c_val)
+        assert sim.get("y2") == (g_val | d_val)
+
+
+def test_mapper_duplicates_shared_gates_by_default():
+    # by default the shared AND is duplicated into both consuming LUTs:
+    # two LUTs total, and the intermediate net 'g' disappears
+    mapped = GreedyMapper(k_max=3).run(_shared_gate_netlist())
+
+    luts = [n for n in mapped.nodes if isinstance(n, LUT)]
+    assert len(luts) == 2
+    assert mapped.get_net("g") is None
+    _check_shared_gate_behaviour(mapped)
+
+
+def test_mapper_can_keep_multi_sink_gates_shared():
+    # with absorb_multi_sink_gates=False the shared AND gets its own LUT,
+    # referenced by both consumers through the preserved net 'g'
+    mapped = GreedyMapper(k_max=3, absorb_multi_sink_gates=False).run(_shared_gate_netlist())
+
+    luts = [n for n in mapped.nodes if isinstance(n, LUT)]
+    assert len(luts) == 3
+    g_net = mapped.get_net("g")
+    assert g_net is not None
+    assert isinstance(g_net.drivers[0], LUT)
+    assert len(g_net.sinks) == 2
+    _check_shared_gate_behaviour(mapped)

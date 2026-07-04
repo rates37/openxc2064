@@ -10,7 +10,7 @@ class TechnologyMapper(ABC):
     """
     def __init__(self, k_max: int = 3):
         self.k_max = k_max
-    
+
     @abstractmethod
     def run(self, netlist: Netlist) -> Netlist:
         pass
@@ -18,7 +18,17 @@ class TechnologyMapper(ABC):
 class GreedyMapper(TechnologyMapper):
     """
     Greedily clusters 1-bit wide netlist into K-input LUTs.
+
+    absorb_multi_sink_gates controls what happens to a gate whose output
+    feeds several cones: True (default) duplicates its logic into every
+    consuming LUT's truth table (fewer LUTs, wider fan-out of the cone
+    inputs); False cuts at the shared net so the gate gets a single LUT of
+    its own that all consumers reference.
     """
+    def __init__(self, k_max: int = 3, absorb_multi_sink_gates: bool = True):
+        super().__init__(k_max)
+        self.absorb_multi_sink_gates = absorb_multi_sink_gates
+
     def run(self, netlist: Netlist) -> Netlist:
         new_nl = Netlist(netlist.module_name)
 
@@ -93,6 +103,10 @@ class GreedyMapper(TechnologyMapper):
                 
                 for net_name, net in list(boundary_nets.items()):
                     if len(net.drivers) == 1 and isinstance(net.drivers[0], LogicGate):
+                        if not self.absorb_multi_sink_gates and len(net.sinks) > 1:
+                            # leave the shared net as a cut input so its gate
+                            # maps to one LUT reused by every consumer
+                            continue
                         cand_node = net.drivers[0]
                         # absorb cand_node:
                         new_bounary = {n.name: n for n in boundary_nets.values() if n.name != net_name}
@@ -125,42 +139,20 @@ class GreedyMapper(TechnologyMapper):
             # pre-evaluate the literal numeric 2^K bit mask Truth table
             truth_table = 0
             k = len(cut_inputs)
-            
+
+            # constants inside the cone hold the same value in every state
+            const_values = {
+                n.name: n.drivers[0].value & 1  # type: ignore
+                for n in boundary_nets.values()
+                if len(n.drivers) == 1 and isinstance(n.drivers[0], Constant)
+            }
+
             for state in range(1<<k):
-                memo = {}
+                memo = dict(const_values)
                 for i,n in enumerate(cut_inputs):
                     memo[n.name] = (state >> i) & 1
-                
-                for n in boundary_nets.values():
-                    if len(n.drivers) == 1 and isinstance(n.drivers[0], Constant):
-                        memo[n.name] = n.drivers[0].value & 1 # type: ignore
-                
-                def eval_net(n: Net) -> int:
-                    if n.name in memo:
-                        return memo[n.name]
-                    driver = n.drivers[0]
-                    in_vals = [eval_net(i) for i in driver.inputs]
-                    op = getattr(driver, "op", "")
-                    if op == "AND":
-                        res = in_vals[0] & in_vals[1]
-                    elif op == "OR":
-                        res = in_vals[0] | in_vals[1]
-                    elif op == "XOR":
-                        res = in_vals[0] ^ in_vals[1]
-                    elif op == "NOT":
-                        res = (~in_vals[0])&1
-                    elif op == "BUF":
-                        res = in_vals[0]
-                    elif op == "MUX":
-                        res = in_vals[1] if in_vals[0] == 0 else in_vals[2]
-                    else:
-                        raise ValueError(f"Technology Mapper encountered unsupported op: {op}")
 
-                    memo[n.name] = res
-                    return res
-                    
-                bit = eval_net(target_net)
-                if bit:
+                if self._eval_cone_net(target_net, memo):
                     truth_table |= (1 << state)
 
             lut_out_net = new_nl.create_net(target_net.name, target_net.width)
@@ -184,3 +176,43 @@ class GreedyMapper(TechnologyMapper):
 
         else:
             raise ValueError(f"Technology Mapper encountered unsupported Node Primitive driver of type: {type(driver)}")
+
+    def _eval_cone_net(self, target: Net, memo: dict[str, int]) -> int:
+        # evaluate one net of a cone for the input assignment held in memo
+        # (cut inputs and cone constants are pre-seeded by the caller).
+        # iterative post-order traversal: a cone can absorb an arbitrarily
+        # long gate chain
+        stack = [target]
+        while stack:
+            n = stack[-1]
+            if n.name in memo:
+                stack.pop()
+                continue
+
+            driver = n.drivers[0]
+            pending = [i for i in driver.inputs if i.name not in memo]
+            if pending:
+                stack.extend(pending)
+                continue
+
+            in_vals = [memo[i.name] for i in driver.inputs]
+            op = getattr(driver, "op", "")
+            if op == "AND":
+                res = in_vals[0] & in_vals[1]
+            elif op == "OR":
+                res = in_vals[0] | in_vals[1]
+            elif op == "XOR":
+                res = in_vals[0] ^ in_vals[1]
+            elif op == "NOT":
+                res = (~in_vals[0])&1
+            elif op == "BUF":
+                res = in_vals[0]
+            elif op == "MUX":
+                res = in_vals[1] if in_vals[0] == 0 else in_vals[2]
+            else:
+                raise ValueError(f"Technology Mapper encountered unsupported op: {op}")
+
+            memo[n.name] = res
+            stack.pop()
+
+        return memo[target.name]
