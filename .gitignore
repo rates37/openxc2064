@@ -216,3 +216,6 @@ temp/
 
 # Ignore visualisations directory
 visualisations/
+
+# esbuild artifact from npm run export-configs
+simulator/scripts/.export_configs.cjs

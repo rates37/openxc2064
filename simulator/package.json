@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "export-configs": "esbuild scripts/export_configs.ts --bundle --platform=node --format=cjs --outfile=scripts/.export_configs.cjs && node scripts/.export_configs.cjs"
   },
   "dependencies": {
     "react": "^19.2.0",
