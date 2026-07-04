@@ -38,7 +38,7 @@ class Optimiser:
         Remove nodes that do not contribute to any output.
         """
         live_node_ids: set[str] = set()
-        queue: list[Node] = deque()
+        queue: deque[Node] = deque()
 
         # inputs are always considered "live" since 
         # they will be driven by external sources
