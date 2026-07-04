@@ -23,7 +23,9 @@ class CLB(Node):
     The fundamental element of the XC2064 logic fabric.
     Encapsulates up to two 3-input LUTs and one D-Flip-Flop.
     """
-    # LUTs
+    # LUTs. Truth-table bit order matches the web simulator (LogicCell.ts):
+    # bit index = (mux1 << 2) | (mux2 << 1) | mux3, where mux1/2/3 are the
+    # sel_*_in1/2/3 input muxes.
     lut_f_init: int = 0
     lut_g_init: int = 0
     
