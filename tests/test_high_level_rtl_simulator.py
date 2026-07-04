@@ -1,7 +1,8 @@
-import pytest
+﻿import pytest
 from openxc2064.synthesis.rtl_nodes import Netlist, Net, LogicGate, DFF, Input, Constant
 from openxc2064.simulator import RTLSimulator
 from itertools import permutations
+from openxc2064.simulator.high_level_rtl_simulator import CombinationalLoopError
 
 
 def test_simple_wire() -> None:
@@ -892,3 +893,66 @@ def test_fanout() -> None:
 
     assert sim.get("out1") == 67
     assert sim.get("out2") == 67
+
+
+
+def test_deep_anti_ordered_chain_settles() -> None:
+    # gates stored in anti-topological order propagate one level per full
+    # sweep in an iterative simulator; with the old 50-iteration cap (100
+    # sweeps per step across the two propagate calls) a 130-gate chain
+    # silently returned stale values. topological evaluation must settle it
+    # in a single pass
+    netlist = Netlist("deep_chain")
+    nets = [netlist.create_net(f"n{i}", 1) for i in range(131)]
+    netlist.add_input("n0", nets[0])
+    for i in range(130, 0, -1):  # deliberately worst-case node order
+        netlist.add_logic("BUF", [nets[i - 1]], [nets[i]])
+    netlist.outputs.append(nets[130])
+
+    sim = RTLSimulator(netlist)
+    sim.set("n0", 1)
+    sim.step()
+    assert sim.get("n130") == 1
+
+    sim.set("n0", 0)
+    sim.step()
+    assert sim.get("n130") == 0
+
+
+def test_combinational_loop_raises() -> None:
+    # a = ~b, b = ~a: previously oscillated for 50 sweeps and silently gave
+    # up; it must now be reported as a structural error at construction
+
+    netlist = Netlist("loop")
+    a = netlist.create_net("a", 1)
+    b = netlist.create_net("b", 1)
+    netlist.add_logic("NOT", [a], [b])
+    netlist.add_logic("NOT", [b], [a])
+    netlist.outputs.append(a)
+
+    with pytest.raises(CombinationalLoopError):
+        RTLSimulator(netlist)
+
+
+def test_sequential_feedback_is_not_a_combinational_loop() -> None:
+    # a DFF in the cycle breaks it: q -> NOT -> d -> DFF -> q must simulate
+    # as a toggle flip-flop, not raise
+    netlist = Netlist("toggle")
+    clk = netlist.create_net("clk", 1)
+    netlist.add_input("clk", clk)
+    q = netlist.create_net("q", 1)
+    d = netlist.create_net("d", 1)
+    netlist.add_logic("NOT", [q], [d])
+    netlist.add_dff([d, clk], [q])
+    netlist.outputs.append(q)
+
+    sim = RTLSimulator(netlist)
+    expected = 0
+    for _ in range(4):
+        assert sim.get("q") == expected
+        sim.set("clk", 0)
+        sim.step()
+        sim.set("clk", 1)
+        sim.step()
+        expected ^= 1
+    assert sim.get("q") == expected
