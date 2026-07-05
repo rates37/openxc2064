@@ -38,18 +38,28 @@ class FabricSimulationError(Exception):
     a net with multiple drivers, or a register-free combinational loop."""
 
 
-def _lut_pins(muxes: dict, which: str) -> set[int]:
-    """Pin indices (0=A..3=D) read by the F or G LUT under its mux config."""
+def _mux_sensitive(table: int, position: int) -> bool:
+    """Does the 8-bit truth table depend on the mux at `position`?
+    position 0 = mux1 (index bit 2), 1 = mux2 (bit 1), 2 = mux3 (bit 0)."""
+    flip = (4, 2, 1)[position]
+    return any(((table >> i) & 1) != ((table >> (i ^ flip)) & 1) for i in range(8))
+
+
+def _lut_pins(muxes: dict, which: str, table: int) -> set[int]:
+    """Pin indices (0=A..3=D) the F or G LUT actually reads: a mux input
+    whose truth-table position is a don't-care (e.g. the defaulted third mux
+    of a 2-input function) is not a dependency."""
     if which == "f":
         m1, m2, m3 = muxes["m18"], muxes["m20"], muxes["m24"]
     else:
         m1, m2, m3 = muxes["m6"], muxes["m8"], muxes["m13"]
-    pins = {1 if m1 else 0, 2 if m2 else 1}
-    if m3 == 0:
-        pins.add(2)
-    elif m3 == 1:
-        pins.add(3)
-    # m3 == 2 reads Q (register state)
+    pins: set[int] = set()
+    if _mux_sensitive(table, 0):
+        pins.add(1 if m1 else 0)
+    if _mux_sensitive(table, 1):
+        pins.add(2 if m2 else 1)
+    if _mux_sensitive(table, 2) and m3 != 2:  # m3 == 2 reads Q (state)
+        pins.add(2 if m3 == 0 else 3)
     return pins
 
 
@@ -220,12 +230,13 @@ class FabricSimulator:
             add_dep(dst, src)
         cell_out_deps: dict[str, list[str]] = {}
         for net, cid, which in active_outputs:
-            muxes = config.logic_cells[cid]["muxes"]
+            muxes, g_int, f_int, _ = self._cell_params(cid)
             sel = muxes["m59"] if which == 0 else muxes["m61"]
             if sel == 1:  # Q: register state, no combinational deps
                 pin_deps: list[str] = []
             else:
-                pins = _lut_pins(muxes, "f" if sel == 2 else "g")
+                table = f_int if sel == 2 else g_int
+                pins = _lut_pins(muxes, "f" if sel == 2 else "g", table)
                 pin_deps = [f"{cid}.net_{'ABCD'[p]}" for p in sorted(pins)]
             cell_out_deps[net] = pin_deps
             deps.setdefault(net, set())
@@ -370,7 +381,7 @@ class FabricSimulator:
 
     #! flip-flops:
     def _make_seq_record(self, cid: str) -> dict:
-        muxes, _, _, pins = self._cell_params(cid)
+        muxes, g_int, _, pins = self._cell_params(cid)
         clock_reads: list[str] = []
         if muxes["m51"] == 2:
             clock_reads.append(f"{cid}.net_K")
@@ -378,7 +389,7 @@ class FabricSimulator:
             clock_reads.append(f"{cid}.net_C")
         else:  # clock from LUT G
             clock_reads.extend(
-                f"{cid}.net_{'ABCD'[p]}" for p in sorted(_lut_pins(muxes, "g"))
+                f"{cid}.net_{'ABCD'[p]}" for p in sorted(_lut_pins(muxes, "g", g_int))
             )
         return {
             "cid": cid,
