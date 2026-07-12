@@ -1,11 +1,13 @@
 import pytest
 
 from openxc2064.device import Fabric
+from openxc2064.device.fabric import RESERVED_PREFIXES
 from openxc2064.mapping.xc2064_primitives import IOB
 from openxc2064.pnr.design_view import DesignView
-from openxc2064.pnr.flow import compile_hdl_to_packed, place_and_route
+from openxc2064.pnr.flow import place_and_route
 from openxc2064.simulator import FabricSimulator, RTLSimulator
 from openxc2064.pnr.verify import verify_equivalence
+from openxc2064.toolchain import compile_hdl_to_packed
 
 
 ADDER_HDL = """module adder(input [3:0] a, input [3:0] b, output [3:0] sum);
@@ -35,8 +37,6 @@ FANOUT_HDL = """module fan(input a, input b, output y1, output y2, output y3);
     assign y3 = a ^ b;
 endmodule
 """
-
-RESERVED_PREFIXES = ("global.net_clk", "global.net_osc", "global_io.")
 
 
 @pytest.fixture(scope="module")
@@ -118,9 +118,9 @@ def test_small_design_on_3x3(fabric3):
 
 def test_unroutable_sink_raises_named_error(fabric8):
     from openxc2064.pnr.design_view import DesignView
-    from openxc2064.pnr.flow import compile_hdl_to_packed
     from openxc2064.pnr.placement import AnnealingPlacer
     from openxc2064.pnr.router import PathFinderRouter, RoutingError
+    from openxc2064.toolchain import compile_hdl_to_packed
 
     packed = compile_hdl_to_packed(
         "module and2(input a, input b, output y);\n assign y = a & b;\nendmodule\n",

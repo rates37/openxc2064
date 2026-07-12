@@ -10,12 +10,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from openxc2064.hdl import parse_hdl
-from openxc2064.synthesis import HDLElaborator, Synthesiser, Optimiser, LoweringPass
 from openxc2064.synthesis.rtl_nodes import DFF, Net
-from openxc2064.mapping.mapper import GreedyMapper
-from openxc2064.mapping.packer import GreedyPacker
 from openxc2064.mapping.xc2064_primitives import CLB, IOB
+from openxc2064.toolchain import compile_hdl_to_packed
 
 from .config import DeviceConfig
 from .fabric import Fabric
@@ -34,17 +31,6 @@ TOGGLE_FF_SETTINGS = dict(
     sel_clk1=2,  # clock from K
     sel_clk2=1,  # non-inverted
 )
-
-
-def _compile(hdl: str, top: str):
-    ast = parse_hdl(hdl)
-    library = HDLElaborator(ast).get_library()
-    netlist = Synthesiser(library).synthesise(top)
-    netlist = Optimiser().optimise(netlist)
-    lowered = LoweringPass().run(netlist)
-    lowered = Optimiser().optimise(lowered)
-    mapped = GreedyMapper(k_max=3).run(lowered)
-    return GreedyPacker(max_clbs=64).run(mapped)
 
 
 def _nearest_bank_route(
@@ -91,12 +77,8 @@ def route_single_clb_design(
     )
 
     # the dedicated clock/oscillator distribution nets are reachable from
-    # IOB inputs but must not carry general data signals
-    reserved_nets: set[str] = {
-        net
-        for net in fabric.bus_nets
-        if net.startswith(("global.net_clk", "global.net_osc", "global_io."))
-    }
+    # IOB inputs but must not carry general data signals (fabric policy)
+    reserved_nets = fabric.reserved_nets()
     used_nets: set[str] = set()
     report: dict = {
         "cell": cell,
@@ -152,7 +134,7 @@ def build_and_gate(cell: str = "DD") -> tuple[DeviceConfig, dict]:
     Returns the DeviceConfig plus a report naming the chosen pads.
     """
     fabric = Fabric.load("xc2064_8x8")
-    packed = _compile(AND_GATE_HDL, "and2")
+    packed = compile_hdl_to_packed(AND_GATE_HDL, "and2")
 
     clb = next(n for n in packed.nodes if isinstance(n, CLB))
     input_names = {

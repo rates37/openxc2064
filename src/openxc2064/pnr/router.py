@@ -22,13 +22,10 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from openxc2064.device.config import DeviceConfig
-from openxc2064.device.fabric import Fabric
+from openxc2064.device.fabric import CLOCK_ALLOWED, Fabric
 
 from .design_view import DesignView, RoutedNet
 from .placement import Placement
-
-RESERVED_PREFIXES = ("global.net_clk", "global.net_osc", "global_io.") 
-CLOCK_ALLOWED = frozenset({"global.net_clk"}) 
 
 Hop = tuple[str, str, tuple]  # (from_net, to_net, edge_ref)
 
@@ -79,9 +76,7 @@ class PathFinderRouter:
     def run(
         self, design: DesignView, placement: Placement, fabric: Fabric
     ) -> tuple[DeviceConfig, RoutingReport]:
-        reserved = {
-            net for net in fabric.bus_nets if net.startswith(RESERVED_PREFIXES)
-        } | self.extra_reserved
+        reserved = fabric.reserved_nets() | self.extra_reserved
 
         # resolve terminals to fabric nets; route clocks first, then data by
         # descending fanout (deterministic tie-break on name)

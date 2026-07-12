@@ -4,7 +4,7 @@ import pytest
 
 from openxc2064.device import Fabric
 from openxc2064.pnr.design_view import DesignView
-from openxc2064.pnr.flow import compile_hdl_to_packed
+from openxc2064.toolchain import compile_hdl_to_packed
 from openxc2064.pnr.placement import (
     AnnealingPlacer,
     direct_connect_table,

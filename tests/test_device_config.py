@@ -4,27 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from openxc2064.hdl import parse_hdl
-from openxc2064.synthesis import HDLElaborator, Synthesiser, Optimiser, LoweringPass
-from openxc2064.mapping.mapper import GreedyMapper
-from openxc2064.mapping.packer import GreedyPacker
 from openxc2064.mapping.xc2064_primitives import CLB
 from openxc2064.simulator import RTLSimulator
 from openxc2064.device import Fabric
+from openxc2064.toolchain import compile_hdl_to_packed as compile_to_packed
 
 REPO_ROOT = Path(__file__).parent.parent
 COUNTER_EXPORT = REPO_ROOT / "simulator" / "test_designs" / "8 bit counter.json"
-
-
-def compile_to_packed(hdl: str, top: str):
-    ast = parse_hdl(hdl)
-    library = HDLElaborator(ast).get_library()
-    netlist = Synthesiser(library).synthesise(top)
-    netlist = Optimiser().optimise(netlist)
-    lowered = LoweringPass().run(netlist)
-    lowered = Optimiser().optimise(lowered)
-    mapped = GreedyMapper(k_max=3).run(lowered)
-    return GreedyPacker(max_clbs=64).run(mapped)
 
 
 def web_logic_cell_eval(muxes: dict, luts: list, a: int, b: int, c: int, d: int, q: int = 0):

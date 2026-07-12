@@ -2,7 +2,7 @@ import pytest
 
 from openxc2064.mapping.xc2064_primitives import CLB, IOB
 from openxc2064.pnr.design_view import DesignError, DesignView
-from openxc2064.pnr.flow import compile_hdl_to_packed
+from openxc2064.toolchain import compile_hdl_to_packed
 from openxc2064.synthesis.rtl_nodes import Netlist
 
 ADDER_HDL = """module adder(input [3:0] a, input [3:0] b, output [3:0] sum);

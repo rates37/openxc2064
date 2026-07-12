@@ -31,6 +31,13 @@ _DATA_DIR = (
     Path(__file__).parent / "data"
 )  # assumes the jsons have already been generated
 
+# Fabric policy: the dedicated clock/oscillator/IO-clock distribution nets are
+# reachable from IOB inputs but must never carry general data signals. A clock
+# net may ride the clock trunk (CLOCK_ALLOWED); everything else is off-limits
+# to every net.
+RESERVED_PREFIXES = ("global.net_clk", "global.net_osc", "global_io.")
+CLOCK_ALLOWED = frozenset({"global.net_clk"})
+
 # Legal pin-to-pin connections inside every switch matrix
 # (mirrors SwitchMatrix.possibleConnections in simulator/src/models/SwitchMatrix.ts).
 # Pin layout: 0,1 top; 2,3 right; 4,5 bottom; 6,7 left.
@@ -430,6 +437,11 @@ class Fabric:
                 self._add_edge(b, a, ref)
 
     #! queries:
+    def reserved_nets(self) -> set[str]:
+        """The bus nets that data signals may never enter (clock/oscillator/
+        IO-clock distribution). Policy defined by RESERVED_PREFIXES."""
+        return {net for net in self.bus_nets if net.startswith(RESERVED_PREFIXES)}
+
     def neighbors(self, net_id: str) -> list[tuple[str, tuple]]:
         return self._adj.get(net_id, [])
 
