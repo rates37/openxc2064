@@ -87,6 +87,24 @@ def test_undriven_net_rejected():
         DesignView(nl)
 
 
+def test_tristate_iob_rejected():
+    # ts_mux_sel=1 makes IOB.is_input and IOB.is_output both true, so the pad
+    # would contribute an 'I' driver *and* an 'O' sink. DesignView is the loud
+    # validation layer and must reject tri-state pads until they're supported.
+    nl = Netlist("tristate")
+    iob = IOB(nl.next_node_id("iob_"), inputs=[], outputs=[], ts_mux_sel=1)
+    pad = nl.create_net("pad_p", 1)
+    inner = nl.create_net("p", 1)
+    drive = nl.create_net("drv", 1)
+    iob.inputs = [pad, drive, None, None]
+    iob.outputs = [None, inner]
+    iob.pad_name = "p"
+    nl.nodes.append(iob)
+
+    with pytest.raises(DesignError, match="tri-state"):
+        DesignView(nl)
+
+
 def test_multiple_clock_domains_rejected():
     nl = Netlist("twoclk")
     clk1 = _input_iob(nl, "clk1").outputs[1]

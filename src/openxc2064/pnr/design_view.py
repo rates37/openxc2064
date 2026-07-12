@@ -66,6 +66,17 @@ class DesignView:
                     sinks.setdefault(node.inputs[4].name, []).append((node.id, "K"))
             elif isinstance(node, IOB):
                 self.iobs[node.id] = node
+                # ts_mux_sel=1 (tri-state pad) makes is_input and is_output both
+                # true, so the pad would act as an 'I' driver *and* an 'O' sink.
+                # The fabric can't honour that here (the simulator only warns on
+                # mts=1), so reject it loudly until bidirectional pads land.
+                if node.ts_mux_sel == 1:
+                    raise DesignError(
+                        f"IOB '{node.id}' (pad '{node.pad_name}') is configured "
+                        "tri-state (ts_mux_sel=1): it would be both an input driver "
+                        "and an output sink. Bidirectional/tri-state pads are not "
+                        "supported yet."
+                    )
                 if node.is_input and len(node.outputs) > 1 and node.outputs[1] is not None:
                     drivers.setdefault(node.outputs[1].name, []).append((node.id, "I"))
                 if node.is_output and len(node.inputs) > 1 and node.inputs[1] is not None:
