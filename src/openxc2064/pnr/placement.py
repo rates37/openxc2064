@@ -25,6 +25,12 @@ class PlacementError(Exception):
     pass
 
 
+# Single source of truth for the direct-connect reward. Both the annealer and
+# placement_cost default to this so a placement is never scored against a
+# different objective than the one it was optimised for.
+DEFAULT_W_DIRECT = 2.0
+
+
 def hpwl(points: list[tuple[int, int]]) -> int:
     """Half-perimeter of the bounding box of grid points."""
     rows = [r for r, _ in points]
@@ -86,7 +92,10 @@ def _net_cost(
 
 
 def placement_cost(
-    design: DesignView, fabric: Fabric, placement: "Placement", w_direct: float = 2.0
+    design: DesignView,
+    fabric: Fabric,
+    placement: "Placement",
+    w_direct: float = DEFAULT_W_DIRECT,
 ) -> float:
     """Full (non-incremental) cost — the correctness reference."""
     coords = _site_coords(fabric)
@@ -144,13 +153,21 @@ class Placement:
 class AnnealingPlacer:
     def __init__(
         self,
-        w_direct: float = 2.0,
+        w_direct: float = DEFAULT_W_DIRECT,
         cooling: float = 0.95,
         moves_per_temperature: int | None = None,
     ):
         self.w_direct = w_direct
         self.cooling = cooling
         self.moves_per_temperature = moves_per_temperature
+
+    def cost(
+        self, design: DesignView, fabric: Fabric, placement: "Placement"
+    ) -> float:
+        """Full placement cost under this placer's own w_direct — the objective
+        it optimises. Use this instead of placement_cost's default when
+        comparing placements produced by a tuned placer."""
+        return placement_cost(design, fabric, placement, self.w_direct)
 
     def run(self, design: DesignView, fabric: Fabric, seed: int = 0) -> Placement:
         rng = random.Random(seed)

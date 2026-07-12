@@ -66,10 +66,27 @@ def test_placement_determinism_and_legality(adder_design, fabric8):
             assert fabric8.io_banks[bank_id].has_pad
 
 
+def test_cost_helper_uses_the_placers_own_weight(adder_design, fabric8):
+    # w_direct is a single source of truth: the placer's cost() helper must
+    # evaluate a placement under the same weight the placer optimised with, so
+    # tuning the weight can't silently diverge from placement_cost's default.
+    placer = AnnealingPlacer(w_direct=5.0)
+    placement = placer.run(adder_design, fabric8, seed=0)
+
+    assert placer.cost(adder_design, fabric8, placement) == pytest.approx(
+        placement_cost(adder_design, fabric8, placement, w_direct=5.0)
+    )
+    # the weight genuinely matters here (the adder has direct-connect hits), so
+    # the helper differs from the free function's default weight
+    assert placer.cost(adder_design, fabric8, placement) != pytest.approx(
+        placement_cost(adder_design, fabric8, placement)
+    )
+
+
 def test_placement_beats_random(adder_design, fabric8):
     placer = AnnealingPlacer()
     placement = placer.run(adder_design, fabric8, seed=0)
-    annealed = placement_cost(adder_design, fabric8, placement)
+    annealed = placer.cost(adder_design, fabric8, placement)
 
     rng = random.Random(1234)
     cells = sorted(fabric8.clbs)
