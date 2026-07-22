@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 
 from openxc2064.device.fabric import Fabric
 
+from .constraints import PinConstraints, coerce_pins
 from .design_view import DesignView, RoutedNet
 
 
@@ -169,7 +170,16 @@ class AnnealingPlacer:
         comparing placements produced by a tuned placer."""
         return placement_cost(design, fabric, placement, self.w_direct)
 
-    def run(self, design: DesignView, fabric: Fabric, seed: int = 0) -> Placement:
+    def run(
+        self,
+        design: DesignView,
+        fabric: Fabric,
+        seed: int = 0,
+        pins: "PinConstraints | dict[str, str] | None" = None,
+    ) -> Placement:
+        """Place every CLB and IOB. `pins` optionally nails chosen pads to
+        chosen banks; those IOBs are pre-placed and never moved, while
+        everything else anneals as usual."""
         rng = random.Random(seed)
 
         cells = sorted(fabric.clbs)
@@ -184,13 +194,30 @@ class AnnealingPlacer:
         if len(iob_nodes) > len(banks):
             raise PlacementError(f"{len(iob_nodes)} IOBs > {len(banks)} pad banks")
 
+        # pinned IOBs are placed up front and withheld from the move set, so
+        # neither they nor their banks can be disturbed by annealing
+        pinned = coerce_pins(pins).resolve(design, fabric)
+        free_iob_nodes = [node for node in iob_nodes if node not in pinned]
+        taken_banks = set(pinned.values())
+        free_banks = [bank for bank in banks if bank not in taken_banks]
+        if len(free_iob_nodes) > len(free_banks):
+            raise PlacementError(
+                f"{len(free_iob_nodes)} unpinned IOBs > {len(free_banks)} free "
+                f"pad banks ({len(pinned)} banks are pinned)"
+            )
+
         # state: node -> site and site -> node (cell/bank namespaces are disjoint)
         node_site: dict[str, str] = {}
         occupant: dict[str, str] = {}
         for node, site in zip(clb_nodes, rng.sample(cells, len(clb_nodes))):
             node_site[node] = site
             occupant[site] = node
-        for node, site in zip(iob_nodes, rng.sample(banks, len(iob_nodes))):
+        for node in sorted(pinned):
+            node_site[node] = pinned[node]
+            occupant[pinned[node]] = node
+        for node, site in zip(
+            free_iob_nodes, rng.sample(free_banks, len(free_iob_nodes))
+        ):
             node_site[node] = site
             occupant[site] = node
 
@@ -213,13 +240,13 @@ class AnnealingPlacer:
         total = sum(net_costs)
 
         def propose():
-            use_clb = clb_nodes and (not iob_nodes or rng.random() < 0.7)
+            use_clb = clb_nodes and (not free_iob_nodes or rng.random() < 0.7)
             if use_clb:
                 node = rng.choice(clb_nodes)
                 target = rng.choice(cells)
             else:
-                node = rng.choice(iob_nodes)
-                target = rng.choice(banks)
+                node = rng.choice(free_iob_nodes)
+                target = rng.choice(free_banks)
             if node_site[node] == target:
                 return None
             return node, target
@@ -260,7 +287,7 @@ class AnnealingPlacer:
             delta = sum(new_costs[i] - net_costs[i] for i in indices)
             return delta, new_costs
 
-        movable = len(clb_nodes) + len(iob_nodes)
+        movable = len(clb_nodes) + len(free_iob_nodes)
         if movable == 0 or not data_nets:
             return Placement(
                 clb_sites={n: node_site[n] for n in clb_nodes},

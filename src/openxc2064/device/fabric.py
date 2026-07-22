@@ -442,6 +442,41 @@ class Fabric:
         IO-clock distribution). Policy defined by RESERVED_PREFIXES."""
         return {net for net in self.bus_nets if net.startswith(RESERVED_PREFIXES)}
 
+    def pad_banks(self, edge: str | None = None) -> list[str]:
+        """IO bank IDs in pad order, optionally restricted to one
+        edge of the die: 'N', 'S', 'W' or 'E'. Corner cells belong to N/S.
+
+        Pad order runs left-to-right along N and S, and top-to-bottom down W
+        and E, so a slice of this list is a contiguous physical row of pads."""
+        ordered = sorted(
+            (bank for bank in self.io_banks.values() if bank.has_pad),
+            key=lambda bank: bank.pad_index,
+        )
+        if edge is None:
+            return [bank.id for bank in ordered]
+
+        edge = edge.upper()
+        if edge not in ("N", "S", "W", "E"):
+            raise ValueError(f"unknown edge '{edge}'; expected N, S, W or E")
+
+        last = self.grid_size - 1
+        result: list[str] = []
+        for bank in ordered:
+            cell = self.clbs[bank.owner_cell]
+            if cell.row == 0:
+                where = "N"
+            elif cell.row == last:
+                where = "S"
+            elif cell.col == 0:
+                where = "W"
+            elif cell.col == last:
+                where = "E"
+            else:
+                continue  # interior cells own no pads on this device
+            if where == edge:
+                result.append(bank.id)
+        return result
+
     def neighbors(self, net_id: str) -> list[tuple[str, tuple]]:
         return self._adj.get(net_id, [])
 

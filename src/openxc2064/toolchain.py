@@ -11,6 +11,7 @@ from openxc2064.device.fabric import Fabric
 from openxc2064.hdl import parse_hdl
 from openxc2064.mapping.mapper import GreedyMapper
 from openxc2064.mapping.packer import GreedyPacker
+from openxc2064.pnr.constraints import PinConstraints
 from openxc2064.pnr.flow import place_and_route
 from openxc2064.pnr.placement import Placement
 from openxc2064.pnr.router import RoutingReport
@@ -39,10 +40,12 @@ def build(
     *,
     fabric: Fabric | None = None,
     seed: int = 0,
+    pins: PinConstraints | dict[str, str] | None = None,
 ) -> tuple[DeviceConfig, Placement, RoutingReport]:
     """One-call compile: HDL source -> placed & routed DeviceConfig.
 
     Chains the frontend (`compile_hdl_to_packed`) and the backend
-    (`place_and_route`)."""
+    (`place_and_route`). `pins` optionally pins top-level pads to chosen IO
+    banks; anything left unconstrained is placed freely."""
     packed = compile_hdl_to_packed(hdl, top)
-    return place_and_route(packed, fabric, seed=seed)
+    return place_and_route(packed, fabric, seed=seed, pins=pins)
