@@ -31,6 +31,7 @@ export const createExportStateFunction = (
 				source: pip.source,
 				destination: pip.destination,
 				enabled: pip.enabled,
+				pos: pip.pos,
 			})),
 			ioBanks: ioBanks.map((bank) => ({
 				id: bank.id,

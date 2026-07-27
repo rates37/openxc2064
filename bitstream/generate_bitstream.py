@@ -115,6 +115,55 @@ def parse_switches(data) -> dict[str, int]:
                     bitstream[magic_str] = 1 if connected else 0
     return bitstream
 
+def parse_pips(data) -> dict[str, int]:
+    pips_sim = data["pips"]
+    skip_pips = ["net_A", "net_B", "net_C", "net_D", "net_K", "net_X", "net_Y", "net_O", "net_I", "net_T", "net_clk", "net_bottom", "net_top", "net_left", "net_right", "net_io_clk"]
+    bitstream = {}
+    
+    ## Load in the CSV from XC2064-spreadsheet
+    bitstream_csv = open("XC2064-spreadsheet.csv", "r").readlines()
+    
+    pips = []
+    for line in bitstream_csv:
+        for part in line.split(","):
+            if part.startswith("PIP"):
+                pips.append(part)
+    
+    
+    pip_objs = []
+    for pip in pips:
+        # print(pip)
+        _temp = {}
+        parts = pip.split("  ")
+        parts = parts[1].split("G")
+        _temp["id"] = pip
+        _temp["x"] = int(parts[0])
+        _temp["y"] = int(parts[1])
+        pip_objs.append(_temp)
+        
+    ## Sort magics by x, then y
+    pip_objs.sort(key=lambda m: (m["x"], m["y"]))
+    
+    plt.scatter([pip["x"] for pip in pip_objs], [pip["y"] for pip in pip_objs])
+    
+    pips_sim_filtered = []
+    for pip in pips_sim:
+        found = False
+        for skip in skip_pips:
+            if pip["source"].split(".")[1] == skip or pip["destination"].split(".")[1] == skip:
+                print(pip["source"], pip["destination"])
+                found = True
+                break
+            
+        if not found:
+            pips_sim_filtered.append(pip)
+                
+    # plt.scatter([pip["pos"]["x"] for pip in pips_sim_filtered], [pip["pos"]["y"] for pip in pips_sim_filtered], color="red")
+    plt.show()
+    
+    return
+    
+    
 def generate_bitstream(data) -> dict[str, int] :
     logic_cells = data["logicCells"]
     bitstream = {}
@@ -129,6 +178,9 @@ def generate_bitstream(data) -> dict[str, int] :
     
     switch_bitstream = parse_switches(data)
     bitstream.update(switch_bitstream)
+    
+    pip_bitstream = parse_pips(data)
+    bitstream.update(pip_bitstream)
 
     return bitstream
     
