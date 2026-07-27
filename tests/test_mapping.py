@@ -362,7 +362,9 @@ def test_packer_standalone_dff():
     
     clbs = [n for n in packed_nl.nodes if isinstance(n, CLB)]
     assert len(clbs) == 1
-    assert clbs[0].lut_f_init == 0xAA
+    # buffer of the single input, which routes onto the first LUT mux; in the
+    # web simulator's bit order that mux is bit 2 of the truth-table index
+    assert clbs[0].lut_f_init == 0xF0
     
     sim = RTLSimulator(packed_nl)
     sim.set("clk", 0)

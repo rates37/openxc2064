@@ -369,20 +369,41 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		while (!settled && steps < MAX_ITERATIONS) {
 			const before = snapshotNets();
 
+			//! settle the combinational logic
+			// Nothing latches here 
+			// every register still holds its pre-edge value
+
 			// Simulate IOBanks after PIPs propagate, so they account for any incoming values
 			ioBanks.forEach((bank) => {
 				bank.simulate();
 			});
-			
+
 			inputNets.forEach((net_id) => {
 				propagateDriver(net_id);
 			});
-			
+
 			// Simulate IOBanks after PIPs propagate, so they account for any incoming values
 			ioBanks.forEach((bank) => {
 				bank.simulate();
 			});
-			
+
+			//! clock every register at once, off that settled state
+			// so none of them can see another register's post-edge value
+			const clocked = logicCells.filter((cell) => cell?.commitClockEdge());
+			ioBanks.forEach((bank) => {
+				bank.commitClockEdge();
+			});
+
+			//! propagate whatever the registers just latched
+			clocked.forEach((cell) => {
+				propagateDriver(`${cell.id}.net_X`);
+				propagateDriver(`${cell.id}.net_Y`);
+			});
+
+			ioBanks.forEach((bank) => {
+				bank.simulate();
+			});
+
 			steps++;
 
 			const after = snapshotNets();

@@ -16,6 +16,9 @@ export class IOBank {
 
 	pad: IOPad | null = null;
 
+	// Clock value as of the last commitClockEdge(), used for edge detection
+	private lastClk: boolean = false;
+
 	constructor(id: string, pos: { x: number; y: number }, size: { width: number; height: number }) {
 		this.id = id;
 		this.pos = pos;
@@ -25,6 +28,7 @@ export class IOBank {
 
 	public reset(): void {
 		this.nets.forEach((net) => (net.value = false));
+		this.lastClk = false;
 	}
 
 	private getNet(id: string): boolean {
@@ -42,14 +46,12 @@ export class IOBank {
 		return this.muxes.find((m) => m.id === id)?.select ?? 0;
 	}
 
+	// Settle this bank's combinational logic
 	public simulate(): void {
 		let prev_nets: { [key: string]: boolean } = {};
 		do {
 			// Save the previous state to allow for propagation
 			prev_nets = { ...this.nets.reduce((acc, net) => ({ ...acc, [net.id]: net.value }), {}) };
-
-			// Save previous clock state for edge detection
-			const prevClk = this.getNet('net_io_clk');
 
             // Tristate mux selects which output source drives the pad
             // Case 0: always enabled, Case 1: enabled if net_T is high, Case 2: always disabled
@@ -61,16 +63,19 @@ export class IOBank {
                 this.setNet("net_pad", this.getNet("net_O"));
             }
 
-            // Rising edge detection for input register
-            if (prevClk === false && this.getNet("net_io_clk") === true) {
-                // Rising edge detected, sample input
-                this.setNet("net_in_q", this.getNet("net_pad"));
-            }
-
             // Input mux selects between pad and registered input
             this.setNet("net_I", this.getMux("min") === 0 ? this.getNet("net_pad") : this.getNet("net_in_q"));
 
 		} while (JSON.stringify(this.nets.reduce((acc, net) => ({ ...acc, [net.id]: net.value }), {})) !== JSON.stringify(prev_nets));
+	}
+
+	// sample the input register if the IO clock rose during this simulation step
+	public commitClockEdge(): void {
+		const clk = this.getNet('net_io_clk');
+		if (clk && !this.lastClk) {
+			this.setNet('net_in_q', this.getNet('net_pad'));
+		}
+		this.lastClk = clk;
 	}
 }
 

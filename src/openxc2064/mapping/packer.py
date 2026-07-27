@@ -67,12 +67,13 @@ def route_lut(
                         break
 
                 if valid:
-                    # Compute truth table
+                    # Compute truth table. Physical bit order matches the web
+                    # simulator (LogicCell.ts): index = (mux1 << 2) | (mux2 << 1) | mux3
                     new_tt = 0
                     for state in range(8):
-                        val0 = (state >> 0) & 1
-                        val1 = (state >> 1) & 1
-                        val2 = (state >> 2) & 1
+                        val0 = (state >> 2) & 1  # mux1 (A/B) value
+                        val1 = (state >> 1) & 1  # mux2 (B/C) value
+                        val2 = (state >> 0) & 1  # mux3 (C/D/Q) value
 
                         phys = {in0: val0, in1: val1, in2: val2}
 

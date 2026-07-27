@@ -26,6 +26,13 @@ export class LogicCell {
         {id: "lut_1", truthTable: [false, false, false, false, false, false, false, false]},
     ];
 
+    // Clock value as of the last commitClockEdge()
+    // used for edge detection
+    // Held across simulation steps
+    //     so an edge is a property of the step and not dependent on
+    //     how many times the combinational logic needed to settle
+    private lastClk: boolean = false;
+
     constructor(id: string, config?: {nets?: Net[], muxes?: Mux[], luts?: LUT[], pos?: {x: number, y: number}}) {
         this.id = id;
         if (!config) return;
@@ -48,6 +55,7 @@ export class LogicCell {
         this.nets.forEach(net => net.value = false);
         this.muxes.forEach(mux => mux.select = 0);
         this.luts.forEach(lut => lut.truthTable.fill(false));
+        this.lastClk = false;
     }
 
     /**
@@ -76,15 +84,14 @@ export class LogicCell {
         return this.muxes.find(m => m.id === id)?.select ?? 0;
     }
 
+    // Settle this cell's combinational logic
+    // The clocked flip-flop update is
     public simulate(): void {
         let prev_nets: { [key: string]: boolean } = {};
         do {
             // Save the previous state to allow for propagation
             prev_nets = { ...this.nets.reduce((acc, net) => ({ ...acc, [net.id]: net.value }), {}) };
-            
-            // Save previous clock state for edge detection
-            const prevClk = this.getNet("net_clk_2_out");
-            
+
             // --- LUT1 Input Muxes ---
             // M6 (2-input): 0=A, 1=B
             this.setNet("net_m6_out", this.getMux("m6") === 0 ? this.getNet("net_A") : this.getNet("net_B"));
@@ -141,18 +148,14 @@ export class LogicCell {
             const m46sel = this.getMux("m46");
             this.setNet("net_R", m46sel === 0 ? this.getNet("net_G") : m46sel === 1 ? this.getNet("net_D") : false);
             
-            // --- D Flip-Flop ---
-            const clk = this.getNet("net_clk_2_out");
-            const risingEdge = clk && !prevClk;
-            
+            // --- D Flip-Flop: (async set/reset only) ---
+            // These are level sensitive, so they settle with everything else
             if (this.getNet("net_R")) {
                 this.setNet("net_Q", false);
             } else if (this.getNet("net_S")) {
                 this.setNet("net_Q", true);
-            } else if (risingEdge) {
-                this.setNet("net_Q", this.getNet("net_F"));
             }
-            
+
             // --- Output Muxes ---
             // M59 (3-input): 0=G, 1=Q, 2=F -> net_X
             const m59sel = this.getMux("m59");
@@ -164,6 +167,27 @@ export class LogicCell {
         
         } while (JSON.stringify(this.nets.reduce((acc, net) => ({ ...acc, [net.id]: net.value }), {})) !== JSON.stringify(prev_nets));
 
+    }
+
+    //! Latches the flip-flop if the clock rose during this simulation step
+    // 
+    // Returns true if the stored value changed, so the caller knows to
+    // propagate this cell's outputs
+    public commitClockEdge(): boolean {
+        const clk = this.getNet("net_clk_2_out");
+        const risingEdge = clk && !this.lastClk;
+        this.lastClk = clk;
+
+        // Set/reset are level sensitive and already applied in simulate(),
+        // so they also take priority over the clock
+        if (!risingEdge || this.getNet("net_R") || this.getNet("net_S")) return false;
+
+        const previousQ = this.getNet("net_Q");
+        this.setNet("net_Q", this.getNet("net_F"));
+        if (this.getNet("net_Q") === previousQ) return false;
+
+        this.simulate(); // refresh the output muxes from the new Q
+        return true;
     }
 
 

@@ -390,18 +390,19 @@ class RTLSimulator:
             # Q is the current state of the DFF
             Q = self.dff_state.get(n.dff.id, 0) if n.dff else 0
 
-            # Evaluate LUT F
+            # Evaluate LUT F (truth-table bit order matches the web simulator:
+            # index = (mux1 << 2) | (mux2 << 1) | mux3, see LogicCell.ts)
             f_in0 = B if n.sel_f_in1 else A
             f_in1 = C if n.sel_f_in2 else B
             f_in2 = D if n.sel_f_in3 == 1 else (Q if n.sel_f_in3 == 2 else C)
-            f_state = (f_in2 << 2) | (f_in1 << 1) | f_in0
+            f_state = (f_in0 << 2) | (f_in1 << 1) | f_in2
             F = (n.lut_f_init >> f_state) & 1
 
             # Evaluate LUT G
             g_in0 = B if n.sel_g_in1 else A
             g_in1 = C if n.sel_g_in2 else B
             g_in2 = D if n.sel_g_in3 == 1 else (Q if n.sel_g_in3 == 2 else C)
-            g_state = (g_in2 << 2) | (g_in1 << 1) | g_in0
+            g_state = (g_in0 << 2) | (g_in1 << 1) | g_in2
             G = (n.lut_g_init >> g_state) & 1
 
             # Drive outputs X and Y based on MUXes
@@ -525,7 +526,7 @@ class RTLSimulator:
                     g_in0 = B if n.sel_g_in1 else A
                     g_in1 = C if n.sel_g_in2 else B
                     g_in2 = D if n.sel_g_in3 == 1 else (dff_q if n.sel_g_in3 == 2 else C)
-                    G = (n.lut_g_init >> ((g_in2<<2)|(g_in1<<1)|g_in0)) & 1
+                    G = (n.lut_g_init >> ((g_in0<<2)|(g_in1<<1)|g_in2)) & 1
                     
                     clk1 = K if n.sel_clk1 == 2 else (C if n.sel_clk1 == 1 else G)
                     clk2 = 0 if n.sel_clk2 == 2 else (clk1 if n.sel_clk2 == 1 else (1 - clk1))
@@ -551,7 +552,7 @@ class RTLSimulator:
                     f_in0 = B if n.sel_f_in1 else A
                     f_in1 = C if n.sel_f_in2 else B
                     f_in2 = D if n.sel_f_in3 == 1 else (q_state if n.sel_f_in3 == 2 else C)
-                    F = (n.lut_f_init >> ((f_in2<<2)|(f_in1<<1)|f_in0)) & 1
+                    F = (n.lut_f_init >> ((f_in0<<2)|(f_in1<<1)|f_in2)) & 1
                     
                     self.dff_state[n.dff.id] = F
 
