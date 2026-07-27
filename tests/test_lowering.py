@@ -790,3 +790,61 @@ def test_nested_full_adder_lowered() -> None:
             sim.step()
             
             assert _get_lowered_bus(sim, "z", 3) == x + y
+
+
+def test_lowering_shares_tie_constants_add():
+    # a width-mismatched ADD needs several tie-0 bits (operand padding + the
+    # carry-in); they must all share one constant node, not mint one per use
+    netlist = Netlist("tie_test")
+    a = netlist.create_net("a", 2)
+    b = netlist.create_net("b", 4)
+    y = netlist.create_net("y", 4)
+    netlist.inputs = [a, b]
+    netlist.outputs = [y]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("ADD", [a, b], [y])
+
+    lowered = LoweringPass().run(netlist)
+
+    consts = [n for n in lowered.nodes if isinstance(n, Constant)]
+    assert len(consts) == 1, f"expected one shared tie constant, got {len(consts)}"
+    assert consts[0].value == 0
+
+    # behaviour is unchanged
+    sim = RTLSimulator(lowered)
+    for a_val in range(4):
+        for b_val in range(16):
+            _set_lowered_bus(sim, "a", 2, a_val)
+            _set_lowered_bus(sim, "b", 4, b_val)
+            sim.step()
+            assert _get_lowered_bus(sim, "y", 4) == ((a_val + b_val) & 0xF)
+
+
+def test_lowering_shares_tie_constants_sub():
+    # SUB pads the narrow operand with tie-0s and seeds the carry with tie-1:
+    # exactly one shared constant node of each value
+    netlist = Netlist("tie_test_sub")
+    a = netlist.create_net("a", 4)
+    b = netlist.create_net("b", 2)
+    y = netlist.create_net("y", 4)
+    netlist.inputs = [a, b]
+    netlist.outputs = [y]
+    netlist.add_input("a", a)
+    netlist.add_input("b", b)
+    netlist.add_logic("SUB", [a, b], [y])
+
+    lowered = LoweringPass().run(netlist)
+
+    consts = [n for n in lowered.nodes if isinstance(n, Constant)]
+    assert len(consts) == 2, f"expected one tie-0 and one tie-1, got {len(consts)}"
+    assert sorted(c.value for c in consts) == [0, 1]
+
+    # behaviour is unchanged
+    sim = RTLSimulator(lowered)
+    for a_val in range(16):
+        for b_val in range(4):
+            _set_lowered_bus(sim, "a", 4, a_val)
+            _set_lowered_bus(sim, "b", 2, b_val)
+            sim.step()
+            assert _get_lowered_bus(sim, "y", 4) == ((a_val - b_val) & 0xF)

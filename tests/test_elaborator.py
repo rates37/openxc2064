@@ -722,5 +722,65 @@ def test_partial_assignment_bit_collision():
     assert "bus" in str(e.value)
 
 
+def test_full_assignment_then_upper_bit_collision():
+    # A full-width assignment drives every bit of 'bus', so a second driver on
+    # bit 1 (any bit other than bit 0) must be rejected.
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            WireDecl("bus", Range(1, 0)),
+            WireDecl("src", Range(1, 0)),
+            # Drives all of bus[1:0]
+            AssignStmt(lhs=Identifier("bus"), rhs=Identifier("src")),
+            # Collision on bit 1
+            AssignStmt(lhs=Indexed(Identifier("bus"), Index("1")), rhs=Number("1")),
+        ],
+    )
+    elaborator = HDLElaborator([mod])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert "bus[1]" in str(e.value)
+
+
+def test_full_assignment_then_upper_slice_collision():
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            WireDecl("bus", Range(3, 0)),
+            WireDecl("src", Range(3, 0)),
+            WireDecl("src2", Range(1, 0)),
+            # Drives all of bus[3:0]
+            AssignStmt(lhs=Identifier("bus"), rhs=Identifier("src")),
+            # Collision on bits 3:2
+            AssignStmt(lhs=Indexed(Identifier("bus"), index=None, range=Range(3, 2)), rhs=Identifier("src2")),
+        ],
+    )
+    elaborator = HDLElaborator([mod])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert "bus" in str(e.value)
+
+
+def test_non_constant_index_conservatively_drives_all_bits():
+    # A non-numeric index can't be resolved statically, so it falls back to
+    # treating every bit as driven; a later driver on bit 1 must then collide.
+    mod = Module(
+        name="mod",
+        ports=[],
+        contents=[
+            WireDecl("bus", Range(1, 0)),
+            WireDecl("i"),
+            AssignStmt(lhs=Indexed(Identifier("bus"), Index("i")), rhs=Number("0")),
+            AssignStmt(lhs=Indexed(Identifier("bus"), Index("1")), rhs=Number("1")),
+        ],
+    )
+    elaborator = HDLElaborator([mod])
+    with pytest.raises(HDLValidationError) as e:
+        elaborator.validate()
+    assert "bus[1]" in str(e.value)
+
+
 if __name__ == "__main__":
     test_single_driver_multiple_assign_single_block()

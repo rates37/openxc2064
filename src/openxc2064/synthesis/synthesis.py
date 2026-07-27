@@ -67,6 +67,12 @@ class Synthesiser:
         # create nets for everything in the symbol table:
         for name, symbol in symbol_table.items():
             name_flat = f"{prefix}{name}"
+            if parent_netlist.get_net(name_flat) is not None:
+                raise SynthesisException(
+                    f"Flattened net name collision: signal '{name}' of instance "
+                    f"'{instance_name or module_name}' flattens to '{name_flat}', which "
+                    f"already exists in the design. Rename the conflicting signal."
+                )
             net = parent_netlist.create_net(name_flat, symbol.width)
             local_net_map[name] = net
 
@@ -112,7 +118,7 @@ class Synthesiser:
             
             # The child's port was flattened to `child_prefix_port_name`
             child_net_name = f"{child_prefix}_{port_name}"
-            child_net = next((n for n in netlist.nets if n.name == child_net_name), None)
+            child_net = netlist.get_net(child_net_name)
 
             if not child_net:
                 raise SynthesisException(

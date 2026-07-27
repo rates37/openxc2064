@@ -1,8 +1,14 @@
 from __future__ import annotations
-from ..synthesis.rtl_nodes import Net, Netlist, DFF, Input, Constant, LogicGate
+from ..synthesis.rtl_nodes import Net, Netlist, DFF, Input, Constant, LogicGate, Node
 from ..mapping.xc2064_primitives import LUT, CLB, IOB
 from typing import Callable, Tuple, Optional
+from collections import deque
 import re
+
+
+class CombinationalLoopError(Exception):
+    """Raised when a netlist contains a combinational cycle (a feedback path
+    with no register on it), which has no stable evaluation."""
 
 
 class RTLSimulator:
@@ -194,7 +200,107 @@ class RTLSimulator:
                     self.net_values[net.name] = value
                     self.prev_net_values[net.name] = value
 
+        # combinational evaluation order, computed once (raises
+        # CombinationalLoopError on register-free feedback)
+        self._eval_schedule = self._build_eval_schedule()
+
         self._propagate_comb()
+
+    def _clb_lut_pins(self, sel_in1: int, sel_in2: int, sel_in3: int) -> set[int]:
+        # pin indices (into CLB.inputs = [A, B, C, D, K]) read by one
+        # internal LUT, derived from its input mux configuration
+        pins = {1 if sel_in1 else 0, 2 if sel_in2 else 1}
+        if sel_in3 == 0:
+            pins.add(2)
+        elif sel_in3 == 1:
+            pins.add(3)
+        # sel_in3 == 2 reads Q, which is register state, not a comb input
+        return pins
+
+    def _output_dependencies(self, node: Node, out_index: int) -> list[Net]:
+        # nets that combinationally determine node.outputs[out_index].
+        # register-state paths (DFF Q, CLB Q, latched IOB inputs) contribute
+        # no edges: they only change on clock edges, between propagations
+        if isinstance(node, (Input, Constant, DFF)):
+            return []
+        if isinstance(node, (LUT, LogicGate)):
+            return [n for n in node.inputs if n is not None]
+        if isinstance(node, IOB):
+            # the pad value reads [PIN_in, OUT, TS]; the IN output follows the
+            # pad combinationally unless latched through the IOB flip-flop
+            pad_deps = [n for n in node.inputs[:3] if n is not None]
+            if out_index == 0 or node.in_mux_sel == 0:
+                return pad_deps
+            return []
+        if isinstance(node, CLB):
+            # outputs[0] is X, outputs[1] is Y; each mux selects G, Q or F
+            sel = node.sel_x if out_index == 0 else node.sel_y
+            if sel == 1:  # Q
+                return []
+            if sel == 2:  # F
+                pins = self._clb_lut_pins(node.sel_f_in1, node.sel_f_in2, node.sel_f_in3)
+            else:  # G
+                pins = self._clb_lut_pins(node.sel_g_in1, node.sel_g_in2, node.sel_g_in3)
+            return [
+                node.inputs[i]
+                for i in sorted(pins)
+                if i < len(node.inputs) and node.inputs[i] is not None
+            ]
+        # unknown node kind: be conservative
+        return [n for n in node.inputs if n is not None]
+
+    def _build_eval_schedule(self) -> list[Node]:
+        # net-level dependency graph: an edge dep -> out for every net that
+        # combinationally determines a driven net's value
+        deps: dict[str, set[str]] = {n.name: set() for n in self.netlist.nets}
+        for node in self.netlist.nodes:
+            for out_index, out_net in enumerate(node.outputs):
+                if out_net is None:
+                    continue
+                out_deps = deps.setdefault(out_net.name, set())
+                for dep in self._output_dependencies(node, out_index):
+                    # read-modify-write ops (SET_INDEX/SET_SLICE) read their
+                    # own previous value; that is not an ordering edge
+                    if dep.name != out_net.name:
+                        out_deps.add(dep.name)
+
+        dependents: dict[str, set[str]] = {}
+        for out_name, dep_names in deps.items():
+            for dep_name in dep_names:
+                dependents.setdefault(dep_name, set()).add(out_name)
+
+        # Kahn's algorithm, seeded and tie-broken deterministically
+        indegree = {name: len(d) for name, d in deps.items()}
+        queue = deque(name for name in deps if indegree[name] == 0)
+        order: list[str] = []
+        while queue:
+            name = queue.popleft()
+            order.append(name)
+            for dependent in sorted(dependents.get(name, ())):
+                indegree[dependent] -= 1
+                if indegree[dependent] == 0:
+                    queue.append(dependent)
+
+        if len(order) < len(deps):
+            looped = sorted(name for name, d in indegree.items() if d > 0)
+            raise CombinationalLoopError(
+                f"Combinational loop detected involving nets: {', '.join(looped)}"
+            )
+
+        # evaluate each driven net's driver(s) once its dependencies are
+        # ready. a node with two outputs appears at both output positions:
+        # the later evaluation overwrites any stale sibling-output value
+        # before anything scheduled afterwards reads it
+        schedule: list[Node] = []
+        for name in order:
+            net = self.net_name_to_net.get(name)
+            if net is None:
+                continue
+            for driver in net.drivers:
+                # inputs are driven externally; constants were set at init
+                if not isinstance(driver, (Input, Constant)):
+                    schedule.append(driver)
+        return schedule
 
     def _mux_op(self, args: list) -> int:
         # args[0] is the select line, args[1..] are the data inputs
@@ -211,135 +317,103 @@ class RTLSimulator:
             return 0
         return value & ((1 << width) - 1)  # value & {width{1'b1}}
 
-    def _propagate_comb(self, max_iterations: int = 50) -> None:
-        # propagate logic through combinational logic until stable
-        for _ in range(max_iterations):
-            changed_flag = False
+    def _propagate_comb(self) -> None:
+        # single pass in topological order: the schedule (built once at init)
+        # orders every driven net after its combinational dependencies, so no
+        # iterate-until-stable loop or settling cap is needed
+        for n in self._eval_schedule:
+            self._eval_node(n)
 
-            for n in self.netlist.nodes:
-                if isinstance(n, LogicGate):
-                    # evaluate the logic gate:
-                    result = self._eval_gate(n)
+    def _eval_node(self, n: Node) -> None:
+        # evaluate one node and write its output nets from current values
+        if isinstance(n, LogicGate):
+            result = self._eval_gate(n)
+            for output_net in n.outputs:
+                self.net_values[output_net.name] = self._mask_value(result, output_net.width)
 
-                    # update output nets:
-                    for output_net in n.outputs:
-                        result_masked = self._mask_value(result, output_net.width)
-                        prev_value = self.net_values.get(output_net.name, 0)
-                        if prev_value != result_masked:
-                            self.net_values[output_net.name] = result_masked
-                            changed_flag = True
+        elif isinstance(n, DFF):
+            q_value = self.dff_state.get(n.id, 0)
+            if n.outputs:
+                output_net = n.outputs[0]
+                self.net_values[output_net.name] = self._mask_value(q_value, output_net.width)
 
-                elif isinstance(n, DFF):
-                    q_value = self.dff_state.get(n.id, 0)
-                    if n.outputs:
-                        output_net = n.outputs[0]
-                        q_value_masked = self._mask_value(q_value, output_net.width)
-                        prev_value = self.net_values.get(output_net.name, 0)
-                        if prev_value != q_value_masked:
-                            self.net_values[output_net.name] = q_value_masked
-                            changed_flag = True
-                            
-                elif isinstance(n, LUT): # assuming LUT ALWAYS has 1-bit width inputs/outputs
-                    # collect LUT inputs from current state:
-                    input_values = [self.net_values.get(in_n.name, 0) for in_n in n.inputs]
-                    # build the k-bit state index from inputs [I0, I1, ..., IK-1]
-                    state = 0
-                    for i, val in enumerate(input_values):
-                        if val:
-                            state |= (1 << i)
-                            
-                    # extract the evaluation bit from the LUT truth table config
-                    result = (n.truth_table >> state) & 1
-                    
-                    if n.outputs:
-                        output_net = n.outputs[0]
-                        prev_value = self.net_values.get(output_net.name, 0)
-                        if prev_value != result:
-                            self.net_values[output_net.name] = result
-                            changed_flag = True
-                            
-                elif isinstance(n, IOB):
-                    # inputs: [PIN_in, OUT, TS, IO_CLK]
-                    # outputs: [PIN_out, IN]
-                    pin_val_in = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs)>0 and n.inputs[0] else 0
-                    out_val = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs)>1 and n.inputs[1] else 0
-                    ts_val = self.net_values.get(n.inputs[2].name, 1) if len(n.inputs)>2 and n.inputs[2] else 1
-                    
-                    internal_ts = 1
-                    if n.ts_mux_sel == 0: internal_ts = 1
-                    elif n.ts_mux_sel == 1: internal_ts = ts_val
-                    elif n.ts_mux_sel == 2: internal_ts = 0
-                    
-                    pin_val_out = pin_val_in
-                    if internal_ts == 0:
-                         pin_val_out = out_val
-                         
-                    if len(n.outputs)>0 and n.outputs[0]:
-                        if self.net_values.get(n.outputs[0].name, 0) != pin_val_out:
-                            self.net_values[n.outputs[0].name] = pin_val_out
-                            changed_flag = True
-                            
-                    # PIN to IN path
-                    if n.in_mux_sel == 0:
-                        if len(n.outputs)>1 and n.outputs[1]:
-                            if self.net_values.get(n.outputs[1].name, 0) != pin_val_out:
-                                self.net_values[n.outputs[1].name] = pin_val_out
-                                changed_flag = True
-                    else:
-                        q_val = self.dff_state.get(n.dff.id, 0) if n.dff else 0
-                        if len(n.outputs)>1 and n.outputs[1]:
-                            if self.net_values.get(n.outputs[1].name, 0) != q_val:
-                                self.net_values[n.outputs[1].name] = q_val
-                                changed_flag = True
-                                
-                elif isinstance(n, CLB):
-                    # Evaluate CLB given strict physical mapping
-                    A = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs) > 0 and n.inputs[0] else 0
-                    B = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs) > 1 and n.inputs[1] else 0
-                    C = self.net_values.get(n.inputs[2].name, 0) if len(n.inputs) > 2 and n.inputs[2] else 0
-                    D = self.net_values.get(n.inputs[3].name, 0) if len(n.inputs) > 3 and n.inputs[3] else 0
-                    
-                    # Q is the current state of the DFF
-                    Q = self.dff_state.get(n.dff.id, 0) if n.dff else 0
-                    
-                    # Evaluate LUT F
-                    f_in0 = B if n.sel_f_in1 else A
-                    f_in1 = C if n.sel_f_in2 else B
-                    f_in2 = D if n.sel_f_in3 == 1 else (Q if n.sel_f_in3 == 2 else C)
-                    f_state = (f_in2 << 2) | (f_in1 << 1) | f_in0
-                    F = (n.lut_f_init >> f_state) & 1
-                    
-                    # Evaluate LUT G
-                    g_in0 = B if n.sel_g_in1 else A
-                    g_in1 = C if n.sel_g_in2 else B
-                    g_in2 = D if n.sel_g_in3 == 1 else (Q if n.sel_g_in3 == 2 else C)
-                    g_state = (g_in2 << 2) | (g_in1 << 1) | g_in0
-                    G = (n.lut_g_init >> g_state) & 1
-                    
-                    # Drive outputs X and Y based on MUXes
-                    X = F if n.sel_x == 2 else (Q if n.sel_x == 1 else G)
-                    Y = F if n.sel_y == 2 else (Q if n.sel_y == 1 else G)
-                    
-                    # Map back to nets
-                    if len(n.outputs) > 0 and n.outputs[0]:
-                        out_net = n.outputs[0] # X
-                        prev = self.net_values.get(out_net.name, 0)
-                        if prev != X:
-                            self.net_values[out_net.name] = X
-                            changed_flag = True
-                            
-                    if len(n.outputs) > 1 and n.outputs[1]:
-                        out_net = n.outputs[1] # Y
-                        prev = self.net_values.get(out_net.name, 0)
-                        if prev != Y:
-                            self.net_values[out_net.name] = Y
-                            changed_flag = True
+        elif isinstance(n, LUT): # assuming LUT ALWAYS has 1-bit width inputs/outputs
+            # collect LUT inputs from current state:
+            input_values = [self.net_values.get(in_n.name, 0) for in_n in n.inputs]
+            # build the k-bit state index from inputs [I0, I1, ..., IK-1]
+            state = 0
+            for i, val in enumerate(input_values):
+                if val:
+                    state |= (1 << i)
 
-            if not changed_flag:
-                break
-        else:
-            # todo: warn that logic did not settle
-            pass
+            # extract the evaluation bit from the LUT truth table config
+            result = (n.truth_table >> state) & 1
+
+            if n.outputs:
+                self.net_values[n.outputs[0].name] = result
+
+        elif isinstance(n, IOB):
+            # inputs: [PIN_in, OUT, TS, IO_CLK]
+            # outputs: [PIN_out, IN]
+            pin_val_in = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs)>0 and n.inputs[0] else 0
+            out_val = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs)>1 and n.inputs[1] else 0
+            ts_val = self.net_values.get(n.inputs[2].name, 1) if len(n.inputs)>2 and n.inputs[2] else 1
+
+            internal_ts = 1
+            if n.ts_mux_sel == 1:
+                internal_ts = ts_val
+            elif n.ts_mux_sel == 2:
+                internal_ts = 0
+
+            pin_val_out = pin_val_in
+            if internal_ts == 0:
+                 pin_val_out = out_val
+
+            if len(n.outputs)>0 and n.outputs[0]:
+                self.net_values[n.outputs[0].name] = pin_val_out
+
+            # PIN to IN path
+            if len(n.outputs)>1 and n.outputs[1]:
+                if n.in_mux_sel == 0:
+                    self.net_values[n.outputs[1].name] = pin_val_out
+                else:
+                    q_val = self.dff_state.get(n.dff.id, 0) if n.dff else 0
+                    self.net_values[n.outputs[1].name] = q_val
+
+        elif isinstance(n, CLB):
+            # Evaluate CLB given strict physical mapping
+            A = self.net_values.get(n.inputs[0].name, 0) if len(n.inputs) > 0 and n.inputs[0] else 0
+            B = self.net_values.get(n.inputs[1].name, 0) if len(n.inputs) > 1 and n.inputs[1] else 0
+            C = self.net_values.get(n.inputs[2].name, 0) if len(n.inputs) > 2 and n.inputs[2] else 0
+            D = self.net_values.get(n.inputs[3].name, 0) if len(n.inputs) > 3 and n.inputs[3] else 0
+
+            # Q is the current state of the DFF
+            Q = self.dff_state.get(n.dff.id, 0) if n.dff else 0
+
+            # Evaluate LUT F
+            f_in0 = B if n.sel_f_in1 else A
+            f_in1 = C if n.sel_f_in2 else B
+            f_in2 = D if n.sel_f_in3 == 1 else (Q if n.sel_f_in3 == 2 else C)
+            f_state = (f_in2 << 2) | (f_in1 << 1) | f_in0
+            F = (n.lut_f_init >> f_state) & 1
+
+            # Evaluate LUT G
+            g_in0 = B if n.sel_g_in1 else A
+            g_in1 = C if n.sel_g_in2 else B
+            g_in2 = D if n.sel_g_in3 == 1 else (Q if n.sel_g_in3 == 2 else C)
+            g_state = (g_in2 << 2) | (g_in1 << 1) | g_in0
+            G = (n.lut_g_init >> g_state) & 1
+
+            # Drive outputs X and Y based on MUXes
+            X = F if n.sel_x == 2 else (Q if n.sel_x == 1 else G)
+            Y = F if n.sel_y == 2 else (Q if n.sel_y == 1 else G)
+
+            # Map back to nets
+            if len(n.outputs) > 0 and n.outputs[0]:
+                self.net_values[n.outputs[0].name] = X  # X
+
+            if len(n.outputs) > 1 and n.outputs[1]:
+                self.net_values[n.outputs[1].name] = Y  # Y
 
     def _eval_gate(self, gate: LogicGate) -> int:
         input_values = [self.net_values.get(n.name, 0) for n in gate.inputs]

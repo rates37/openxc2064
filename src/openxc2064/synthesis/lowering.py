@@ -19,9 +19,13 @@ class LoweringPass:
 
     def __init__(self) -> None:
         self.net_map: dict[str, list[Net]] = {}
+        self._tie0: Net | None = None
+        self._tie1: Net | None = None
 
     def run(self, netlist: Netlist) -> Netlist:
         self.net_map.clear()
+        self._tie0 = None
+        self._tie1 = None
         new_netlist = Netlist(netlist.module_name)
 
         # map all old generic (multi-bit) nets to arrays of 1-bit nets:
@@ -45,14 +49,19 @@ class LoweringPass:
         return new_netlist
     
     def _add_0(self, netlist: Netlist) -> Net:
-        n = netlist.create_net(f"tie0_{len(netlist.nodes)}", 1)
-        netlist.add_const(0, n)
-        return n
+        # one shared tie-0 per run: every padded bit reads the same constant.
+        # the plain name cannot collide with lowered user nets, which all
+        # carry an [i] suffix or a node-id prefix
+        if self._tie0 is None:
+            self._tie0 = netlist.create_net("tie0", 1)
+            netlist.add_const(0, self._tie0)
+        return self._tie0
 
     def _add_1(self, netlist: Netlist) -> Net:
-        n = netlist.create_net(f"tie1_{len(netlist.nodes)}", 1)
-        netlist.add_const(1, n)
-        return n
+        if self._tie1 is None:
+            self._tie1 = netlist.create_net("tie1", 1)
+            netlist.add_const(1, self._tie1)
+        return self._tie1
 
     def _build_or_tree(self, netlist: Netlist, nets: list[Net], prefix: str) -> Net:
         if len(nets) == 0:

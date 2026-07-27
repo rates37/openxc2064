@@ -100,6 +100,18 @@ def route_lut(
     return None
 
 
+def pin_assignments(input_names: set[str]):
+    """Yield each distinct (A, B, C, D) pin assignment of the given nets once.
+    """
+    padded = sorted(input_names) + [None] * (4 - len(input_names))
+    seen = set()
+    for assignment in permutations(padded):
+        if assignment in seen:
+            continue
+        seen.add(assignment)
+        yield assignment
+
+
 def find_clb_orientation(
     lut_f_node: LUT | None, lut_g_node: LUT | None
 ) -> dict[str, Any] | None:
@@ -126,11 +138,7 @@ def find_clb_orientation(
     if len(all_inputs) > 4:
         return None
 
-    inputs_list = list(all_inputs)
-    while len(inputs_list) < 4:  # pad input list to always be length 4
-        inputs_list.append(None)
-
-    for A, B, C, D in permutations(inputs_list):
+    for A, B, C, D in pin_assignments(all_inputs):
         opts_f = route_lut(lut_f_node, A, B, C, D)
         if opts_f is None:
             continue
@@ -155,19 +163,36 @@ def find_clb_orientation(
     return None
 
 
-class GreedyPacker(Packer):
-    """Greedy implementation of a CLB packer algorithm."""
+def shared_input_count(lut_a: LUT | None, lut_b: LUT | None) -> int:
+    """Number of input nets two LUTs have in common.
 
-    def run(self, netlist: Netlist) -> Netlist | None:
+    This is the packing affinity metric: LUTs sharing inputs packed into one
+    CLB remove whole nets from the routing problem and leave A/B/C/D pins
+    free. (Producer/consumer co-packing deliberately scores nothing. The
+    XC2064 input muxes only select from A/B/C/D/Q, so a paired LUT's output
+    still has to leave via X/Y and re-enter through a pin.)
+    """
+    if lut_a is None or lut_b is None:
+        return 0
+    return len({n.name for n in lut_a.inputs} & {n.name for n in lut_b.inputs})
+
+
+class GreedyPacker(Packer):
+    """Greedy implementation of a CLB packer algorithm.
+
+    Clustering is connectivity-driven: at each step the legal pairing with
+    the most shared input nets is taken, rather than the first legal one.
+    """
+
+    def run(self, netlist: Netlist) -> Netlist:
         # create blank netlist:
         new_nl = Netlist(netlist.module_name)
-        net_map = {}
 
         ## ! Map inputs to IOBs:
         inputs = [n for n in netlist.nodes if isinstance(n, Input)]
         for inp in inputs:
             iob = IOB(
-                f"iob_in_{len(new_nl.nodes)}", inputs=[], outputs=[], ts_mux_sel=0
+                new_nl.next_node_id("iob_in_"), inputs=[], outputs=[], ts_mux_sel=0
             )
             iob.inputs = [None, None, None, None]
             iob.outputs = [None, None]
@@ -186,21 +211,19 @@ class GreedyPacker(Packer):
                 new_net = new_nl.create_net(old_out_net.name, old_out_net.width)
                 iob.outputs[1] = new_net
                 new_net.drivers.append(iob)
-                net_map[old_out_net.name] = new_net
                 # Top down inputs are no longer internal logic nets, they are the PINs
 
         ## ! Map constants:
         constants = [n for n in netlist.nodes if isinstance(n, Constant)]
         for c in constants:
             new_c = Constant(
-                f"const{len(new_nl.nodes)}", inputs=[], outputs=[], value=c.value
+                new_nl.next_node_id("const"), inputs=[], outputs=[], value=c.value
             )
             new_nl.nodes.append(new_c)
             for old_out_net in c.outputs:
                 new_net = new_nl.create_net(old_out_net.name, old_out_net.width)
                 new_c.outputs.append(new_net)
                 new_net.drivers.append(new_c)
-                net_map[old_out_net.name] = new_net
 
         ## ! Extract actual logic:
         unpacked_luts = list(n for n in netlist.nodes if isinstance(n, LUT))
@@ -219,51 +242,83 @@ class GreedyPacker(Packer):
             if not driving_lut:
                 # Standalone DFF -> Buffer LUT F
                 # use 0xAA (10101010) because we want the output to exactly mirror in0
-                driving_lut = LUT(f"dummy_{dff.id}", inputs=[data_net], outputs=[data_net], truth_table=0xAA)
+                driving_lut = LUT(f"dummy_{dff.id}", inputs=[], outputs=[], truth_table=0xAA)
+                # assign the input after construction so __post_init__ does not register
+                # dummy as a sink/driver on the source netlist's data net.
+                driving_lut.inputs = [data_net]
 
-            clb_configs.append({"lut_f": driving_lut, "lut_g": None, "dff": dff})
+            orient = find_clb_orientation(driving_lut, None)
+            if orient is None:
+                raise CapacityError(f"MUX routing failure for DFF '{dff.id}' F-LUT.")
+            clb_configs.append(
+                {"lut_f": driving_lut, "lut_g": None, "dff": dff, "orientation": orient}
+            )
             unpacked_dffs.remove(dff)
 
         ## ! Try to pack rest of remaining LUTs into unused G-lut slots
-        # all existing LUTs only have their F-lut in use, so pack as much as possible into the un-used G-luts
-        for lut in list(unpacked_luts):
-            best_target = None
+        # all existing LUTs only have their F-lut in use, so pack as much as possible
+        # into the un-used G-luts, taking the (slot, LUT) pairing with the most
+        # shared input nets each round
+        while True:
+            best = None  # (score, clb, lut, orientation)
             for clb in clb_configs:
-                if clb["lut_g"] is None:
+                if clb["lut_g"] is not None:
+                    continue
+                for lut in unpacked_luts:
                     # check if there exists a routable orientation for this pair
                     orient = find_clb_orientation(clb["lut_f"], lut)
-                    if orient is not None:
-                        best_target = clb
-                        break
-            if best_target:
-                best_target["lut_g"] = lut
-                unpacked_luts.remove(lut)
+                    if orient is None:
+                        continue
+                    score = shared_input_count(clb["lut_f"], lut)
+                    if best is None or score > best[0]:
+                        best = (score, clb, lut, orient)
+            if best is None:
+                break
+            _, clb, lut, orient = best
+            clb["lut_g"] = lut
+            clb["orientation"] = orient
+            unpacked_luts.remove(lut)
 
         ##! Pack isolated LUT pairs
-        # any LUTs that didn't get paired into DFF luts
+        # any LUTs that didn't get paired into DFF luts: repeatedly take the legal
+        # pair with the most shared input nets
         while unpacked_luts:
-            base_lut = unpacked_luts.pop(0)
-            best_partner = None
-            for i, partner in enumerate(unpacked_luts):
-                orient = find_clb_orientation(base_lut, partner)
-                if orient is not None:
-                    best_partner = i
-                    break
+            best = None  # (score, lut_a, lut_b, orientation)
+            for i, lut_a in enumerate(unpacked_luts):
+                for lut_b in unpacked_luts[i + 1:]:
+                    orient = find_clb_orientation(lut_a, lut_b)
+                    if orient is None:
+                        continue
+                    score = shared_input_count(lut_a, lut_b)
+                    if best is None or score > best[0]:
+                        best = (score, lut_a, lut_b, orient)
 
-            if best_partner is not None:
-                partner = unpacked_luts.pop(best_partner)
-                clb_configs.append({"lut_f": base_lut, "lut_g": partner, "dff": None})
+            if best is None:
+                # no legal pairs remain; the rest each get their own CLB
+                for lut in unpacked_luts:
+                    orient = find_clb_orientation(lut, None)
+                    if orient is None:
+                        raise CapacityError(f"MUX routing failure for LUT '{lut.id}'.")
+                    clb_configs.append(
+                        {"lut_f": lut, "lut_g": None, "dff": None, "orientation": orient}
+                    )
+                unpacked_luts = []
             else:
-                clb_configs.append({"lut_f": base_lut, "lut_g": None, "dff": None})
+                _, lut_a, lut_b, orient = best
+                unpacked_luts.remove(lut_a)
+                unpacked_luts.remove(lut_b)
+                clb_configs.append(
+                    {"lut_f": lut_a, "lut_g": lut_b, "dff": None, "orientation": orient}
+                )
 
         if len(clb_configs) > self.max_clbs:
             raise CapacityError(f"Design uses {len(clb_configs)} CLBs.")
 
         ##! Create design physical structure:
         for idx, config in enumerate(clb_configs):
-            orient = find_clb_orientation(config["lut_f"], config["lut_g"])
-            if not orient:
-                raise CapacityError("MUX routing failure.")
+            # the orientation accepted when this pairing was made; never
+            # re-derived here, so build and search cannot disagree
+            orient = config["orientation"]
 
             new_clb = CLB(
                 id=f"clb{idx}",
@@ -290,9 +345,9 @@ class GreedyPacker(Packer):
 
             for pin_name in ordered_pins:
                 if pin_name:
-                    if pin_name not in net_map:
-                        net_map[pin_name] = new_nl.create_net(pin_name, 1)
-                    mapped_in = net_map[pin_name]
+                    mapped_in = new_nl.get_net(pin_name)
+                    if mapped_in is None:
+                        mapped_in = new_nl.create_net(pin_name, 1)
                     new_clb.inputs.append(mapped_in)
                     mapped_in.sinks.append(new_clb)
                 else:
@@ -305,7 +360,7 @@ class GreedyPacker(Packer):
             if config["dff"]:
                 outputs_needed.append(("Q", config["dff"]))
                 
-            if config["lut_f"]:
+            if config["lut_f"] and config["lut_f"].outputs:
                 f_net = config["lut_f"].outputs[0]
                 is_f_exported = f_net in netlist.outputs
                 for sink in f_net.sinks:
@@ -333,9 +388,9 @@ class GreedyPacker(Packer):
                     new_clb.sel_x = 0
 
                 out_net_name = node.outputs[0].name
-                if out_net_name not in net_map:
-                    net_map[out_net_name] = new_nl.create_net(out_net_name, 1)
-                mapped_out = net_map[out_net_name]
+                mapped_out = new_nl.get_net(out_net_name)
+                if mapped_out is None:
+                    mapped_out = new_nl.create_net(out_net_name, 1)
                 new_clb.outputs.append(mapped_out)
                 mapped_out.drivers.append(new_clb)
 
@@ -349,23 +404,23 @@ class GreedyPacker(Packer):
                     new_clb.sel_y = 0
 
                 out_net_name = node.outputs[0].name
-                if out_net_name not in net_map:
-                    net_map[out_net_name] = new_nl.create_net(out_net_name, 1)
-                mapped_out = net_map[out_net_name]
+                mapped_out = new_nl.get_net(out_net_name)
+                if mapped_out is None:
+                    mapped_out = new_nl.create_net(out_net_name, 1)
                 new_clb.outputs.append(mapped_out)
                 mapped_out.drivers.append(new_clb)
 
         ##! Map top outputs:
         for out_net in netlist.outputs:
             iob = IOB(
-                f"iob_out_{len(new_nl.nodes)}", inputs=[], outputs=[], ts_mux_sel=2
+                new_nl.next_node_id("iob_out_"), inputs=[], outputs=[], ts_mux_sel=2
             )
             iob.inputs = [None, None, None, None]
             iob.outputs = [None, None]
             new_nl.nodes.append(iob)
 
             # The OUT net from internal logic
-            mapped_in = net_map[out_net.name]
+            mapped_in = new_nl.nets_by_name[out_net.name]
             iob.inputs[1] = mapped_in
             mapped_in.sinks.append(iob)
 

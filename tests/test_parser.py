@@ -768,5 +768,20 @@ def test_missing_ports_is_error():
         parse_hdl(bad_src)
 
 
+# ---------- parser caching ----------
+def test_create_parser_is_cached():
+    # LALR table construction is the expensive part of Lark; the same parser
+    # instance should be reused rather than rebuilt on every parse_hdl call
+    assert create_parser() is create_parser()
+
+
+def test_cached_parser_is_reusable():
+    # repeated parses through the shared parser must stay independent
+    first = parse_hdl("module m1(input a, output b); assign b = a; endmodule")
+    second = parse_hdl("module m2(input x, output y); assign y = !x; endmodule")
+    assert [m.name for m in first] == ["m1"]
+    assert [m.name for m in second] == ["m2"]
+
+
 if __name__ == "__main__":
     test_always_seq_block_parsing()

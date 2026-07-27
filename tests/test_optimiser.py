@@ -106,14 +106,15 @@ def test_constant_folding_or_identity():
 
 
 def test_constant_folding_mux():
+    # MUX inputs are [cond, else, then]: sel=1 selects the 'then' input
     nl = Netlist(module_name="test_mod")
 
     sel_net = nl.create_net("sel")
-    true_net = nl.create_net("t")
-    false_net = nl.create_net("f")
+    else_net = nl.create_net("e")
+    then_net = nl.create_net("t")
     nl.add_input("sel", sel_net)
-    nl.add_input("t", true_net)
-    nl.add_input("f", false_net)
+    nl.add_input("e", else_net)
+    nl.add_input("t", then_net)
 
     out_net = nl.create_net("out")
     nl.outputs.append(out_net)
@@ -122,7 +123,7 @@ def test_constant_folding_mux():
     sel_const_net = nl.create_net("sel_c")
     nl.add_const(1, sel_const_net)
 
-    nl.add_logic("MUX", [sel_const_net, true_net, false_net], [out_net])
+    nl.add_logic("MUX", [sel_const_net, else_net, then_net], [out_net])
 
     opt = Optimiser()
     opt.optimise(nl)
@@ -131,9 +132,9 @@ def test_constant_folding_mux():
     assert len(muxes) == 0
     bufs = [n for n in nl.nodes if getattr(n, "op", "") == "BUF"]
     assert len(bufs) == 1
-    # Check that output is driven by BUF which is driven by true_net
+    # Check that output is driven by BUF which is driven by then_net
     buf_node = out_net.drivers[0]
-    assert buf_node is not None and buf_node.inputs[0] == true_net
+    assert buf_node is not None and buf_node.inputs[0] == then_net
 
 
 def test_constant_folding_gates_exhaustive():
@@ -234,15 +235,15 @@ def test_constant_folding_mux_advanced():
     nl.add_const(0, c0)
     nl.add_const(1, c1)
 
-    # MUX with sel=0 -> f
+    # MUX inputs are [cond, else, then]: sel=0 selects the 'else' input (t here)
     out_m0 = nl.create_net("out_m0")
     nl.add_logic("MUX", [c0, t, f], [out_m0])
 
-    # MUX with t=1, f=0 -> sel
+    # MUX with else=1, then=0 -> ~sel
     out_m_bool1 = nl.create_net("out_m_bool1")
     nl.add_logic("MUX", [sel, c1, c0], [out_m_bool1])
 
-    # MUX with t=0, f=1 -> ~sel
+    # MUX with else=0, then=1 -> sel
     out_m_bool2 = nl.create_net("out_m_bool2")
     nl.add_logic("MUX", [sel, c0, c1], [out_m_bool2])
 
@@ -252,9 +253,9 @@ def test_constant_folding_mux_advanced():
     opt.optimise(nl)
 
     # Checks:
-    assert out_m0.drivers[0].op == "BUF" and out_m0.drivers[0].inputs[0] == f
-    assert out_m_bool1.drivers[0].op == "BUF" and out_m_bool1.drivers[0].inputs[0] == sel
-    assert out_m_bool2.drivers[0].op == "NOT" and out_m_bool2.drivers[0].inputs[0] == sel
+    assert out_m0.drivers[0].op == "BUF" and out_m0.drivers[0].inputs[0] == t
+    assert out_m_bool1.drivers[0].op == "NOT" and out_m_bool1.drivers[0].inputs[0] == sel
+    assert out_m_bool2.drivers[0].op == "BUF" and out_m_bool2.drivers[0].inputs[0] == sel
 
 
 def test_simplify_identical_inputs():
@@ -476,3 +477,88 @@ def test_nested_full_adder_optimised() -> None:
             sim.set("y", y)
             sim.step()
             assert sim.get("z") == x + y
+
+
+def test_fold_to_buf_detaches_from_constant_net():
+    # a & 1 rewrites to BUF(a): the gate must stop being a sink of the const net
+    nl = Netlist(module_name="test_mod")
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    one = nl.create_net("one")
+    nl.add_const(1, one)
+    y = nl.create_net("y")
+    gate = nl.add_logic("AND", [a, one], [y])
+    nl.outputs.append(y)
+
+    changed = Optimiser()._fold_constants(nl)
+
+    assert changed
+    assert gate.op == "BUF"
+    assert gate.inputs == [a]
+    assert gate not in one.sinks
+    assert gate in a.sinks
+
+
+def test_fold_to_const_fully_detaches_dead_gate():
+    # a & 0 rewrites to a constant: the dead gate must be disconnected from its
+    # input nets and removed from the netlist immediately
+    nl = Netlist(module_name="test_mod")
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    zero = nl.create_net("zero")
+    nl.add_const(0, zero)
+    y = nl.create_net("y")
+    gate = nl.add_logic("AND", [a, zero], [y])
+    nl.outputs.append(y)
+
+    changed = Optimiser()._fold_constants(nl)
+
+    assert changed
+    assert gate not in nl.nodes
+    assert gate not in a.sinks
+    assert gate not in zero.sinks
+    # y is now driven only by the folded constant
+    assert len(y.drivers) == 1
+    assert isinstance(y.drivers[0], Constant)
+
+
+def test_simplify_mux_same_inputs_detaches_from_select_net():
+    # mux(sel, a, a) rewrites to BUF(a): sel keeps its own driver/uses, but the
+    # rewritten gate must no longer appear among sel's sinks, even after a full
+    # optimise() run (sel stays live, so dead-code trimming never cleans it)
+    nl = Netlist(module_name="test_mod")
+    sel = nl.create_net("sel")
+    nl.add_input("sel", sel)
+    nl.inputs.append(sel)
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    y = nl.create_net("y")
+    mux = nl.add_logic("MUX", [sel, a, a], [y])
+    nl.outputs.append(y)
+
+    Optimiser().optimise(nl)
+
+    assert mux.op == "BUF"
+    assert mux not in sel.sinks
+    assert mux in a.sinks
+
+
+def test_simplify_identical_inputs_normalises_sink_multiplicity():
+    # a & a rewrites to BUF(a): 'a' listed the gate as a sink twice (once per
+    # input entry); after the rewrite it must appear exactly once
+    nl = Netlist(module_name="test_mod")
+    a = nl.create_net("a")
+    nl.add_input("a", a)
+    nl.inputs.append(a)
+    y = nl.create_net("y")
+    gate = nl.add_logic("AND", [a, a], [y])
+    nl.outputs.append(y)
+
+    changed = Optimiser()._simplify_logic(nl)
+
+    assert changed
+    assert gate.op == "BUF"
+    assert a.sinks.count(gate) == 1

@@ -338,7 +338,7 @@ class HDLElaborator:
 
         # if full identifier:
         if isinstance(target, Identifier):
-            start, end = min(symbol.lsb, symbol.msb), min(symbol.lsb, symbol.msb)
+            start, end = min(symbol.lsb, symbol.msb), max(symbol.lsb, symbol.msb)
             return [(name, i) for i in range(start, end + 1)]
 
         # otherwise is indexed, e.g., `bus[1], or my_signal[4:2]`
@@ -352,7 +352,7 @@ class HDLElaborator:
                     # should not be permitted by the grammar, but will assume this error means all bits of the signal are driven
                     start, end = (
                         min(symbol.lsb, symbol.msb),
-                        min(symbol.lsb, symbol.msb),
+                        max(symbol.lsb, symbol.msb),
                     )
                     return [(name, i) for i in range(start, end + 1)]
             elif target.range is not None:
