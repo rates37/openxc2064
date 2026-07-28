@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useMemo} from 'react';
 import { LogicCell } from './models/LogicCell';
 import { SwitchMatrix } from './models/SwitchMatrix';
 import { Net, Pip } from './types';
 import { initialiseSimulation } from './InitialiseSimulation';
 import { IOBank, IOPad } from './models/IOBank';
 import { createExportStateFunction, createImportStateFunction } from './SaveSimulation';
+import path from 'path/win32';
+import { readdir } from 'fs/promises';
 
 interface SimulatorContextValue {
 	/**
@@ -110,7 +112,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	// Import/Export functions
 	const exportState = useCallback(() => createExportStateFunction(logicCells, switchMatrices, pips, ioBanks, drivers)(), [logicCells, switchMatrices, pips, ioBanks, drivers]);
 	const importState = useCallback(() => createImportStateFunction(logicCells, switchMatrices, ioBanks, setPips, setDrivers, bumpTick)(), [logicCells, switchMatrices, ioBanks, bumpTick]);
-
+	
 	// Import an example state directly (used by ExamplesModal)
 	const importExample = useCallback((state: any) => {
 		try {

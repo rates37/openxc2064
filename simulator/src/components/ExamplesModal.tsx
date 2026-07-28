@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSimulator } from '../SimulatorContext';
+import { readdir } from 'fs/promises';
+import * as path from 'path';
+const modules = import.meta.glob('../../test_designs/*.json', { eager: true });
+const exampleNames : string[] = [];
+for (const [path, module] of Object.entries(modules)) {
+  const pathString = String(path);
+  const filename = pathString.split('/').pop() || '';
+  exampleNames.push(filename);
+  console.log(`Loaded example: ${path}`);
+}
 
 interface ExamplesModalProps {
   isOpen: boolean;
@@ -21,17 +31,10 @@ const ExamplesModal: React.FC<ExamplesModalProps> = ({ isOpen, onClose }) => {
     // Fetch the list of examples from the test_designs folder
     const fetchExamples = async () => {
       try {
-        // Get the list of JSON files from the test_designs folder
-        const response = await fetch('/test_designs');
-        if (!response.ok) {
-          throw new Error('Failed to fetch examples');
-        }
         
         // Note: This assumes the server has a way to list directory contents
         // For now, we'll use a hardcoded list and try to fetch each one
-        const exampleNames = [
-          '8 bit counter.json',
-        ];
+  
 
         const loadedExamples: { name: string; content: any }[] = [];
 
