@@ -1,6 +1,6 @@
 import json
 import openpyxl
-import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 DEBUG = False
@@ -117,7 +117,6 @@ def parse_switches(data) -> dict[str, int]:
 
 def parse_pips(data) -> dict[str, int]:
     pips_sim = data["pips"]
-    skip_pips = ["net_A", "net_B", "net_C", "net_D", "net_K", "net_X", "net_Y", "net_O", "net_I", "net_T", "net_clk", "net_bottom", "net_top", "net_left", "net_right", "net_io_clk"]
     bitstream = {}
     
     ## Load in the CSV from XC2064-spreadsheet
@@ -142,26 +141,24 @@ def parse_pips(data) -> dict[str, int]:
         pip_objs.append(_temp)
         
     ## Sort magics by x, then y
-    pip_objs.sort(key=lambda m: (m["x"], m["y"]))
-    
-    plt.scatter([pip["x"] for pip in pip_objs], [pip["y"] for pip in pip_objs])
-    
-    # pips_sim_filtered = []
-    # for pip in pips_sim:
-    #     found = False
-    #     for skip in skip_pips:
-    #         if pip["source"].split(".")[1] == skip or pip["destination"].split(".")[1] == skip:
-    #             print(pip["source"], pip["destination"])
-    #             found = True
-    #             break
-            
-    #     if not found:
-    #         pips_sim_filtered.append(pip)
-                
-    # plt.scatter([pip["pos"]["x"] for pip in pips_sim_filtered], [pip["pos"]["y"] for pip in pips_sim_filtered], color="red")
-    plt.show()
-    
-    return
+    pip_objs.sort(key=lambda m: (m["y"], m["x"]))
+
+    ## import the mapping json object
+    coord_map = json.load(open("coordinate_mapping.json", "r"))
+
+    for pip in tqdm(pip_objs):
+        new_x = coord_map["x_mappings"].get(str(pip["x"]), pip["x"])
+        new_y = coord_map["y_mappings"].get(str(pip["y"]), pip["y"])
+        
+        for sim_pip in pips_sim:
+            if sim_pip["pos"]["x"] == new_x and sim_pip["pos"]["y"] == new_y:
+                bitstream[pip["id"]] = 1 if sim_pip["enabled"] else 0
+                break
+        
+        if pip["id"] not in bitstream:
+            print("unable to find pip for", pip["id"], "at", new_x, new_y)
+
+    return bitstream
     
     
 def generate_bitstream(data) -> dict[str, int] :
@@ -171,16 +168,24 @@ def generate_bitstream(data) -> dict[str, int] :
 
     print("Generating bitstream...")
 
+    print("Populating Unused Bits...")
+    ununsed_bits = {
+        "----- NOT USED -----": -1
+    }
+    bitstream.update(ununsed_bits)
+
     print("Parsing CLBs...")
-    for clb in tqdm.tqdm(logic_cells):
+    for clb in tqdm(logic_cells):
         clb_bitstream = parse_clb(clb)
         bitstream.update(clb_bitstream)
     
+    print("Parsing Switches...")
     switch_bitstream = parse_switches(data)
     bitstream.update(switch_bitstream)
     
+    print("Parsing PIPs...")
     pip_bitstream = parse_pips(data)
-    # bitstream.update(pip_bitstream)
+    bitstream.update(pip_bitstream)
 
     return bitstream
     
@@ -192,7 +197,9 @@ def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, 
     sheet = mapping_sheet.active
 
     print("Writing Bitstream")
-    for key, value in tqdm.tqdm(bitstream.items()):
+    
+    bit_count = 0
+    for key, value in tqdm(bitstream.items()):
         if DEBUG:
             print(key, value)
 
@@ -206,8 +213,9 @@ def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, 
 
 
                     cell.fill = openpyxl.styles.PatternFill(start_color=fill_colour, end_color=fill_colour, fill_type="solid")
+                    bit_count += 1
 
-    print(f"Num bits: {len(bitstream)} / 11358 ({len(bitstream)/11358*100:.2f}%)")
+    print(f"Num bits: {bit_count} / 11358 ({bit_count/11358*100:.2f}%)")
     
     return mapping_sheet
 
@@ -235,9 +243,9 @@ if __name__ == "__main__":
 
     # generate speadsheet
     ## import mapping sheet from XC2064-spreadsheet
-    mapping_sheet = openpyxl.load_workbook("XC2064.xlsx")
+    mapping_sheet = openpyxl.load_workbook("XC2064-bits.xlsx")
 
     mapping_sheet = generate_spreadsheet(mapping_sheet, bitstream, "sim_out.xlsx")
 
     # save spreadsheet
-    mapping_sheet.save("XC2064.xlsx")
+    mapping_sheet.save("XC2064_output.xlsx")
