@@ -146,17 +146,17 @@ def parse_pips(data) -> dict[str, int]:
     
     plt.scatter([pip["x"] for pip in pip_objs], [pip["y"] for pip in pip_objs])
     
-    pips_sim_filtered = []
-    for pip in pips_sim:
-        found = False
-        for skip in skip_pips:
-            if pip["source"].split(".")[1] == skip or pip["destination"].split(".")[1] == skip:
-                print(pip["source"], pip["destination"])
-                found = True
-                break
+    # pips_sim_filtered = []
+    # for pip in pips_sim:
+    #     found = False
+    #     for skip in skip_pips:
+    #         if pip["source"].split(".")[1] == skip or pip["destination"].split(".")[1] == skip:
+    #             print(pip["source"], pip["destination"])
+    #             found = True
+    #             break
             
-        if not found:
-            pips_sim_filtered.append(pip)
+    #     if not found:
+    #         pips_sim_filtered.append(pip)
                 
     # plt.scatter([pip["pos"]["x"] for pip in pips_sim_filtered], [pip["pos"]["y"] for pip in pips_sim_filtered], color="red")
     plt.show()
@@ -180,7 +180,7 @@ def generate_bitstream(data) -> dict[str, int] :
     bitstream.update(switch_bitstream)
     
     pip_bitstream = parse_pips(data)
-    bitstream.update(pip_bitstream)
+    # bitstream.update(pip_bitstream)
 
     return bitstream
     

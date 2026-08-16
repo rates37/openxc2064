@@ -175,9 +175,24 @@ export const initialiseSimulation = (): {
 				const sourceNetName = decodeRelativeNetName(pip.source, cellId, { i, j });
 				const destinationNetName = decodeRelativeNetName(pip.destination, cellId, { i, j });
 
+
+				let pip_id = `${cellId}.${pip.id}`;
+				if (pips.find((p) => p.id === pip_id)) {
+					// If the pip id is already in use, we need to generate a new unique id for it.
+					let counter = 1;
+					let new_pip_id = `${cellId}.${pip.id}_${counter}`;
+					while (pips.find((p) => p.id === new_pip_id)) {
+						counter++;
+						new_pip_id = `${cellId}.${pip.id}_${counter}`;
+					}
+
+					pip_id = new_pip_id;
+				}
+				
+				
 				// Add the pip to the list
 				pips.push({
-					id: pip.id,
+					id: pip_id,
 					source: sourceNetName,
 					destination: destinationNetName,
 					enabled: pip.enabled,

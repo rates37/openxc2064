@@ -337,6 +337,8 @@ const SimulationCanvas: React.FC = () => {
         removeDriver,
         searchQuery,
         selectIOBank,
+        setCursorPos,
+        setHoveredPipId,
     } = useSimulator();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -401,6 +403,25 @@ const SimulationCanvas: React.FC = () => {
         return { x, y };
     }, []);
 
+    const findPipAtWorld = useCallback(
+        (world: { x: number; y: number }) => {
+            for (let i = 0; i < pips.length; i++) {
+                const pip = pips[i];
+                if (
+                    world.x >= pip.pos.x - PIP_WIDTH / 2 &&
+                    world.x <= pip.pos.x + PIP_WIDTH / 2 &&
+                    world.y >= pip.pos.y - PIP_HEIGHT / 2 &&
+                    world.y <= pip.pos.y + PIP_HEIGHT / 2
+                ) {
+                    return pip;
+                }
+            }
+
+            return null;
+        },
+        [pips]
+    );
+
     // Handle panning
     const onPointerDown = useCallback((e: React.PointerEvent) => {
         setIsPanning(true);
@@ -410,11 +431,17 @@ const SimulationCanvas: React.FC = () => {
 
     const onPointerMove = useCallback(
         (e: React.PointerEvent) => {
-            if (!isPanning) return;
             const canvas = canvasRef.current;
             if (!canvas) return;
             const rect = canvas.getBoundingClientRect();
             const vb = viewBoxRef.current;
+
+            const world = screenToWorld(e.clientX, e.clientY);
+            setCursorPos({ x: Math.round(world.x), y: Math.round(world.y) });
+            setHoveredPipId(findPipAtWorld(world)?.id ?? null);
+
+            if (!isPanning) return;
+
             const scaleX = vb.w / rect.width;
             const scaleY = vb.h / rect.height;
             const dx = (e.clientX - panStart.current.x) * scaleX;
@@ -422,12 +449,18 @@ const SimulationCanvas: React.FC = () => {
             panStart.current = { x: e.clientX, y: e.clientY };
             setViewBox((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
         },
-        [isPanning]
+        [isPanning, screenToWorld, findPipAtWorld, setCursorPos, setHoveredPipId]
     );
 
     const onPointerUp = useCallback(() => {
         setIsPanning(false);
     }, []);
+
+    const onPointerLeave = useCallback(() => {
+        setIsPanning(false);
+        setCursorPos(null);
+        setHoveredPipId(null);
+    }, [setCursorPos, setHoveredPipId]);
 
     // Handle zooming
     useEffect(() => {
@@ -680,7 +713,7 @@ const SimulationCanvas: React.FC = () => {
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
-                onPointerLeave={onPointerUp}
+                onPointerLeave={onPointerLeave}
                 onClick={onClick}
             />
             {showOscillatorModal && <OscillatorModal isOpen={showOscillatorModal} onClose={() => setShowOscillatorModal(false)} />}

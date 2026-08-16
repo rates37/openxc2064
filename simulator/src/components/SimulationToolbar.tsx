@@ -4,7 +4,7 @@ import ExamplesModal from './ExamplesModal';
 import { downloadConfigsAsJSON } from '../configs/configs';
 
 const SimulationToolbar: React.FC = () => {
-  const { simulate, isRunning, showGrid, toggleGrid, cursorPos, exportState, importState, searchQuery, setSearchQuery, drivers } = useSimulator();
+  const { simulate, isRunning, showGrid, toggleGrid, cursorPos, hoveredPipId, exportState, importState, searchQuery, setSearchQuery, drivers } = useSimulator();
   const [showExamplesModal, setShowExamplesModal] = useState(false);
 
   // Find the driver for the searched net (if any)
@@ -94,8 +94,9 @@ const SimulationToolbar: React.FC = () => {
           )}
         </div>
       </div>
-      <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#555' }}>
+      <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#555', textAlign: 'right' }}>
         {cursorPos ? `X: ${cursorPos.x}  Y: ${cursorPos.y}` : ''}
+        {hoveredPipId ? `${cursorPos ? '  ' : ''}PIP: ${hoveredPipId}` : ''}
       </span>
       <ExamplesModal isOpen={showExamplesModal} onClose={() => setShowExamplesModal(false)} />
     </div>
