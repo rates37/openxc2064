@@ -339,6 +339,7 @@ const SimulationCanvas: React.FC = () => {
         selectIOBank,
         setCursorPos,
         setHoveredPipId,
+        hoveredPipId,
     } = useSimulator();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -461,6 +462,53 @@ const SimulationCanvas: React.FC = () => {
         setCursorPos(null);
         setHoveredPipId(null);
     }, [setCursorPos, setHoveredPipId]);
+
+    const copyTextToClipboard = useCallback(async (text: string) => {
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+
+            const fallbackInput = document.createElement("textarea");
+            fallbackInput.value = text;
+            fallbackInput.setAttribute("readonly", "true");
+            fallbackInput.style.position = "fixed";
+            fallbackInput.style.left = "-9999px";
+            document.body.appendChild(fallbackInput);
+            fallbackInput.select();
+            const copied = document.execCommand("copy");
+            document.body.removeChild(fallbackInput);
+            return copied;
+        } catch (error) {
+            console.error("Failed to copy pip id:", error);
+            return false;
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.code !== "Space" || event.repeat) return;
+
+            const activeElement = document.activeElement;
+            if (
+                activeElement instanceof HTMLInputElement ||
+                activeElement instanceof HTMLTextAreaElement ||
+                activeElement instanceof HTMLSelectElement ||
+                activeElement?.getAttribute("contenteditable") === "true"
+            ) {
+                return;
+            }
+
+            if (!hoveredPipId) return;
+
+            event.preventDefault();
+            void copyTextToClipboard(hoveredPipId);
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [copyTextToClipboard, hoveredPipId]);
 
     // Handle zooming
     useEffect(() => {
@@ -633,8 +681,8 @@ const SimulationCanvas: React.FC = () => {
         canvas.style.height = `${canvasSize.cssHeight}px`;
 
         // Enable anti-aliasing for smooth rendering when zoomed out
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
+        // ctx.imageSmoothingEnabled = true;
+        // ctx.imageSmoothingQuality = "high";
 
         // Clear canvas
         ctx.fillStyle = "#fff";
@@ -695,8 +743,9 @@ const SimulationCanvas: React.FC = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                height: "calc(100vh - 50px)",
+                height: "100vh",
                 width: "100%",
+                boxSizing: "border-box",
             }}
         >
             <canvas

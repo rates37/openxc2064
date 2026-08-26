@@ -16,7 +16,34 @@ possible_connections = [
         [1, 1, 1, 1, 0, 1, 0, 0]
     ]
 
-def parse_clb(data) -> dict[str, int]:
+def neighbour_clb(clb_id: str, dir: str) -> str:
+    row_letter = clb_id[0]
+    col_letter = clb_id[1]
+    
+    if dir == "N":
+        if row_letter == "A":
+            raise ValueError("Cannot move north from row A")
+        
+        row_letter = chr(ord(row_letter) - 1)
+    elif dir == "S":
+        if row_letter == "H":
+            raise ValueError("Cannot move south from row H")
+        
+        row_letter = chr(ord(row_letter) + 1)
+    elif dir == "E":
+        if col_letter == "H":
+            raise ValueError("Cannot move east from column H")
+        
+        col_letter = chr(ord(col_letter) + 1)
+    elif dir == "W":
+        if col_letter == "A":
+            raise ValueError("Cannot move west from column A")
+        
+        col_letter = chr(ord(col_letter) - 1)
+    
+    return f"{row_letter}{col_letter}"
+
+def parse_clb(data, fabric) -> dict[str, int]:
     bitstream = {}
 
     if DEBUG:
@@ -64,6 +91,26 @@ def parse_clb(data) -> dict[str, int]:
 
             pass
 
+    ## Pips for the I/O Ports
+    for pip in fabric["pips"]:
+        # K <- Global Clk
+        if pip["id"] == f"{data['id']}.pip_clk":
+            bitstream[f"CLB {data['id']}.K MuxBit: 1"] = 1 if pip["enabled"] else 0
+            continue
+        
+        # K <- Left side global vertical long line 
+        if pip["id"] == f"{data['id']}.pip_v2_0_6":
+            bitstream[f"CLB {data['id']}.K MuxBit: 0"] = 1 if pip["enabled"] else 0
+            continue
+        
+        # C <- X
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], "S")}.pip_22":
+                bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 1 if pip["enabled"] else 0
+                continue
+        except ValueError:
+            pass
+        
         
     return bitstream
 
@@ -140,7 +187,7 @@ def parse_pips(data) -> dict[str, int]:
         _temp["y"] = int(parts[1])
         pip_objs.append(_temp)
         
-    ## Sort magics by x, then y
+    ## Sort pips by x, then y
     pip_objs.sort(key=lambda m: (m["y"], m["x"]))
 
     ## import the mapping json object
@@ -157,6 +204,32 @@ def parse_pips(data) -> dict[str, int]:
         
         if pip["id"] not in bitstream:
             print("unable to find pip for", pip["id"], "at", new_x, new_y)
+            
+    ## Do the same for the bidi's
+    bidis = []
+    for line in bitstream_csv:
+        for part in line.split(","):
+            if part.startswith("Bidi"):
+                bidis.append(part)
+    bidi_objs = []
+    for bidi in bidis:
+        _temp = {}
+        parts = bidi.split(" ")
+        parts = parts[1].split("G")
+        _temp["id"] = bidi
+        _temp["x"] = int(parts[0])
+        _temp["y"] = int(parts[1])
+        bidi_objs.append(_temp)
+        
+    ## Sort bidis by x, then y
+    bidi_objs.sort(key=lambda m: (m["y"], m["x"]))
+    
+    for bidi in tqdm(bidi_objs):
+        ##TODO : Implement bidirectional pip parsing - I HAVE NO CLUE WHAT THE BIDI LINES ARE
+        bitstream[bidi["id"]] = 0
+        
+        
+        
 
     return bitstream
     
@@ -176,7 +249,7 @@ def generate_bitstream(data) -> dict[str, int] :
 
     print("Parsing CLBs...")
     for clb in tqdm(logic_cells):
-        clb_bitstream = parse_clb(clb)
+        clb_bitstream = parse_clb(clb, data)
         bitstream.update(clb_bitstream)
     
     print("Parsing Switches...")
