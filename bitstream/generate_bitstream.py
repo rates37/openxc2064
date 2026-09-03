@@ -91,6 +91,17 @@ def parse_clb(data, fabric) -> dict[str, int]:
 
             pass
 
+    
+    bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0
+
+
+
+
+
     ## Pips for the I/O Ports
     for pip in fabric["pips"]:
         # K <- Global Clk
@@ -103,15 +114,60 @@ def parse_clb(data, fabric) -> dict[str, int]:
             bitstream[f"CLB {data['id']}.K MuxBit: 0"] = 1 if pip["enabled"] else 0
             continue
         
-        # C <- X
+        # CX
         try:
-            if pip["id"] == f"{neighbour_clb(data['id'], "S")}.pip_22":
-                bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 1 if pip["enabled"] else 0
+            if pip["id"] == f"{neighbour_clb(data['id'], 'S')}.pip_22":
+                bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0 if pip["enabled"] else 1
                 continue
         except ValueError:
             pass
-        
-        
+
+        # C1
+        if pip["id"] == f"{data['id']}.pip_8":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 1"] = 1
+            continue
+
+        # C2
+        if pip["id"] == f"{data['id']}.pip_9":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 1"] = 1
+            continue
+
+        # C3
+        if pip["id"] == f"{data['id']}.pip_10":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0
+            continue
+
+        # C4
+        if pip["id"] == f"{data['id']}.pip_11":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 1
+            continue
+
+        # C5
+        if pip["id"] == f"{data['id']}.pip_v2_0_21":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 1
+            continue
+
+        # C6
+        if pip["id"] == f"{data['id']}.pip_v2_0_3":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 1
+            continue
+
+        # C7
+        if pip["id"] == f"{data['id']}.pip_v2_0_4":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 1
+            continue
+
     return bitstream
 
 def parse_switches(data) -> dict[str, int]:
