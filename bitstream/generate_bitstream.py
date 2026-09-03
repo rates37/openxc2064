@@ -232,12 +232,22 @@ def parse_pips(data) -> dict[str, int]:
         
 
     return bitstream
-    
+
+def parse_io_banks(data) -> dict[str, int]:
+    bitstream = {}
+    io_banks = data["ioBanks"]
+
+    coord_map = json.load(open("coordinate_mapping.json", "r"))
+
+    for bank in io_banks:
+        mapped_id = coord_map["io_mappings"].get(str(bank["id"]), bank["id"])
+        bitstream[f"IOB {mapped_id}.I PAD/Latched"] = bank["muxes"][1]['select']
+
+    return bitstream
     
 def generate_bitstream(data) -> dict[str, int] :
     logic_cells = data["logicCells"]
     bitstream = {}
-
 
     print("Generating bitstream...")
 
@@ -259,6 +269,10 @@ def generate_bitstream(data) -> dict[str, int] :
     print("Parsing PIPs...")
     pip_bitstream = parse_pips(data)
     bitstream.update(pip_bitstream)
+
+    print("Parsing IO Banks...")
+    io_bitstream = parse_io_banks(data)
+    bitstream.update(io_bitstream)
 
     return bitstream
     
