@@ -229,6 +229,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 			if (!matrix) return;
 			matrix.connections = connections;
 			simulate();
+			setShouldSimulateAfterPipToggle(true);
 		},
 		[switchMatrices, bumpTick],
 	);

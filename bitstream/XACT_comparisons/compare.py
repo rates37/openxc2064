@@ -33,7 +33,7 @@ def strip_bits(data: bytes, num_bits: int) -> tuple[bytes, int]:
     return remaining_bytes, stripped_bits
 
 
-def load_xact_bitstream(filename: str) -> dict[str, int]:
+def load_xact_bitstream(filename: str) -> bytearray:
     bitstream = bytearray()
     bit_buffer = 0
     bit_pos = 0
@@ -74,22 +74,71 @@ def load_xact_bitstream(filename: str) -> dict[str, int]:
     return bitstream
     
 
-def load_bitstream_names(filename: str) -> dict[int, str]:
-    bit_names = []
-    with open(filename, "r") as f:
-        ## load csv rows
-        rows = f.read().splitlines()
-        
-        ## append to the list, column first, then rows
-        for col in range(len(rows[0].split(","))):
-            for row in rows:
-                bit_names.append(row.split(",")[col].strip())
-        
+def load_bitstream_names(filename: str, bits) -> dict[int, str]:
+    bit_names: dict[str, int] = {}
+
+    with open(filename, "r", encoding="utf-8") as f:
+        # read csv rows (simple CSV parsing - file expected to be rectangular)
+        rows = [line.split(",") for line in f.read().splitlines() if line.strip()]
+
+        if not rows:
+            return bit_names
+
+        num_rows = len(rows)
+        num_cols = len(rows[0])
+
+        # iterate column-major: for each column, then each row
+        for col in range(num_cols):
+            for row_idx in range(num_rows):
+                # guard against ragged rows
+                if col >= len(rows[row_idx]):
+                    continue
+                name = rows[row_idx][col].strip()
+                if not name:
+                    continue
+
+                bit_index = col * num_rows + row_idx
+                if bit_index < len(bits):
+                    bit_names[name] = bits[bit_index]
+
     return bit_names
+    
+
+                
+import openpyxl
+from tqdm import tqdm
+                
+def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, int], filename: str) -> openpyxl.Workbook:
+    sheet = mapping_sheet.active
+
+    print("Writing Bitstream")
+    
+    bit_count = 0
+    for key, value in tqdm(bitstream.items()):
+
+        # if key is in a cell in the sheet, colour that cell green
+        for row in sheet.iter_rows():
+            for cell in row:
+                if cell.value == key:
+                    if (value == 1):
+                        fill_colour = "00FF00"
+                    if (value == -1):
+                        fill_colour = "000000"
+                    if (value == 0):
+                        fill_colour = "FF0000"
+
+
+                    cell.fill = openpyxl.styles.PatternFill(start_color=fill_colour, end_color=fill_colour, fill_type="solid")
+                    bit_count += 1
+
+    print(f"Num bits: {bit_count} / 11358 ({bit_count/11358*100:.2f}%)")
+    
+    return mapping_sheet
+
     
     
 if __name__ == "__main__":
-    FILENAME = 'COUNTER'
+    FILENAME = 'PIN_FIND'
     xact_bytes = load_xact_bitstream("./" + FILENAME + ".BIT")
     xact_bits = []
     for byte in xact_bytes:
@@ -97,6 +146,12 @@ if __name__ == "__main__":
             xact_bits.append((byte >> (7 - i)) & 1)
     
     
-    bit_names = load_bitstream_names("../XC2064-spreadsheet.csv")
-    
-    [print(name, " | ", xact_bits[i]) for i, name in enumerate(bit_names)]
+    bitstream = load_bitstream_names("../XC2064-spreadsheet.csv", xact_bits)
+
+    ## import mapping sheet from XC2064-spreadsheet
+    mapping_sheet = openpyxl.load_workbook("XC2064-bits.xlsx")
+
+    mapping_sheet = generate_spreadsheet(mapping_sheet, bitstream, "sim_out.xlsx")
+
+    # save spreadsheet
+    mapping_sheet.save("XC2064_output.xlsx")
