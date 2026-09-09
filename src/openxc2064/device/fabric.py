@@ -38,6 +38,11 @@ _DATA_DIR = (
 RESERVED_PREFIXES = ("global.net_clk", "global.net_osc", "global_io.")
 CLOCK_ALLOWED = frozenset({"global.net_clk"})
 
+# The on-chip oscillator's output net. It is an external source like a pad
+# (the RC oscillator drives it; the web simulator's Oscillator control toggles
+# it directly), not something the router may reach on its own.
+OSCILLATOR_NET = "global.net_osc_in"
+
 # Legal pin-to-pin connections inside every switch matrix
 # (mirrors SwitchMatrix.possibleConnections in simulator/src/models/SwitchMatrix.ts).
 # Pin layout: 0,1 top; 2,3 right; 4,5 bottom; 6,7 left.
@@ -482,6 +487,15 @@ class Fabric:
 
     def reverse_neighbors(self, net_id: str) -> list[tuple[str, tuple]]:
         return self._radj.get(net_id, [])
+
+    def edge_ref(self, src: str, dst: str) -> tuple | None:
+        """The edge_ref for the directed hop src -> dst (the same value
+        find_path reports), or None if the fabric has no such edge. Lets a
+        routed hop be turned back off without re-running the search."""
+        for other, ref in self.neighbors(src):
+            if other == dst:
+                return ref
+        return None
 
     def reachable_sources(self, net_id: str) -> set[str]:
         """All nets from which net_id can be reached (reverse BFS)."""

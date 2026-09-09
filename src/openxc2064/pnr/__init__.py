@@ -1,3 +1,9 @@
+from .clocking import (
+    ClockSource,
+    ClockSourceError,
+    OscillatorHookup,
+    reroute_clock_to_oscillator,
+)
 from .constraints import PinConstraintError, PinConstraints
 from .design_view import DesignError, DesignView, RoutedNet
 from .placement import AnnealingPlacer, Placement, PlacementError, placement_cost
@@ -8,6 +14,10 @@ from .flow import place_and_route
 __all__ = [
     "PinConstraints",
     "PinConstraintError",
+    "ClockSource",
+    "ClockSourceError",
+    "OscillatorHookup",
+    "reroute_clock_to_oscillator",
     "DesignError",
     "DesignView",
     "RoutedNet",

@@ -142,6 +142,30 @@ class DeviceConfig:
         for src, dst, ref in hops:
             self.enable_edge(src, dst, ref)
 
+    def disable_edge(self, src: str, dst: str, ref: tuple) -> None:
+        """Undo one routing hop: drop its driver record and switch the
+        underlying pip or matrix connection back off. `ref` is the edge_ref
+        the hop was enabled with (Fabric.edge_ref recovers it).
+        """
+        kind = ref[0]
+        if kind == "pip":
+            pip: Pip = ref[1]
+            self.enabled_pips.discard((pip.source, pip.destination))
+        elif kind == "matrix":
+            _, mid, i, j = ref
+            matrix = self.fabric.matrices[mid]
+            if matrix.pin_nets[i] == src and matrix.pin_nets[j] == dst:
+                self.matrix_connections[mid][i][j] = 0
+            elif matrix.pin_nets[j] == src and matrix.pin_nets[i] == dst:
+                self.matrix_connections[mid][j][i] = 0
+            else:
+                raise ValueError(f"edge {ref} does not connect {src} -> {dst}")
+        else:
+            raise ValueError(f"Unknown edge kind '{kind}'")
+        if (src, dst) in self._driver_set:
+            self._driver_set.discard((src, dst))
+            self.drivers.remove((src, dst))
+
     #! export:
     def to_dict(self) -> dict:
         logic_cells = [

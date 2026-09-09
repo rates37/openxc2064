@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import random
 
+from openxc2064.device.fabric import OSCILLATOR_NET
 from openxc2064.mapping.xc2064_primitives import IOB
 from openxc2064.simulator import FabricSimulator, RTLSimulator
 from openxc2064.synthesis.rtl_nodes import Netlist
@@ -64,6 +65,17 @@ def verify_equivalence(
 
     data_inputs = [n for n in inputs if n is not clock_node]
 
+    # a design built with ClockSource.OSCILLATOR no longer reaches its clock
+    # tree through the pad, so drive the oscillator net the same way the web
+    # simulator's Oscillator control does
+    oscillator_clocked = any(src == OSCILLATOR_NET for src, _ in config.drivers)
+
+    def drive_clock(value: int) -> None:
+        if oscillator_clocked:
+            fabric_sim.set_net(OSCILLATOR_NET, value)
+        else:
+            fabric_sim.set_pad(placement.iob_sites[clock_node.id], value)
+
     n_inputs = len(data_inputs)
     if n_inputs <= max_exhaustive_inputs:
         vectors = [
@@ -109,7 +121,7 @@ def verify_equivalence(
         for cycle in range(clock_cycles):
             for clk in (0, 1):
                 rtl_sim.net_values[rtl_sim.input_ports[clock_node.pad_name]] = clk
-                fabric_sim.set_pad(placement.iob_sites[clock_node.id], clk)
+                drive_clock(clk)
                 rtl_sim.step()
                 fabric_sim.step()
                 compare(step, bits, f" cycle {cycle} clk={clk}")

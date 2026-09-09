@@ -106,6 +106,17 @@ packed = compile_hdl_to_packed(HDL, "counter")
 config, placement, report = place_and_route(packed, seed=0)
 ```
 
+Both take the same optional arguments:
+
+| argument   | what it does                                                                |
+| ---------- | --------------------------------------------------------------------------- |
+| `fabric`   | the device to target (defaults to `Fabric.load("xc2064_8x8")`)              |
+| `seed`     | the placer's RNG seed; the whole flow is deterministic per seed             |
+| `pins`     | pad -> bank constraints, see [Constraining pin assignment](#constraining-pin-assignment) |
+| `placer`   | a tuned `AnnealingPlacer` instead of the default                            |
+| `router`   | a tuned `PathFinderRouter`, e.g. `PathFinderRouter(max_iterations=100)` for a congested design |
+| `clock`    | `ClockSource.PAD` (default) or `ClockSource.OSCILLATOR`, see [Clocking off the on-chip oscillator](#clocking-off-the-on-chip-oscillator) |
+
 Pipeline composition can be seen in [`openxc2064/toolchain.py`](src/openxc2064/toolchain.py).
 
 ---
@@ -409,6 +420,16 @@ Pad names are the bit-level names the front end produces: a scalar port `clk` be
 - `assign("clk", bank)`: a bare scalar name is accepted when it is   unambiguous, so `clk` resolves to `clk[0]`
 - `assign("count[3]", bank)`: pin one bit of a bus by its exact name
 - `assign_bus("count", banks)`: pin `count[i]` to `banks[i]`, the usual way to lay a bus along a row.
+- `assign_buses([(port, width), ...], banks)`: lay several buses over one pool of banks, each taking the next contiguous run. Handy when a design has more than one bus to place:
+
+```python
+pins.assign_buses(
+    [(f"c{i}", 8) for i in range(6)],           # six 8-bit buses
+    fabric.pad_banks(edge="N") + fabric.pad_banks(edge="E"),
+)
+```
+
+It raises `PinConstraintError` up front if the pool cannot hold them all.
 
 Constraints can also be kept in a file, since `to_json()` / `from_json()` round-trip a plain `{pad: bank}` object:
 
@@ -422,9 +443,62 @@ A plain `dict` works anywhere a `PinConstraints` does:
 
 ---
 
+### Clocking off the on-chip oscillator
+
+By default a design's clock arrives on an input pad, which can be toggled by hand
+in the web simulator. The device also has an on-chip oscillator, and
+`clock=ClockSource.OSCILLATOR` sources the clock from that instead, so the web
+simulator's Oscillator control drives the design directly:
+
+```python
+from openxc2064 import build
+from openxc2064.pnr import ClockSource
+
+config, placement, report = build(
+    COUNTER_HDL, "counter", clock=ClockSource.OSCILLATOR
+)
+config.save("counter.json")   # import it, enable the Oscillator, watch it count
+```
+
+The router itself never reaches the oscillator: `global.net_osc` and
+`global.net_osc_in` are reserved (`RESERVED_PREFIXES`), so no data net can
+stray onto them. Routing happens as usual against the clock pad, then
+[`reroute_clock_to_oscillator`](src/openxc2064/pnr/clocking.py) cuts the pad
+out of the clock tree — driver record *and* the pip/matrix connection behind
+it — and routes the oscillator into the same trunk over real fabric edges.
+Everything downstream, the trunk fanning out to every CLB's K pin, is
+untouched. You can call it directly on an already-routed config:
+
+```python
+from openxc2064.pnr import reroute_clock_to_oscillator
+
+hookup = reroute_clock_to_oscillator(config, fabric, design, placement)
+hookup.freed_bank   # 'BA_IO0': the pad the clock no longer uses
+hookup.hops         # (('global.net_osc_in', 'global.net_osc'), ...)
+```
+
+`verify_equivalence` understands both clock sources, driving `global.net_osc_in`
+instead of a pad when the config is oscillator-clocked, so an oscillator design
+is checked against its RTL exactly like any other. In the Python simulator that
+net is driven with `FabricSimulator.set_net`:
+
+```python
+sim = FabricSimulator(config)
+for _ in range(6):
+    for level in (0, 1):
+        sim.set_net("global.net_osc_in", level)
+        sim.step()
+```
+
+`ClockSourceError` is raised if the design has no clock net at all, or if its
+clock is driven by something other than an input pad.
+
+---
+
 ## Current limitations
 
 - One clock domain per design: Multiple clock nets raise `DesignError`
+- An oscillator-sourced clock still costs a pad: `ClockSource.OSCILLATOR` reroutes  after placement, so the clock port is still allocated an IOB (and then freed).  On a pad-tight design that pad is not available for data
 - No tri-state / bidirectional pads: `inout` parses, but a tri-state IOB is   rejected by `DesignView` rather than silently mis-routed
 - No timing analysis: Placement and routing optimise wire length and   congestion; there is no static timing model or `Fmax` figure calculated
 - No bitstream generation yet: The flow ends at a `DeviceConfig` (JSON), which the fabric simulator and web simulator both consume; emitting real XC2064 bitstream bits is not yet implemented
