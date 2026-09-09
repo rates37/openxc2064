@@ -13,6 +13,7 @@ from openxc2064.mapping.mapper import GreedyMapper
 from openxc2064.mapping.packer import GreedyPacker
 from openxc2064.pnr.clocking import ClockSource
 from openxc2064.pnr.constraints import PinConstraints
+from openxc2064.pnr.pin_assignments import PinAssignments
 from openxc2064.pnr.flow import place_and_route
 from openxc2064.pnr.placement import AnnealingPlacer, Placement
 from openxc2064.pnr.router import PathFinderRouter, RoutingReport
@@ -41,10 +42,10 @@ def build(
     *,
     fabric: Fabric | None = None,
     seed: int = 0,
-    pins: PinConstraints | dict[str, str] | None = None,
+    pins: PinAssignments | PinConstraints | dict[str, str] | None = None,
     placer: AnnealingPlacer | None = None,
     router: PathFinderRouter | None = None,
-    clock: ClockSource | str = ClockSource.PAD,
+    clock: ClockSource | str | None = None,
 ) -> tuple[DeviceConfig, Placement, RoutingReport]:
     """One-call compile: HDL source -> placed & routed DeviceConfig.
 

@@ -164,4 +164,10 @@ def coerce_pins(
         return PinConstraints()
     if isinstance(pins, PinConstraints):
         return pins
+    if type(pins).__name__ == "PinAssignments":
+        raise PinConstraintError(
+            "a PinAssignments file names edge slots, which only mean something "
+            "against a device: call .to_constraints(fabric), or pass it to "
+            "build()/place_and_route() which resolve it for you"
+        )
     return PinConstraints(dict(pins))

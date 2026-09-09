@@ -22,10 +22,15 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from openxc2064.device.config import DeviceConfig
-from openxc2064.device.fabric import CLOCK_ALLOWED, Fabric
+from openxc2064.device.fabric import (
+    CLOCK_ALLOWED,
+    OSCILLATOR_ALLOWED,
+    OSCILLATOR_NET,
+    Fabric,
+)
 
 from .design_view import DesignView, RoutedNet
-from .placement import Placement
+from .placement import OSCILLATOR_SITE, Placement
 
 Hop = tuple[str, str, tuple]  # (from_net, to_net, edge_ref)
 
@@ -50,7 +55,9 @@ def _terminal_fabric_net(terminal: tuple[str, str], placement: Placement) -> str
     if port in "ABCD" or port == "K":
         return f"{placement.clb_sites[node_id]}.net_{port}"
     if port == "I":
-        return f"{placement.iob_sites[node_id]}.net_I"
+        site = placement.iob_sites[node_id]
+        # an IOB bound to the oscillator has no pad to come in on
+        return OSCILLATOR_NET if site == OSCILLATOR_SITE else f"{site}.net_I"
     if port == "O":
         return f"{placement.iob_sites[node_id]}.net_O"
     raise ValueError(f"unknown terminal port '{port}'")
@@ -141,6 +148,8 @@ class PathFinderRouter:
         for node_id, cell in sorted(placement.clb_sites.items()):
             config.configure_clb(cell, design.clbs[node_id])
         for node_id, bank in sorted(placement.iob_sites.items()):
+            if bank == OSCILLATOR_SITE:
+                continue  # no pad bank backs it
             iob = design.iobs[node_id]
             config.configure_iob(bank, "output" if iob.is_output else "input")
 
@@ -180,6 +189,8 @@ class PathFinderRouter:
         net, source, sinks = entry
         name = net.name
         blocked = (reserved - CLOCK_ALLOWED) if net.is_clock else reserved
+        if source == OSCILLATOR_NET:
+            blocked = blocked - OSCILLATOR_ALLOWED
 
         tree = {source}
         hops: list[Hop] = []

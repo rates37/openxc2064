@@ -27,9 +27,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 
-_DATA_DIR = (
-    Path(__file__).parent / "data"
-)  # assumes the jsons have already been generated
+_DATA_DIR = Path(__file__).parent / "data"  # assumes the jsons have already been generated
 
 # Fabric policy: the dedicated clock/oscillator/IO-clock distribution nets are
 # reachable from IOB inputs but must never carry general data signals. A clock
@@ -42,6 +40,18 @@ CLOCK_ALLOWED = frozenset({"global.net_clk"})
 # (the RC oscillator drives it; the web simulator's Oscillator control toggles
 # it directly), not something the router may reach on its own.
 OSCILLATOR_NET = "global.net_osc_in"
+
+# The oscillator's distribution nets. Reserved like the clock trunk: only a
+# net actually sourced at the oscillator may enter them (pnr.ClockSource).
+OSCILLATOR_ALLOWED = frozenset({OSCILLATOR_NET, "global.net_osc"})
+
+# Canvas layout constants, mirroring simulator/src/configs/constants.ts
+CELL_WIDTH = 200
+CELL_HEIGHT = 320
+CELL_MARGIN_X = 320
+CELL_MARGIN_Y = 240
+CELL_OFFSET_X = 0
+CELL_OFFSET_Y = 0
 
 # Legal pin-to-pin connections inside every switch matrix
 # (mirrors SwitchMatrix.possibleConnections in simulator/src/models/SwitchMatrix.ts).
@@ -65,6 +75,23 @@ CLB_OUTPUT_PINS = ("net_X", "net_Y")
 def cell_name(row: int, col: int) -> str:
     """Grid coordinates to cell ID: (0, 0) -> 'AA' (top-left), row first."""
     return chr(65 + row) + chr(65 + col)
+
+
+def _pad_world_pos(bconf: dict, row: int, col: int) -> tuple[float, float] | None:
+    """Where this bank's pad sits on the canvas, or None if it has no pad.
+
+    Ports the positioning logic in simulator/src/InitialiseSimulation.ts: bank
+    position is relative to its cell, pad position relative to its bank.
+    """
+    pads = bconf.get("pads")
+    if not pads:
+        return None
+    cell_x = col * (CELL_WIDTH + CELL_MARGIN_X) + CELL_OFFSET_X
+    cell_y = row * (CELL_HEIGHT + CELL_MARGIN_Y) + CELL_OFFSET_Y
+    bank_x = cell_x + CELL_WIDTH / 2 + bconf["pos"]["x"] - bconf["size"]["width"] / 2
+    bank_y = cell_y + CELL_HEIGHT / 2 - bconf["size"]["height"] / 2 + bconf["pos"]["y"]
+    pad = pads[0]
+    return (bank_x + pad["pos"]["x"], bank_y + pad["pos"]["y"])
 
 
 def decode_relative_net_name(
@@ -184,6 +211,7 @@ class IOBankSite:
     pad_index: int  # global pad ordering (grid creation order)
     has_pad: bool
     nets: set[str] = field(default_factory=set)
+    pad_pos: tuple[float, float] | None = None  # world (x, y) of the pad, if exists
 
     def net(self, local: str) -> str:
         # assert local in ('net_I', 'net_O', 'net_T', 'net_pad', ...)
@@ -205,6 +233,7 @@ class Fabric:
         self.clbs: dict[str, CLBSite] = {}
         self.matrices: dict[str, SwitchMatrixSite] = {}
         self.io_banks: dict[str, IOBankSite] = {}
+        self._pads_by_edge_cache: dict[str, list[str]] | None = None
         self.pips: list[Pip] = []
         self.bus_nets: list[str] = []
         self.nodes: set[str] = set()
@@ -262,17 +291,13 @@ class Fabric:
                 ]
                 for index, mconf in enumerate(matrix_configs):
                     if mconf is None:
-                        self.warnings.append(
-                            f"null switch matrix config at {cid}_M{index}"
-                        )
+                        self.warnings.append(f"null switch matrix config at {cid}_M{index}")
                 matrix_configs_by_index = list(enumerate(matrix_configs))
                 for index, mconf in matrix_configs_by_index:
                     if mconf is None:
                         continue
                     mid = f"{cid}_M{index}"
-                    pin_nets: list[str | None] = [
-                        f"{mid}.{net['id']}" for net in mconf["nets"]
-                    ]
+                    pin_nets: list[str | None] = [f"{mid}.{net['id']}" for net in mconf["nets"]]
                     pin_nets += [None] * (8 - len(pin_nets))
                     self.matrices[mid] = SwitchMatrixSite(
                         id=mid,
@@ -301,6 +326,7 @@ class Fabric:
                         pad_index=len(self.io_banks),
                         has_pad=bool(bconf.get("pads")),
                         nets={f"{bid}.{net['id']}" for net in bconf["nets"]},
+                        pad_pos=_pad_world_pos(bconf, row, col),
                     )
 
         self.bus_nets = [net["id"] for net in config["bus"]]
@@ -345,9 +371,7 @@ class Fabric:
                     bottom_index = index % 2
                     bottom_cell = cid
 
-            def resolve(
-                target_cell: str | None, target_index: int, net_local: str
-            ) -> str | None:
+            def resolve(target_cell: str | None, target_index: int, net_local: str) -> str | None:
                 if target_cell is None:
                     return None
                 target = self.matrices.get(f"{target_cell}_M{target_index}")
@@ -380,9 +404,7 @@ class Fabric:
                 _, pip_configs = self._cell_config(config, cid)
                 for pconf in pip_configs:
                     source = decode_relative_net_name(pconf["source"], cid, row, col, n)
-                    destination = decode_relative_net_name(
-                        pconf["destination"], cid, row, col, n
-                    )
+                    destination = decode_relative_net_name(pconf["destination"], cid, row, col, n)
                     if source is None or destination is None:
                         self.warnings.append(
                             f"pip in {cid} points off-grid: "
@@ -392,9 +414,7 @@ class Fabric:
                     # (source, destination) is the canonical pip identity
                     # (SaveSimulation.ts matches saved pips the same way)
                     if (source, destination) in seen:
-                        self.warnings.append(
-                            f"duplicate pip in {cid}: {source} -> {destination}"
-                        )
+                        self.warnings.append(f"duplicate pip in {cid}: {source} -> {destination}")
                         continue
                     seen.add((source, destination))
                     self.pips.append(
@@ -416,8 +436,7 @@ class Fabric:
             self.nodes.update(clb.nets)
         for matrix in self.matrices.values():
             self.nodes.update(
-                matrix.own_net_ids
-                - {p for p in matrix.own_net_ids if self._is_placeholder(p)}
+                matrix.own_net_ids - {p for p in matrix.own_net_ids if self._is_placeholder(p)}
             )
         for bank in self.io_banks.values():
             self.nodes.update(bank.nets)
@@ -448,38 +467,63 @@ class Fabric:
         return {net for net in self.bus_nets if net.startswith(RESERVED_PREFIXES)}
 
     def pad_banks(self, edge: str | None = None) -> list[str]:
-        """IO bank IDs in pad order, optionally restricted to one
-        edge of the die: 'N', 'S', 'W' or 'E'. Corner cells belong to N/S.
+        """IO bank IDs in physical pad order, optionally restricted to one
+        edge of the die: 'N', 'S', 'W' or 'E'.
 
-        Pad order runs left-to-right along N and S, and top-to-bottom down W
-        and E, so a slice of this list is a contiguous physical row of pads."""
-        ordered = sorted(
-            (bank for bank in self.io_banks.values() if bank.has_pad),
-            key=lambda bank: bank.pad_index,
-        )
-        if edge is None:
-            return [bank.id for bank in ordered]
+        Order runs left-to-right along N and S and top-to-bottom down E and W,
+        so a slice is a contiguous physical row of pads. With no edge, the
+        pads run clockwise from the top-left: N, then E, then S, then W.
 
-        edge = edge.upper()
-        if edge not in ("N", "S", "W", "E"):
-            raise ValueError(f"unknown edge '{edge}'; expected N, S, W or E")
+        Which edge a pad is on comes from where it is actually drawn, not from
+        its owning cell: a corner cell owns pads on two different edges (on
+        the 8x8, AA_IO0/IO1 are the top of the west edge while AA_IO2/IO3 are
+        the left of the north edge)."""
+        if edge is not None:
+            edge = edge.upper()
+            if edge not in ("N", "S", "W", "E"):
+                raise ValueError(f"unknown edge '{edge}'; expected N, S, W or E")
 
-        last = self.grid_size - 1
-        result: list[str] = []
-        for bank in ordered:
-            cell = self.clbs[bank.owner_cell]
-            if cell.row == 0:
-                where = "N"
-            elif cell.row == last:
-                where = "S"
-            elif cell.col == 0:
-                where = "W"
-            elif cell.col == last:
-                where = "E"
-            else:
-                continue  # interior cells own no pads on this device
-            if where == edge:
-                result.append(bank.id)
+        by_edge = self._pads_by_edge()
+        if edge is not None:
+            return list(by_edge[edge])
+        return [bid for side in ("N", "E", "S", "W") for bid in by_edge[side]]
+
+    def _pads_by_edge(self) -> dict[str, list[str]]:
+        """Pads grouped by the edge they are drawn on, each in physical order."""
+        if self._pads_by_edge_cache is not None:
+            return self._pads_by_edge_cache
+
+        pads = [
+            (bank.id, bank.pad_pos[0], bank.pad_pos[1])
+            for bank in self.io_banks.values()
+            if bank.has_pad and bank.pad_pos is not None
+        ]
+        result: dict[str, list[str]] = {"N": [], "E": [], "S": [], "W": []}
+        if pads:
+            min_x = min(x for _, x, _ in pads)
+            max_x = max(x for _, x, _ in pads)
+            min_y = min(y for _, _, y in pads)
+            max_y = max(y for _, _, y in pads)
+
+            grouped: dict[str, list[tuple[str, float, float]]] = {
+                "N": [],
+                "E": [],
+                "S": [],
+                "W": [],
+            }
+            for bid, x, y in pads:
+                # the edge whose boundary this pad hugs most closely
+                side = min(
+                    (("N", y - min_y), ("S", max_y - y), ("W", x - min_x), ("E", max_x - x)),
+                    key=lambda item: item[1],
+                )[0]
+                grouped[side].append((bid, x, y))
+
+            for side, entries in grouped.items():
+                axis = 1 if side in ("N", "S") else 2  # across the edge
+                result[side] = [item[0] for item in sorted(entries, key=lambda item: item[axis])]
+
+        self._pads_by_edge_cache = result
         return result
 
     def neighbors(self, net_id: str) -> list[tuple[str, tuple]]:
