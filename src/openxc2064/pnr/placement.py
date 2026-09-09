@@ -26,6 +26,10 @@ class PlacementError(Exception):
     pass
 
 
+# Pseudo-site for an IOB bound to the on-chip oscillator rather than a pad
+OSCILLATOR_SITE = "OSC"
+
+
 # Single source of truth for the direct-connect reward. Both the annealer and
 # placement_cost default to this so a placement is never scored against a
 # different objective than the one it was optimised for.
@@ -130,13 +134,16 @@ class Placement:
             bank = self.iob_sites.get(node_id)
             if bank is None:
                 issues.append(f"IOB node '{node_id}' is not placed")
+            elif bank == OSCILLATOR_SITE:
+                continue  # bound to the oscillator not a pad bank
             elif bank not in fabric.io_banks:
                 issues.append(f"IOB node '{node_id}' placed on unknown bank '{bank}'")
             elif not fabric.io_banks[bank].has_pad:
                 issues.append(f"IOB node '{node_id}' placed on padless bank '{bank}'")
         if len(set(self.clb_sites.values())) != len(self.clb_sites):
             issues.append("two CLB nodes share a cell")
-        if len(set(self.iob_sites.values())) != len(self.iob_sites):
+        banks = [b for b in self.iob_sites.values() if b != OSCILLATOR_SITE]
+        if len(set(banks)) != len(banks):
             issues.append("two IOB nodes share a bank")
         return issues
 
@@ -176,10 +183,13 @@ class AnnealingPlacer:
         fabric: Fabric,
         seed: int = 0,
         pins: "PinConstraints | dict[str, str] | None" = None,
+        oscillator_iobs: frozenset[str] | set[str] = frozenset(),
     ) -> Placement:
         """Place every CLB and IOB. `pins` optionally nails chosen pads to
         chosen banks; those IOBs are pre-placed and never moved, while
-        everything else anneals as usual."""
+        everything else anneals normally. IOB nodes in `oscillator_iobs` are
+        bound to the on-chip oscillator instead of a pad, so they consume no
+        bank."""
         rng = random.Random(seed)
 
         cells = sorted(fabric.clbs)
@@ -188,7 +198,7 @@ class AnnealingPlacer:
             key=lambda bid: fabric.io_banks[bid].pad_index,
         )
         clb_nodes = sorted(design.clbs)
-        iob_nodes = sorted(design.iobs)
+        iob_nodes = sorted(node for node in design.iobs if node not in oscillator_iobs)
         if len(clb_nodes) > len(cells):
             raise PlacementError(f"{len(clb_nodes)} CLBs > {len(cells)} cells")
         if len(iob_nodes) > len(banks):
@@ -197,6 +207,13 @@ class AnnealingPlacer:
         # pinned IOBs are placed up front and withheld from the move set, so
         # neither they nor their banks can be disturbed by annealing
         pinned = coerce_pins(pins).resolve(design, fabric)
+        clashes = sorted(set(pinned) & set(oscillator_iobs))
+        if clashes:
+            pads = ", ".join(sorted(design.iobs[node].pad_name for node in clashes))
+            raise PlacementError(
+                f"pad '{pads}' is pinned to a bank but is also sourced from the "
+                "oscillator. Drop the pin constraint or the oscillator clock"
+            )
         free_iob_nodes = [node for node in iob_nodes if node not in pinned]
         taken_banks = set(pinned.values())
         free_banks = [bank for bank in banks if bank not in taken_banks]
@@ -220,6 +237,8 @@ class AnnealingPlacer:
         ):
             node_site[node] = site
             occupant[site] = node
+        for node in sorted(oscillator_iobs):
+            node_site[node] = OSCILLATOR_SITE
 
         site_coords = _site_coords(fabric)
         table = direct_connect_table(fabric)
@@ -291,7 +310,7 @@ class AnnealingPlacer:
         if movable == 0 or not data_nets:
             return Placement(
                 clb_sites={n: node_site[n] for n in clb_nodes},
-                iob_sites={n: node_site[n] for n in iob_nodes},
+                iob_sites={n: node_site[n] for n in sorted(design.iobs)},
             )
 
         # initial temperature from the spread of random move deltas
@@ -344,5 +363,5 @@ class AnnealingPlacer:
 
         return Placement(
             clb_sites={n: node_site[n] for n in clb_nodes},
-            iob_sites={n: node_site[n] for n in iob_nodes},
+            iob_sites={n: node_site[n] for n in sorted(design.iobs)},
         )

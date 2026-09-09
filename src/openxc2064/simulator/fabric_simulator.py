@@ -29,6 +29,8 @@ from __future__ import annotations
 from collections import deque
 from typing import TYPE_CHECKING, Callable
 
+from ..device.fabric import OSCILLATOR_NET
+
 if TYPE_CHECKING:
     from ..device.config import DeviceConfig
 
@@ -89,6 +91,10 @@ class FabricSimulator:
         """Debug access. Nets outside the compiled schedule read as 0."""
         index = self._index.get(net_id)
         return self._values[index] if index is not None else 0
+
+    def set_net(self, net_id: str, value: int) -> None:
+        """Drive a source net that is not a pad."""
+        self._values[self._idx(net_id)] = 1 if value else 0
 
     def step(self) -> None:
         schedule = self._schedule
@@ -292,12 +298,14 @@ class FabricSimulator:
         # flip-flop update records
         self._seq = [self._make_seq_record(cid) for cid in sorted(seq_cells)]
 
-        # floating-net report: reads with no producer and no external source
+        # floating-net report: reads with no producer and no external source.
+        # the oscillator net is an external source like a pad, the on-chip RC
+        # oscillator drives it, so a design clocked off it is not floating
         external_sources = {
             fabric.io_banks[bid].net("net_pad")
             for bid, bank_cfg in config.io_banks.items()
             if bank_cfg["mts"] != 2
-        }
+        } | {OSCILLATOR_NET}
         produced = set(producers) | external_sources
         reads: dict[str, str] = {}
         for src, dst in hops:

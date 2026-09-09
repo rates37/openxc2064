@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from openxc2064.device import Fabric
@@ -192,3 +194,80 @@ def test_8x8_interior_matrix_aliasing(fabric8: Fabric):
 def test_8x8_k_pin_clock_reachability(fabric8: Fabric):
     direct = {s for s, _ in fabric8.reverse_neighbors("DD.net_K")}
     assert direct == {"global.net_clk", "global_V3.net_1"}
+
+
+# ---------- pad geometry: which edge a pad is actually drawn on ----------
+
+
+def test_8x8_pad_edges_match_the_rendered_layout(fabric8: Fabric):
+    """The die has 16 pads along the top and bottom and 13 down each side.
+
+    A corner cell owns pads on two edges, so an edge cannot be derived from
+    the owning cell's row/col: AA_IO0/IO1 sit at the top of the west edge
+    while AA_IO2/IO3 are the leftmost pads of the north edge.
+    """
+    counts = {edge: len(fabric8.pad_banks(edge=edge)) for edge in "NESW"}
+    assert counts == {"N": 16, "E": 13, "S": 16, "W": 13}
+    assert sum(counts.values()) == len(fabric8.pad_banks()) == 58
+
+    assert fabric8.pad_banks(edge="N")[:2] == ["AA_IO2", "AA_IO3"]
+    assert fabric8.pad_banks(edge="N")[-2:] == ["AH_IO2", "AH_IO3"]
+    assert fabric8.pad_banks(edge="W")[:2] == ["AA_IO0", "AA_IO1"]
+    assert fabric8.pad_banks(edge="E")[:2] == ["AH_IO0", "AH_IO1"]
+
+
+def test_3x3_pad_edges(fabric3: Fabric):
+    counts = {edge: len(fabric3.pad_banks(edge=edge)) for edge in "NESW"}
+    assert counts == {"N": 6, "E": 4, "S": 6, "W": 4}
+    assert sum(counts.values()) == len(fabric3.pad_banks()) == 20
+
+
+def test_pad_banks_are_in_physical_order(fabric8: Fabric):
+    """N and S run left to right, E and W run top to bottom, so a slice of an
+    edge is a contiguous row of pads on the die."""
+    for edge in ("N", "S"):
+        xs = [fabric8.io_banks[b].pad_pos[0] for b in fabric8.pad_banks(edge=edge)]
+        assert xs == sorted(xs)
+    for edge in ("E", "W"):
+        ys = [fabric8.io_banks[b].pad_pos[1] for b in fabric8.pad_banks(edge=edge)]
+        assert ys == sorted(ys)
+
+    # every pad appears exactly once across the four edges
+    per_edge = [b for edge in "NESW" for b in fabric8.pad_banks(edge=edge)]
+    assert sorted(per_edge) == sorted(fabric8.pad_banks())
+    assert len(set(per_edge)) == len(per_edge)
+
+
+def test_every_pad_bank_knows_where_it_is(fabric8: Fabric):
+    for bid, bank in fabric8.io_banks.items():
+        assert (bank.pad_pos is not None) == bank.has_pad, bid
+
+
+def test_readme_pad_map_matches_the_device(fabric8: Fabric):
+    """The README's slot -> bank table is the map users read to find a pad in
+    the simulator. Re-derive it here so it cannot drift from the fabric (it
+    already did once, when edges were counted per owning cell)."""
+    readme = (Path(__file__).parent.parent / "README.md").read_text(encoding="utf-8")
+
+    header = "| slot | `N` (top) | `E` (right) | `S` (bottom) | `W` (left) |"
+    assert header in readme, "README pad map table is missing"
+    body = readme.split(header, 1)[1].splitlines()[2:]  # skip the |---| rule
+
+    documented: dict[str, list[str]] = {edge: [] for edge in "NESW"}
+    for line in body:
+        if not line.startswith("|"):
+            break
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        slot, banks = int(cells[0]), cells[1:]
+        for edge, bank in zip("NESW", banks):
+            if bank != "—":
+                assert len(documented[edge]) == slot, f"{edge} rows out of order"
+                documented[edge].append(bank.strip("`"))
+
+    for edge in "NESW":
+        assert documented[edge] == fabric8.pad_banks(edge=edge), f"{edge} edge"
+
+    # and the prose counts that go with it
+    assert len(documented["N"]) == len(documented["S"]) == 16
+    assert len(documented["E"]) == len(documented["W"]) == 13
+    assert "16 along the top and bottom" in readme

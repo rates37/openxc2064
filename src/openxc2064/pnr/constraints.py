@@ -57,6 +57,30 @@ class PinConstraints:
             self.pins[f"{port}[{index}]"] = bank
         return self
 
+    def assign_buses(
+        self, buses: Sequence[tuple[str, int]], banks: Sequence[str]
+    ) -> "PinConstraints":
+        """Lay several buses out over one pool of banks, each taking the next
+        contiguous run. `buses` is (port, width) pairs. A pool built from
+        `fabric.pad_banks(edge=...)` slices keeps each bus in pad order.
+
+            pins.assign_buses([("a", 8), ("b", 8)], fabric.pad_banks(edge="N"))
+
+        Raises PinConstraintError if the pool is too small to hold them all.
+        Returns self so calls can chain."""
+        needed = sum(width for _, width in buses)
+        if needed > len(banks):
+            names = ", ".join(f"{port}[{width}]" for port, width in buses)
+            raise PinConstraintError(
+                f"{needed} pads needed for {names}, but only {len(banks)} banks "
+                "were given; pass a larger pool (e.g. more edges) or narrow the buses"
+            )
+        offset = 0
+        for port, width in buses:
+            self.assign_bus(port, banks[offset : offset + width])
+            offset += width
+        return self
+
     #! serialisation:
     def to_json(self) -> str:
         return json.dumps(self.pins, indent=2, sort_keys=True)
@@ -140,4 +164,10 @@ def coerce_pins(
         return PinConstraints()
     if isinstance(pins, PinConstraints):
         return pins
+    if type(pins).__name__ == "PinAssignments":
+        raise PinConstraintError(
+            "a PinAssignments file names edge slots, which only mean something "
+            "against a device: call .to_constraints(fabric), or pass it to "
+            "build()/place_and_route() which resolve it for you"
+        )
     return PinConstraints(dict(pins))

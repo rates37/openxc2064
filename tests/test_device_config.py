@@ -173,6 +173,36 @@ def test_enable_edges(fabric3: Fabric):
     assert {"source": "BB_M0.net_0", "destination": "BB_M0.net_2"} in out["drivers"]
 
 
+def test_disable_edge_undoes_enable_edge(fabric3: Fabric):
+    from openxc2064.device.config import DeviceConfig
+
+    config = DeviceConfig(fabric3)
+
+    pip_hops = fabric3.find_path("AA_M0.net_2", "BB.net_A")
+    matrix_hops = fabric3.find_path("BB_M0.net_0", "BB_M0.net_2")
+    config.enable_path(pip_hops)
+    config.enable_path(matrix_hops)
+
+    for hops in (pip_hops, matrix_hops):
+        for src, dst, ref in hops:
+            config.disable_edge(src, dst, ref)
+
+    # both halves are off again: no driver record and no physical resource
+    out = config.to_dict()
+    assert config.drivers == []
+    assert out["drivers"] == []
+    assert not [p for p in out["pips"] if p["enabled"]]
+    bb_m0 = next(m for m in out["switchMatrices"] if m["id"] == "BB_M0")
+    assert bb_m0["connections"][0][2] == 0
+
+
+def test_edge_ref_recovers_the_ref_a_hop_was_enabled_with(fabric3: Fabric):
+    hops = fabric3.find_path("AA_M0.net_2", "BB.net_A")
+    src, dst, ref = hops[0]
+    assert fabric3.edge_ref(src, dst) == ref
+    assert fabric3.edge_ref(dst, src) is None  # a one-way pip has no reverse edge
+
+
 def test_find_path_avoids_blocked_nets(fabric3: Fabric):
     direct = fabric3.find_path("AA_M0.net_2", "BB.net_A")
     assert direct is not None and len(direct) == 1
