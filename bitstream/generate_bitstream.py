@@ -77,7 +77,12 @@ def parse_clb(data, fabric) -> dict[str, int]:
             bitstream[f"CLB {data['id']} Reset-Enable"] = 1 if mux["select"] != 2 else 0
             bitstream[f"CLB {data['id']} Reset D/G"] = 1 if mux["select"] == 0 else 0
         elif (mux["id"] == "m51"):
-            pass
+            if mux["select"] == 0:
+                bitstream[f"CLB {data['id']}"] = 0
+            elif mux["select"] == 1:
+                bitstream[f"CLB {data['id']}"] = 1
+            elif mux["select"] == 2:
+                bitstream[f"CLB {data['id']}"] = 0
         elif (mux["id"] == "m56"):
             bitstream[f"CLB {data['id']} Set-Enable"] = 1 if mux["select"] != 2 else 0
             bitstream[f"CLB {data['id']} Set A/F"] = 1 if mux["select"] == 0 else 0
@@ -88,8 +93,15 @@ def parse_clb(data, fabric) -> dict[str, int]:
             bitstream[f"CLB {data['id']}.X G"] = 1 if mux["select"] == 0 else 0
             bitstream[f"CLB {data['id']}.X F/M or Q"] = 1 if mux["select"] == 2 else 0
         elif (mux["id"] == "m100"):
-
-            pass
+            if mux["select"] == 0:
+                bitstream[f"CLB {data['id']} CLK Invert"] = 1
+                bitstream[f"CLB {data['id']} CLK enable"] = 1
+            elif mux["select"] == 1:
+                bitstream[f"CLB {data['id']} CLK Invert"] = 0
+                bitstream[f"CLB {data['id']} CLK enable"] = 1
+            elif mux["select"] == 2:
+                bitstream[f"CLB {data['id']} CLK Invert"] = 0
+                bitstream[f"CLB {data['id']} CLK enable"] = 0
 
     
     bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 0
@@ -98,9 +110,26 @@ def parse_clb(data, fabric) -> dict[str, int]:
     bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 0
     bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0
 
+    bitstream[f"CLB {data['id']}.K MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.K MuxBit: 1"] = 0
 
+    bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 3"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 4"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 5"] = 0
 
+    bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.A MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.A MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.A MuxBit: 3"] = 0
 
+    bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.D MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.D MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.D MuxBit: 3"] = 0
+  
 
     ## Pips for the I/O Ports
     for pip in fabric["pips"]:
@@ -168,6 +197,166 @@ def parse_clb(data, fabric) -> dict[str, int]:
                 bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 1
             continue
 
+        # B1
+        if pip["id"] == f"{data['id']}.pip_4_1":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 4"] = 1
+            continue
+        
+        # B2
+        if pip["id"] == f"{data['id']}.pip_5":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 1
+            continue
+
+        # B3
+        if pip["id"] == f"{data['id']}.pip_6":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 5"] = 0
+            continue
+
+        # B4
+        if pip["id"] == f"{data['id']}.pip_7":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 3"] = 1
+            continue
+        
+        # B5
+        if pip["id"] == f"{data['id']}.pip_v2_0_20":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 3"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+            continue
+        
+        # B6
+        if pip["id"] == f"{data['id']}.pip_v2_0":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 2"] = 1
+            continue
+        
+        # B7
+        if pip["id"] == f"{data['id']}.pip_v2_0_1":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 2"] = 1
+            continue
+        
+        # BC
+        if pip["id"] == f"{data['id']}.pip_v2_0_2":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 1
+            continue
+        
+        # BX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'N')}.pip_21_2":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                    bitstream[f"CLB {data['id']}.B MuxBit: 5"] = 0
+
+                continue
+        except ValueError:
+            pass
+        
+        # BY
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'W')}.pip_21_3":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.B MuxBit: 4"] = 1
+                    bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+
+                continue
+        except ValueError:
+            pass
+
+        # A1
+        if pip["id"] == f"{data['id']}.pip_0":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 2"] = 1
+            continue
+        
+        # A2
+        if pip["id"] == f"{data['id']}.pip_1":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 3"] = 0
+            continue
+        
+        # A3
+        if pip["id"] == f"{data['id']}.pip_2":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 1"] = 1
+                bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 1
+            continue
+        
+        # A4
+        if pip["id"] == f"{data['id']}.pip_3":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 2"] = 1
+                bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 1
+            continue
+        
+        # A5
+        if pip["id"] == f"{data['id']}.pip_4":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 3"] = 0
+                bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 1
+            continue
+        
+        # AX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'W')}.pip_21_1":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 1
+
+                continue
+        except ValueError:
+            pass
+
+        #D1
+        if pip["id"] == f"{data['id']}.pip_12":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 2"] = 1
+            continue
+
+        #D2
+        if pip["id"] == f"{data['id']}.pip_13":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 3"] = 0
+            continue
+
+        #D3
+        if pip["id"] == f"{data['id']}.pip_14":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 1"] = 1
+                bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 1
+            continue
+
+        #D4
+        if pip["id"] == f"{data['id']}.pip_15":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 2"] = 1
+                bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 1
+            continue
+
+        #D5
+        if pip["id"] == f"{data['id']}.pip_v2_0_5":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 3"] = 0
+                bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 1
+            continue
+
+        #DX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'S')}.pip_20":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.D MuxBit: 1"] = 1
+    
+                continue
+        except ValueError:
+            pass
+        
     return bitstream
 
 def parse_switches(data) -> dict[str, int]:
