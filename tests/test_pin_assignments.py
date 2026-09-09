@@ -1,5 +1,7 @@
 """Pin assignments: the CSV pin file."""
 
+from pathlib import Path
+
 import pytest
 
 from openxc2064.device import Fabric
@@ -270,9 +272,11 @@ def test_from_file(tmp_path, fabric8):
     assert plan.to_constraints(fabric8).pins["count[0]"] == fabric8.pad_banks(edge="N")[0]
 
 
-def test_the_shipped_pin_files_parse_and_resolve(fabric8):
-    for name, width in (("pin_assignments.csv", 55), ("six_counters_pin_assignments.csv", 48)):
-        plan = PinAssignments.from_file(name)
+def test_the_example_pin_files_parse_and_resolve(fabric8):
+    """The files in examples/ are the ones readers copy, so keep them valid."""
+    examples = Path(__file__).parent.parent / "examples"
+    for name, width in (("counter", 55), ("six_counters", 48)):
+        plan = PinAssignments.from_file(examples / name / "pin_assignments.csv")
         assert plan.clock_source() is ClockSource.OSCILLATOR
         assert len(plan.to_constraints(fabric8).pins) == width
 
