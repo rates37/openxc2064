@@ -62,6 +62,8 @@ interface SimulatorContextValue {
 	// Cursor Position information
 	cursorPos: { x: number; y: number } | null;
 	setCursorPos: (pos: { x: number; y: number } | null) => void;
+	hoveredPipId: string | null;
+	setHoveredPipId: (id: string | null) => void;
 	exportState: () => void;
 	importState: () => void;
 	importExample: (state: any) => void;
@@ -100,8 +102,10 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	const [selectedCell, setSelectedCell] = useState<LogicCell | null>(null);
 	const [selectedIOBank, setSelectedIOBank] = useState<IOBank | null>(null);
 	const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+	const [hoveredPipId, setHoveredPipId] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState<string | null>(null);
 	const [simStats, setSimStats] = useState<{ avg_steps: string; avg_time: number; min_time: number; max_time: number } | null>(null);
+	const [shouldSimulateAfterPipToggle, setShouldSimulateAfterPipToggle] = useState(false);
 
 	// Dummy update function to force a re-render of the simulator canvas. This is nice, because it means we can only re-render the display after the simulation is settled, not between each step.
 	const bumpTick = useCallback(() => setTick((t) => t + 1), []);
@@ -198,6 +202,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 	// Toggle a PIP on/off by index in the pips array
 	const togglePip = useCallback((index: number) => {
 		setPips((prev) => prev.map((pip, i) => (i === index ? { ...pip, enabled: !pip.enabled } : pip)));
+		
+		setShouldSimulateAfterPipToggle(true);
 	}, []);
 
 	const updateIOBank = useCallback((updatedBank: IOBank) => {
@@ -223,6 +229,7 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 			if (!matrix) return;
 			matrix.connections = connections;
 			simulate();
+			setShouldSimulateAfterPipToggle(true);
 		},
 		[switchMatrices, bumpTick],
 	);
@@ -417,7 +424,6 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 				}
 			}
 		}
-
 		const endTime = performance.now();
 
 		// console.log(`Simulation settled after ${steps} step(s) in ${(endTime - startTime).toFixed(1)} ms`);
@@ -465,6 +471,14 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		return () => clearInterval(interval);
 	}, [oscillator.enabled, oscillator.frequency, getNet, simulate]);
 
+	// Simulate after a PIP toggle (ensures pips state is updated before simulate runs)
+	useEffect(() => {
+		if (shouldSimulateAfterPipToggle) {
+			simulate();
+			setShouldSimulateAfterPipToggle(false);
+		}
+	}, [shouldSimulateAfterPipToggle, simulate]);
+
 	useEffect(() => {
 		const { logicCells, switchMatrices, pips, ioBanks, busNets } = initialiseSimulation();
 		setLogicCells(logicCells);
@@ -499,6 +513,8 @@ export const SimulatorProvider: React.FC<{ children: ReactNode }> = ({ children 
 		busNets: busNets,
 		cursorPos: cursorPos,
 		setCursorPos: setCursorPos,
+		hoveredPipId: hoveredPipId,
+		setHoveredPipId: setHoveredPipId,
 		exportState: exportState,
 		importState: importState,
 		importExample: importExample,
