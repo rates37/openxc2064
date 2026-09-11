@@ -2,6 +2,7 @@ import json
 import openpyxl
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import time
 
 DEBUG = False
 
@@ -50,32 +51,72 @@ def parse_clb(data, fabric) -> dict[str, int]:
         print(data)
 
     for lut in data["luts"]:
-        lut_idx = 1 if lut["id"] == "lut_0" else 2
-        for bit_idx in range(8):
-            bitstream[f"CLB {data['id']} Logic Table: {lut_idx} Bit: {bit_idx}"] = 1 if lut["truthTable"][bit_idx] else 0
+        # lut_0 = G = 1, lut_1 = F = 0
+        lut_idx = 2 if lut["id"] == "lut_0" else 1
+        # Shuffle the indexes to account for A being the LSB and C being the MSB in the bitstream
+        for tt_idx, bit_idx in enumerate([0, 4, 2, 6, 1, 5, 3, 7]):
+            bitstream[f"CLB {data['id']} Logic Table: {lut_idx} Bit: {bit_idx}"] = 1 if lut["truthTable"][tt_idx] else 0
 
-    bitstream[f"CLB {data['id']} Select Latch/FF"] = 0 ## TODO: Verify!
-    bitstream[f"CLB {data['id']} BASE FG"] = 0 ## TODO: Verify!
+    bitstream[f"CLB {data['id']} Select Latch/FF"] = 0
+    bitstream[f"CLB {data['id']} BASE FG"] = 1 # 3 vs 4 input luts, currently only support for 3 input luts.
 
 
     for mux in data["muxes"]:
         if (mux["id"] == "m6"):
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux A/B"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux A/B"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux A/B"] = 0
         elif (mux["id"] == "m8"):
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux B/C"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux B/C"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux B/C"] = 0
         elif (mux["id"] == "m13"):
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 1 if mux["select"] == 1 else 0
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 1
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 0
+                    pass
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 1
+                    pass
+                case 2:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 0
+                    pass
         elif (mux["id"] == "m18"):
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux A/B"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux A/B"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux A/B"] = 0
         elif (mux["id"] == "m20"):
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux B/C"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux B/C"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux B/C"] = 0
         elif (mux["id"] == "m24"):
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 1 if mux["select"] == 1 else 0
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 1
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 0
+                    pass
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 1
+                    pass
+                case 2:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 0
+                    pass
         elif (mux["id"] == "m46"):
             bitstream[f"CLB {data['id']} Reset-Enable"] = 1 if mux["select"] != 2 else 0
-            bitstream[f"CLB {data['id']} Reset D/G"] = 1 if mux["select"] == 0 else 0
+            bitstream[f"CLB {data['id']} Reset D/G"] = 0 if mux["select"] == 0 else 1
         elif (mux["id"] == "m51"):
             if mux["select"] == 0:
                 bitstream[f"CLB {data['id']}"] = 0
@@ -85,23 +126,43 @@ def parse_clb(data, fabric) -> dict[str, int]:
                 bitstream[f"CLB {data['id']}"] = 0
         elif (mux["id"] == "m56"):
             bitstream[f"CLB {data['id']} Set-Enable"] = 1 if mux["select"] != 2 else 0
-            bitstream[f"CLB {data['id']} Set A/F"] = 1 if mux["select"] == 0 else 0
+            bitstream[f"CLB {data['id']} Set A/F"] = 0 if mux["select"] == 0 else 1
         elif (mux["id"] == "m59"):
-            bitstream[f"CLB {data['id']}.Y G"] = 1 if mux["select"] == 0 else 0
-            bitstream[f"CLB {data['id']}.Y F/M or Q"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']}.Y G"] = 1
+                    bitstream[f"CLB {data['id']}.Y F/M or Q"] = 0
+                case 1:
+                    bitstream[f"CLB {data['id']}.Y G"] = 0
+                    bitstream[f"CLB {data['id']}.Y F/M or Q"] = 0
+                case 2:
+                    bitstream[f"CLB {data['id']}.Y G"] = 0
+                    bitstream[f"CLB {data['id']}.Y F/M or Q"] = 1
         elif (mux["id"] == "m61"):
-            bitstream[f"CLB {data['id']}.X G"] = 1 if mux["select"] == 0 else 0
-            bitstream[f"CLB {data['id']}.X F/M or Q"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']}.X G"] = 1
+                    bitstream[f"CLB {data['id']}.X F/M or Q"] = 0
+                case 1:
+                    bitstream[f"CLB {data['id']}.X G"] = 0
+                    bitstream[f"CLB {data['id']}.X F/M or Q"] = 0
+                case 2:
+                    bitstream[f"CLB {data['id']}.X G"] = 0
+                    bitstream[f"CLB {data['id']}.X F/M or Q"] = 1
         elif (mux["id"] == "m100"):
+            # The pins here don't quite line up, TODO: Verify in the future.
+
+            # Grab the select for M56
+            m56_select = next((m["select"] for m in data["muxes"] if m["id"] == "m56"), None)
             if mux["select"] == 0:
-                bitstream[f"CLB {data['id']} CLK Invert"] = 1
-                bitstream[f"CLB {data['id']} CLK enable"] = 1
+                bitstream[f"CLB {data['id']} CLK Invert"] = 0 if m56_select == 0 else 1 # CLK = NOT G
+                bitstream[f"CLB {data['id']} CLK enable"] = 1 # 1
             elif mux["select"] == 1:
-                bitstream[f"CLB {data['id']} CLK Invert"] = 0
-                bitstream[f"CLB {data['id']} CLK enable"] = 1
+                bitstream[f"CLB {data['id']} CLK Invert"] = 1 if m56_select == 0 else 0 # CLK = G
+                bitstream[f"CLB {data['id']} CLK enable"] = 1 # 1
             elif mux["select"] == 2:
-                bitstream[f"CLB {data['id']} CLK Invert"] = 0
-                bitstream[f"CLB {data['id']} CLK enable"] = 0
+                bitstream[f"CLB {data['id']} CLK Invert"] = 0 # 0
+                bitstream[f"CLB {data['id']} CLK enable"] = 0 # 0
 
     
     bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 0
@@ -529,23 +590,27 @@ def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, 
     sheet = mapping_sheet.active
 
     print("Writing Bitstream")
-    
+
+    fills = {
+        "active": openpyxl.styles.PatternFill(
+            start_color="00FF00", end_color="00FF00", fill_type="solid"
+        ),
+        "unused": openpyxl.styles.PatternFill(
+            start_color="000000", end_color="000000", fill_type="solid"
+        ),
+    }
     bit_count = 0
-    for key, value in tqdm(bitstream.items()):
-        if DEBUG:
-            print(key, value)
+    for row in sheet.iter_rows():
+        for cell in row:
+            value = bitstream.get(cell.value)
+            if value is None:
+                continue
 
-        # if key is in a cell in the sheet, colour that cell green
-        for row in sheet.iter_rows():
-            for cell in row:
-                if cell.value == key:
-                    fill_colour = "00FF00"
-                    if (value == -1):
-                        fill_colour = "000000"
+            if DEBUG:
+                print(cell.value, value)
+            cell.fill = fills["unused" if value == -1 else "active"]
+            bit_count += 1
 
-
-                    cell.fill = openpyxl.styles.PatternFill(start_color=fill_colour, end_color=fill_colour, fill_type="solid")
-                    bit_count += 1
 
     print(f"Num bits: {bit_count} / 11358 ({bit_count/11358*100:.2f}%)")
     

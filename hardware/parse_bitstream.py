@@ -81,7 +81,7 @@ def parse_xact_bitstream(path: str) -> list[int]:
 
 
 
-FILENAME = 'LUT_TEST'
+FILENAME = 'LUT2'
 ## Load in and print the binary data from "SIMPLE.bin"
 with open("./bitstreams/" + FILENAME + ".BIT", "rb") as f:
     data = f.read()

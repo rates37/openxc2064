@@ -112,24 +112,21 @@ def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, 
     sheet = mapping_sheet.active
 
     print("Writing Bitstream")
-    
+
+    fills = {
+        1: openpyxl.styles.PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid"),
+        0: openpyxl.styles.PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid"),
+        -1: openpyxl.styles.PatternFill(start_color="000000", end_color="000000", fill_type="solid"),
+    }
     bit_count = 0
-    for key, value in tqdm(bitstream.items()):
+    for row in tqdm(sheet.iter_rows()):
+        for cell in row:
+            value = bitstream.get(cell.value)
+            if value is None:
+                continue
 
-        # if key is in a cell in the sheet, colour that cell green
-        for row in sheet.iter_rows():
-            for cell in row:
-                if cell.value == key:
-                    if (value == 1):
-                        fill_colour = "00FF00"
-                    if (value == -1):
-                        fill_colour = "000000"
-                    if (value == 0):
-                        fill_colour = "FF0000"
-
-
-                    cell.fill = openpyxl.styles.PatternFill(start_color=fill_colour, end_color=fill_colour, fill_type="solid")
-                    bit_count += 1
+            cell.fill = fills[value]
+            bit_count += 1
 
     print(f"Num bits: {bit_count} / 11358 ({bit_count/11358*100:.2f}%)")
     
@@ -138,7 +135,7 @@ def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, 
     
     
 if __name__ == "__main__":
-    FILENAME = 'PIN_FIND'
+    FILENAME = 'BIG2'
     xact_bytes = load_xact_bitstream("./" + FILENAME + ".BIT")
     xact_bits = []
     for byte in xact_bytes:
