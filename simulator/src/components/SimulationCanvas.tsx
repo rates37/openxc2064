@@ -337,6 +337,9 @@ const SimulationCanvas: React.FC = () => {
         removeDriver,
         searchQuery,
         selectIOBank,
+        setCursorPos,
+        setHoveredPipId,
+        hoveredPipId,
     } = useSimulator();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -401,6 +404,25 @@ const SimulationCanvas: React.FC = () => {
         return { x, y };
     }, []);
 
+    const findPipAtWorld = useCallback(
+        (world: { x: number; y: number }) => {
+            for (let i = 0; i < pips.length; i++) {
+                const pip = pips[i];
+                if (
+                    world.x >= pip.pos.x - PIP_WIDTH / 2 &&
+                    world.x <= pip.pos.x + PIP_WIDTH / 2 &&
+                    world.y >= pip.pos.y - PIP_HEIGHT / 2 &&
+                    world.y <= pip.pos.y + PIP_HEIGHT / 2
+                ) {
+                    return pip;
+                }
+            }
+
+            return null;
+        },
+        [pips]
+    );
+
     // Handle panning
     const onPointerDown = useCallback((e: React.PointerEvent) => {
         setIsPanning(true);
@@ -410,11 +432,17 @@ const SimulationCanvas: React.FC = () => {
 
     const onPointerMove = useCallback(
         (e: React.PointerEvent) => {
-            if (!isPanning) return;
             const canvas = canvasRef.current;
             if (!canvas) return;
             const rect = canvas.getBoundingClientRect();
             const vb = viewBoxRef.current;
+
+            const world = screenToWorld(e.clientX, e.clientY);
+            setCursorPos({ x: Math.round(world.x), y: Math.round(world.y) });
+            setHoveredPipId(findPipAtWorld(world)?.id ?? null);
+
+            if (!isPanning) return;
+
             const scaleX = vb.w / rect.width;
             const scaleY = vb.h / rect.height;
             const dx = (e.clientX - panStart.current.x) * scaleX;
@@ -422,12 +450,65 @@ const SimulationCanvas: React.FC = () => {
             panStart.current = { x: e.clientX, y: e.clientY };
             setViewBox((v) => ({ ...v, x: v.x - dx, y: v.y - dy }));
         },
-        [isPanning]
+        [isPanning, screenToWorld, findPipAtWorld, setCursorPos, setHoveredPipId]
     );
 
     const onPointerUp = useCallback(() => {
         setIsPanning(false);
     }, []);
+
+    const onPointerLeave = useCallback(() => {
+        setIsPanning(false);
+        setCursorPos(null);
+        setHoveredPipId(null);
+    }, [setCursorPos, setHoveredPipId]);
+
+    const copyTextToClipboard = useCallback(async (text: string) => {
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+
+            const fallbackInput = document.createElement("textarea");
+            fallbackInput.value = text;
+            fallbackInput.setAttribute("readonly", "true");
+            fallbackInput.style.position = "fixed";
+            fallbackInput.style.left = "-9999px";
+            document.body.appendChild(fallbackInput);
+            fallbackInput.select();
+            const copied = document.execCommand("copy");
+            document.body.removeChild(fallbackInput);
+            return copied;
+        } catch (error) {
+            console.error("Failed to copy pip id:", error);
+            return false;
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.code !== "Space" || event.repeat) return;
+
+            const activeElement = document.activeElement;
+            if (
+                activeElement instanceof HTMLInputElement ||
+                activeElement instanceof HTMLTextAreaElement ||
+                activeElement instanceof HTMLSelectElement ||
+                activeElement?.getAttribute("contenteditable") === "true"
+            ) {
+                return;
+            }
+
+            if (!hoveredPipId) return;
+
+            event.preventDefault();
+            void copyTextToClipboard(hoveredPipId);
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [copyTextToClipboard, hoveredPipId]);
 
     // Handle zooming
     useEffect(() => {
@@ -600,8 +681,8 @@ const SimulationCanvas: React.FC = () => {
         canvas.style.height = `${canvasSize.cssHeight}px`;
 
         // Enable anti-aliasing for smooth rendering when zoomed out
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
+        // ctx.imageSmoothingEnabled = true;
+        // ctx.imageSmoothingQuality = "high";
 
         // Clear canvas
         ctx.fillStyle = "#fff";
@@ -662,8 +743,9 @@ const SimulationCanvas: React.FC = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                height: "calc(100vh - 50px)",
+                height: "100vh",
                 width: "100%",
+                boxSizing: "border-box",
             }}
         >
             <canvas
@@ -680,7 +762,7 @@ const SimulationCanvas: React.FC = () => {
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
-                onPointerLeave={onPointerUp}
+                onPointerLeave={onPointerLeave}
                 onClick={onClick}
             />
             {showOscillatorModal && <OscillatorModal isOpen={showOscillatorModal} onClose={() => setShowOscillatorModal(false)} />}

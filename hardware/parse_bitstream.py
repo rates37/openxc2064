@@ -53,7 +53,35 @@ def generate_hex_file(input_file: str, output_file: str):
         f.write(":00000001FF\n")  # End of file record
 
 
-FILENAME = 'COUNTER'
+def parse_xact_bitstream(path: str) -> list[int]:
+    """Parse an XACT-style .BIT file and return a list of data bits extracted
+    from each 71-bit frame in the packet sequence (MSB-first per frame).
+    """
+    with open(path, "rb") as f:
+        data = f.read()
+
+    # strip the file header fields (as observed in the bitstream format)
+    data, _ = strip_bits(data, 8)
+    data, _ = strip_bits(data, 4)
+    data, _ = strip_bits(data, 24)
+    data, _ = strip_bits(data, 4)
+
+    bits: list[int] = []
+
+    for _ in range(170):
+        data, _ = strip_bits(data, 1)    # header
+        data, frame = strip_bits(data, 71)  # 71-bit payload
+        data, _ = strip_bits(data, 3)    # footer
+
+        # convert the 71-bit integer (MSB-first) into a list of bits
+        frame_bits = [((frame >> (70 - i)) & 1) for i in range(71)]
+        bits.extend(frame_bits)
+
+    return bits
+
+
+
+FILENAME = 'LUT2'
 ## Load in and print the binary data from "SIMPLE.bin"
 with open("./bitstreams/" + FILENAME + ".BIT", "rb") as f:
     data = f.read()
@@ -73,7 +101,7 @@ with open("./bitstreams/" + FILENAME + ".BIT", "rb") as f:
 
     accumulator = 0
 
-    for i in range(160):
+    for i in range(180):
         data, header = strip_bits(data, 1)
         accumulator += 1
         data, frame = strip_bits(data, 71)

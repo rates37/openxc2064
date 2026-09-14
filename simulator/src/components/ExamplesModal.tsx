@@ -106,6 +106,9 @@ const ExamplesModal: React.FC<ExamplesModalProps> = ({ isOpen, onClose }) => {
           maxHeight: '600px',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'stretch',
+          justifyContent: 'center',
+          margin: 'auto',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
         }}
         onClick={(e) => e.stopPropagation()}

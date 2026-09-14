@@ -1,7 +1,8 @@
 import json
 import openpyxl
-import tqdm
+from tqdm import tqdm
 import matplotlib.pyplot as plt
+import time
 
 DEBUG = False
 
@@ -16,54 +17,406 @@ possible_connections = [
         [1, 1, 1, 1, 0, 1, 0, 0]
     ]
 
-def parse_clb(data) -> dict[str, int]:
+def neighbour_clb(clb_id: str, dir: str) -> str:
+    row_letter = clb_id[0]
+    col_letter = clb_id[1]
+    
+    if dir == "N":
+        if row_letter == "A":
+            raise ValueError("Cannot move north from row A")
+        
+        row_letter = chr(ord(row_letter) - 1)
+    elif dir == "S":
+        if row_letter == "H":
+            raise ValueError("Cannot move south from row H")
+        
+        row_letter = chr(ord(row_letter) + 1)
+    elif dir == "E":
+        if col_letter == "H":
+            raise ValueError("Cannot move east from column H")
+        
+        col_letter = chr(ord(col_letter) + 1)
+    elif dir == "W":
+        if col_letter == "A":
+            raise ValueError("Cannot move west from column A")
+        
+        col_letter = chr(ord(col_letter) - 1)
+    
+    return f"{row_letter}{col_letter}"
+
+def parse_clb(data, fabric) -> dict[str, int]:
     bitstream = {}
 
     if DEBUG:
         print(data)
 
     for lut in data["luts"]:
-        lut_idx = 1 if lut["id"] == "lut_0" else 2
-        for bit_idx in range(8):
-            bitstream[f"CLB {data['id']} Logic Table: {lut_idx} Bit: {bit_idx}"] = 1 if lut["truthTable"][bit_idx] else 0
+        # lut_0 = G = 1, lut_1 = F = 0
+        lut_idx = 2 if lut["id"] == "lut_0" else 1
+        # Shuffle the indexes to account for A being the LSB and C being the MSB in the bitstream
+        for tt_idx, bit_idx in enumerate([0, 4, 2, 6, 1, 5, 3, 7]):
+            bitstream[f"CLB {data['id']} Logic Table: {lut_idx} Bit: {bit_idx}"] = 1 if lut["truthTable"][tt_idx] else 0
 
-    bitstream[f"CLB {data['id']} Select Latch/FF"] = 0 ## TODO: Verify!
-    bitstream[f"CLB {data['id']} BASE FG"] = 0 ## TODO: Verify!
+    bitstream[f"CLB {data['id']} Select Latch/FF"] = 0
+    bitstream[f"CLB {data['id']} BASE FG"] = 1 # 3 vs 4 input luts, currently only support for 3 input luts.
 
 
     for mux in data["muxes"]:
         if (mux["id"] == "m6"):
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux A/B"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux A/B"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux A/B"] = 0
         elif (mux["id"] == "m8"):
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux B/C"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux B/C"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux B/C"] = 0
         elif (mux["id"] == "m13"):
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 1 if mux["select"] == 1 else 0
-            bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 1
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 0
+                    pass
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 1
+                    pass
+                case 2:
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 0
+                    pass
         elif (mux["id"] == "m18"):
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux A/B"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux A/B"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux A/B"] = 0
         elif (mux["id"] == "m20"):
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux B/C"] = mux["select"]
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux B/C"] = 1
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux B/C"] = 0
         elif (mux["id"] == "m24"):
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 0"] = 1 if mux["select"] == 1 else 0
-            bitstream[f"CLB {data['id']} Logic Table: 2 Mux C/D/Q Bit: 1"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 1
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 0
+                    pass
+                case 1:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 1
+                    pass
+                case 2:
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 0"] = 0
+                    bitstream[f"CLB {data['id']} Logic Table: 1 Mux C/D/Q Bit: 1"] = 0
+                    pass
         elif (mux["id"] == "m46"):
             bitstream[f"CLB {data['id']} Reset-Enable"] = 1 if mux["select"] != 2 else 0
-            bitstream[f"CLB {data['id']} Reset D/G"] = 1 if mux["select"] == 0 else 0
+            bitstream[f"CLB {data['id']} Reset D/G"] = 0 if mux["select"] == 0 else 1
         elif (mux["id"] == "m51"):
-            pass
+            if mux["select"] == 0:
+                bitstream[f"CLB {data['id']}"] = 0
+            elif mux["select"] == 1:
+                bitstream[f"CLB {data['id']}"] = 1
+            elif mux["select"] == 2:
+                bitstream[f"CLB {data['id']}"] = 0
         elif (mux["id"] == "m56"):
             bitstream[f"CLB {data['id']} Set-Enable"] = 1 if mux["select"] != 2 else 0
-            bitstream[f"CLB {data['id']} Set A/F"] = 1 if mux["select"] == 0 else 0
+            bitstream[f"CLB {data['id']} Set A/F"] = 0 if mux["select"] == 0 else 1
         elif (mux["id"] == "m59"):
-            bitstream[f"CLB {data['id']}.Y G"] = 1 if mux["select"] == 0 else 0
-            bitstream[f"CLB {data['id']}.Y F/M or Q"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']}.Y G"] = 1
+                    bitstream[f"CLB {data['id']}.Y F/M or Q"] = 0
+                case 1:
+                    bitstream[f"CLB {data['id']}.Y G"] = 0
+                    bitstream[f"CLB {data['id']}.Y F/M or Q"] = 0
+                case 2:
+                    bitstream[f"CLB {data['id']}.Y G"] = 0
+                    bitstream[f"CLB {data['id']}.Y F/M or Q"] = 1
         elif (mux["id"] == "m61"):
-            bitstream[f"CLB {data['id']}.X G"] = 1 if mux["select"] == 0 else 0
-            bitstream[f"CLB {data['id']}.X F/M or Q"] = 1 if mux["select"] == 2 else 0
+            match mux["select"]:
+                case 0:
+                    bitstream[f"CLB {data['id']}.X G"] = 1
+                    bitstream[f"CLB {data['id']}.X F/M or Q"] = 0
+                case 1:
+                    bitstream[f"CLB {data['id']}.X G"] = 0
+                    bitstream[f"CLB {data['id']}.X F/M or Q"] = 0
+                case 2:
+                    bitstream[f"CLB {data['id']}.X G"] = 0
+                    bitstream[f"CLB {data['id']}.X F/M or Q"] = 1
         elif (mux["id"] == "m100"):
+            # The pins here don't quite line up, TODO: Verify in the future.
 
+            # Grab the select for M56
+            m56_select = next((m["select"] for m in data["muxes"] if m["id"] == "m56"), None)
+            if mux["select"] == 0:
+                bitstream[f"CLB {data['id']} CLK Invert"] = 0 if m56_select == 0 else 1 # CLK = NOT G
+                bitstream[f"CLB {data['id']} CLK enable"] = 1 # 1
+            elif mux["select"] == 1:
+                bitstream[f"CLB {data['id']} CLK Invert"] = 1 if m56_select == 0 else 0 # CLK = G
+                bitstream[f"CLB {data['id']} CLK enable"] = 1 # 1
+            elif mux["select"] == 2:
+                bitstream[f"CLB {data['id']} CLK Invert"] = 0 # 0
+                bitstream[f"CLB {data['id']} CLK enable"] = 0 # 0
+
+    
+    bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 0
+    bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0
+
+    bitstream[f"CLB {data['id']}.K MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.K MuxBit: 1"] = 0
+
+    bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 3"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 4"] = 0
+    bitstream[f"CLB {data['id']}.B MuxBit: 5"] = 0
+
+    bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.A MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.A MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.A MuxBit: 3"] = 0
+
+    bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 0
+    bitstream[f"CLB {data['id']}.D MuxBit: 1"] = 0
+    bitstream[f"CLB {data['id']}.D MuxBit: 2"] = 0
+    bitstream[f"CLB {data['id']}.D MuxBit: 3"] = 0
+  
+
+    ## Pips for the I/O Ports
+    for pip in fabric["pips"]:
+        # K <- Global Clk
+        if pip["id"] == f"{data['id']}.pip_clk":
+            bitstream[f"CLB {data['id']}.K MuxBit: 1"] = 1 if pip["enabled"] else 0
+            continue
+        
+        # K <- Left side global vertical long line 
+        if pip["id"] == f"{data['id']}.pip_v2_0_6":
+            bitstream[f"CLB {data['id']}.K MuxBit: 0"] = 1 if pip["enabled"] else 0
+            continue
+        
+        # CX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'S')}.pip_22":
+                bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0 if pip["enabled"] else 1
+                continue
+        except ValueError:
             pass
 
+        # C1
+        if pip["id"] == f"{data['id']}.pip_8":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 1"] = 1
+            continue
+
+        # C2
+        if pip["id"] == f"{data['id']}.pip_9":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 1"] = 1
+            continue
+
+        # C3
+        if pip["id"] == f"{data['id']}.pip_10":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 4"] = 0
+            continue
+
+        # C4
+        if pip["id"] == f"{data['id']}.pip_11":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 1
+            continue
+
+        # C5
+        if pip["id"] == f"{data['id']}.pip_v2_0_21":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 3"] = 1
+            continue
+
+        # C6
+        if pip["id"] == f"{data['id']}.pip_v2_0_3":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 1
+            continue
+
+        # C7
+        if pip["id"] == f"{data['id']}.pip_v2_0_4":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.C MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.C MuxBit: 2"] = 1
+            continue
+
+        # B1
+        if pip["id"] == f"{data['id']}.pip_4_1":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 4"] = 1
+            continue
+        
+        # B2
+        if pip["id"] == f"{data['id']}.pip_5":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 1
+            continue
+
+        # B3
+        if pip["id"] == f"{data['id']}.pip_6":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 5"] = 0
+            continue
+
+        # B4
+        if pip["id"] == f"{data['id']}.pip_7":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 3"] = 1
+            continue
+        
+        # B5
+        if pip["id"] == f"{data['id']}.pip_v2_0_20":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 3"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+            continue
+        
+        # B6
+        if pip["id"] == f"{data['id']}.pip_v2_0":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                bitstream[f"CLB {data['id']}.B MuxBit: 2"] = 1
+            continue
+        
+        # B7
+        if pip["id"] == f"{data['id']}.pip_v2_0_1":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 2"] = 1
+            continue
+        
+        # BC
+        if pip["id"] == f"{data['id']}.pip_v2_0_2":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 1
+            continue
+        
+        # BX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'N')}.pip_21_2":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+                    bitstream[f"CLB {data['id']}.B MuxBit: 5"] = 0
+
+                continue
+        except ValueError:
+            pass
+        
+        # BY
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'W')}.pip_21_3":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.B MuxBit: 4"] = 1
+                    bitstream[f"CLB {data['id']}.B MuxBit: 0"] = 1
+
+                continue
+        except ValueError:
+            pass
+
+        # A1
+        if pip["id"] == f"{data['id']}.pip_0":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 2"] = 1
+            continue
+        
+        # A2
+        if pip["id"] == f"{data['id']}.pip_1":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 3"] = 0
+            continue
+        
+        # A3
+        if pip["id"] == f"{data['id']}.pip_2":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 1"] = 1
+                bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 1
+            continue
+        
+        # A4
+        if pip["id"] == f"{data['id']}.pip_3":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 2"] = 1
+                bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 1
+            continue
+        
+        # A5
+        if pip["id"] == f"{data['id']}.pip_4":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.A MuxBit: 3"] = 0
+                bitstream[f"CLB {data['id']}.A MuxBit: 0"] = 1
+            continue
+        
+        # AX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'W')}.pip_21_1":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.B MuxBit: 1"] = 1
+
+                continue
+        except ValueError:
+            pass
+
+        #D1
+        if pip["id"] == f"{data['id']}.pip_12":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 2"] = 1
+            continue
+
+        #D2
+        if pip["id"] == f"{data['id']}.pip_13":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 3"] = 0
+            continue
+
+        #D3
+        if pip["id"] == f"{data['id']}.pip_14":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 1"] = 1
+                bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 1
+            continue
+
+        #D4
+        if pip["id"] == f"{data['id']}.pip_15":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 2"] = 1
+                bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 1
+            continue
+
+        #D5
+        if pip["id"] == f"{data['id']}.pip_v2_0_5":
+            if pip["enabled"]:
+                bitstream[f"CLB {data['id']}.D MuxBit: 3"] = 0
+                bitstream[f"CLB {data['id']}.D MuxBit: 0"] = 1
+            continue
+
+        #DX
+        try:
+            if pip["id"] == f"{neighbour_clb(data['id'], 'S')}.pip_20":
+                if pip["enabled"]:
+                    bitstream[f"CLB {data['id']}.D MuxBit: 1"] = 1
+    
+                continue
+        except ValueError:
+            pass
         
     return bitstream
 
@@ -117,7 +470,6 @@ def parse_switches(data) -> dict[str, int]:
 
 def parse_pips(data) -> dict[str, int]:
     pips_sim = data["pips"]
-    skip_pips = ["net_A", "net_B", "net_C", "net_D", "net_K", "net_X", "net_Y", "net_O", "net_I", "net_T", "net_clk", "net_bottom", "net_top", "net_left", "net_right", "net_io_clk"]
     bitstream = {}
     
     ## Load in the CSV from XC2064-spreadsheet
@@ -141,46 +493,92 @@ def parse_pips(data) -> dict[str, int]:
         _temp["y"] = int(parts[1])
         pip_objs.append(_temp)
         
-    ## Sort magics by x, then y
-    pip_objs.sort(key=lambda m: (m["x"], m["y"]))
-    
-    plt.scatter([pip["x"] for pip in pip_objs], [pip["y"] for pip in pip_objs])
-    
-    pips_sim_filtered = []
-    for pip in pips_sim:
-        found = False
-        for skip in skip_pips:
-            if pip["source"].split(".")[1] == skip or pip["destination"].split(".")[1] == skip:
-                print(pip["source"], pip["destination"])
-                found = True
+    ## Sort pips by x, then y
+    pip_objs.sort(key=lambda m: (m["y"], m["x"]))
+
+    ## import the mapping json object
+    coord_map = json.load(open("coordinate_mapping.json", "r"))
+
+    for pip in tqdm(pip_objs):
+        new_x = coord_map["x_mappings"].get(str(pip["x"]), pip["x"])
+        new_y = coord_map["y_mappings"].get(str(pip["y"]), pip["y"])
+        
+        for sim_pip in pips_sim:
+            if sim_pip["pos"]["x"] == new_x and sim_pip["pos"]["y"] == new_y:
+                bitstream[pip["id"]] = 1 if sim_pip["enabled"] else 0
                 break
+        
+        if pip["id"] not in bitstream:
+            print("unable to find pip for", pip["id"], "at", new_x, new_y)
             
-        if not found:
-            pips_sim_filtered.append(pip)
-                
-    # plt.scatter([pip["pos"]["x"] for pip in pips_sim_filtered], [pip["pos"]["y"] for pip in pips_sim_filtered], color="red")
-    plt.show()
+    ## Do the same for the bidi's
+    bidis = []
+    for line in bitstream_csv:
+        for part in line.split(","):
+            if part.startswith("Bidi"):
+                bidis.append(part)
+    bidi_objs = []
+    for bidi in bidis:
+        _temp = {}
+        parts = bidi.split(" ")
+        parts = parts[1].split("G")
+        _temp["id"] = bidi
+        _temp["x"] = int(parts[0])
+        _temp["y"] = int(parts[1])
+        bidi_objs.append(_temp)
+        
+    ## Sort bidis by x, then y
+    bidi_objs.sort(key=lambda m: (m["y"], m["x"]))
     
-    return
-    
+    for bidi in tqdm(bidi_objs):
+        ##TODO : Implement bidirectional pip parsing - I HAVE NO CLUE WHAT THE BIDI LINES ARE
+        bitstream[bidi["id"]] = 0
+        
+        
+        
+
+    return bitstream
+
+def parse_io_banks(data) -> dict[str, int]:
+    bitstream = {}
+    io_banks = data["ioBanks"]
+
+    coord_map = json.load(open("coordinate_mapping.json", "r"))
+
+    for bank in io_banks:
+        mapped_id = coord_map["io_mappings"].get(str(bank["id"]), bank["id"])
+        bitstream[f"IOB {mapped_id}.I PAD/Latched"] = bank["muxes"][1]['select']
+
+    return bitstream
     
 def generate_bitstream(data) -> dict[str, int] :
     logic_cells = data["logicCells"]
     bitstream = {}
 
-
     print("Generating bitstream...")
 
+    print("Populating Unused Bits...")
+    ununsed_bits = {
+        "----- NOT USED -----": -1
+    }
+    bitstream.update(ununsed_bits)
+
     print("Parsing CLBs...")
-    for clb in tqdm.tqdm(logic_cells):
-        clb_bitstream = parse_clb(clb)
+    for clb in tqdm(logic_cells):
+        clb_bitstream = parse_clb(clb, data)
         bitstream.update(clb_bitstream)
     
+    print("Parsing Switches...")
     switch_bitstream = parse_switches(data)
     bitstream.update(switch_bitstream)
     
+    print("Parsing PIPs...")
     pip_bitstream = parse_pips(data)
     bitstream.update(pip_bitstream)
+
+    print("Parsing IO Banks...")
+    io_bitstream = parse_io_banks(data)
+    bitstream.update(io_bitstream)
 
     return bitstream
     
@@ -192,22 +590,29 @@ def generate_spreadsheet(mapping_sheet: openpyxl.Workbook, bitstream: dict[str, 
     sheet = mapping_sheet.active
 
     print("Writing Bitstream")
-    for key, value in tqdm.tqdm(bitstream.items()):
-        if DEBUG:
-            print(key, value)
 
-        # if key is in a cell in the sheet, colour that cell green
-        for row in sheet.iter_rows():
-            for cell in row:
-                if cell.value == key:
-                    fill_colour = "00FF00"
-                    if (value == -1):
-                        fill_colour = "000000"
+    fills = {
+        "active": openpyxl.styles.PatternFill(
+            start_color="00FF00", end_color="00FF00", fill_type="solid"
+        ),
+        "unused": openpyxl.styles.PatternFill(
+            start_color="000000", end_color="000000", fill_type="solid"
+        ),
+    }
+    bit_count = 0
+    for row in sheet.iter_rows():
+        for cell in row:
+            value = bitstream.get(cell.value)
+            if value is None:
+                continue
+
+            if DEBUG:
+                print(cell.value, value)
+            cell.fill = fills["unused" if value == -1 else "active"]
+            bit_count += 1
 
 
-                    cell.fill = openpyxl.styles.PatternFill(start_color=fill_colour, end_color=fill_colour, fill_type="solid")
-
-    print(f"Num bits: {len(bitstream)} / 11358 ({len(bitstream)/11358*100:.2f}%)")
+    print(f"Num bits: {bit_count} / 11358 ({bit_count/11358*100:.2f}%)")
     
     return mapping_sheet
 
@@ -235,9 +640,9 @@ if __name__ == "__main__":
 
     # generate speadsheet
     ## import mapping sheet from XC2064-spreadsheet
-    mapping_sheet = openpyxl.load_workbook("XC2064.xlsx")
+    mapping_sheet = openpyxl.load_workbook("XC2064-bits.xlsx")
 
     mapping_sheet = generate_spreadsheet(mapping_sheet, bitstream, "sim_out.xlsx")
 
     # save spreadsheet
-    mapping_sheet.save("XC2064.xlsx")
+    mapping_sheet.save("XC2064_output.xlsx")
