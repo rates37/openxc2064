@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSimulator } from '../SimulatorContext';
-import { readdir } from 'fs/promises';
-import * as path from 'path';
-const modules = import.meta.glob('../../test_designs/*.json', { eager: true });
-const exampleNames : string[] = [];
-for (const [path, module] of Object.entries(modules)) {
-  const pathString = String(path);
-  const filename = pathString.split('/').pop() || '';
-  exampleNames.push(filename);
-  console.log(`Loaded example: ${path}`);
-}
+
+const modules = import.meta.glob<{ default: any }>('../../test_designs/*.json', { eager: true });
+const bundledExamples: { name: string; content: any }[] = Object.entries(modules)
+  .map(([path, module]) => {
+    const filename = path.split('/').pop();
+    return { name: filename.replace('.json', ''), content: module.default };
+  });
 
 interface ExamplesModalProps {
   isOpen: boolean;
@@ -19,52 +16,16 @@ interface ExamplesModalProps {
 const ExamplesModal: React.FC<ExamplesModalProps> = ({ isOpen, onClose }) => {
   const { importExample } = useSimulator();
   const [examples, setExamples] = useState<{ name: string; content: any }[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setLoading(true);
     setError(null);
-
-    // Fetch the list of examples from the test_designs folder
-    const fetchExamples = async () => {
-      try {
-        
-        // Note: This assumes the server has a way to list directory contents
-        // For now, we'll use a hardcoded list and try to fetch each one
-  
-
-        const loadedExamples: { name: string; content: any }[] = [];
-
-        for (const filename of exampleNames) {
-          try {
-            const fileResponse = await fetch(`/test_designs/${encodeURIComponent(filename)}`);
-            if (fileResponse.ok) {
-              const content = await fileResponse.json();
-              loadedExamples.push({
-                name: filename.replace('.json', ''),
-                content,
-              });
-            }
-          } catch (e) {
-            console.warn(`Failed to load example: ${filename}`, e);
-          }
-        }
-
-        setExamples(loadedExamples);
-        if (loadedExamples.length === 0) {
-          setError('No examples found');
-        }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load examples');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchExamples();
+    setExamples(bundledExamples);
+    if (bundledExamples.length === 0) {
+      setError('No examples found');
+    }
   }, [isOpen]);
 
   const loadExample = (example: { name: string; content: any }) => {
@@ -117,12 +78,6 @@ const ExamplesModal: React.FC<ExamplesModalProps> = ({ isOpen, onClose }) => {
           Load Example
         </h2>
 
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-            Loading examples...
-          </div>
-        )}
-
         {error && (
           <div
             style={{
@@ -138,7 +93,7 @@ const ExamplesModal: React.FC<ExamplesModalProps> = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {!loading && examples.length > 0 && (
+        {examples.length > 0 && (
           <div
             style={{
               flex: 1,
@@ -176,7 +131,7 @@ const ExamplesModal: React.FC<ExamplesModalProps> = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {!loading && examples.length === 0 && !error && (
+        {examples.length === 0 && !error && (
           <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
             No examples available
           </div>
